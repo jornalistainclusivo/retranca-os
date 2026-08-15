@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "sql-capability",
+  "description": "Autoriza exclusivamente os comandos IPC do tauri-plugin-sql para a Retranca OS.",
+  "windows": ["main"],
+  "permissions": [
+    "sql:default"
+  ]
+}
