@@ -1,6 +1,0 @@
-{
-  "name": "Agenda JINC - Editorial OS",
-  "description": "Sistema Operacional Editorial para o Jornalista Inclusivo com Kanban, Checklists, CMS Local, Metricas e Assistente IA.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
