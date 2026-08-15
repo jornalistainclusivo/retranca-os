@@ -14,8 +14,15 @@ import { ArticleModal } from '@/components/ArticleModal';
 import { MotivationalModal } from '@/components/MotivationalModal';
 import { AiAssistantModal } from '@/components/AiAssistantModal';
 
+import { fetchAllRawArticles, saveRawArticle, deleteRawArticle } from '@/lib/api/articles';
+import { toArticleProps, fromArticleProps } from '@/lib/adapters/articleAdapter';
+import { getDb } from '@/db/client';
+import { seedDatabase, setDbInstanceForSeed } from '@/lib/api/seed';
+import { articles as articlesSchema } from '@/db/schema';
+
 export default function Home() {
-  const [articles, setArticles] = useState<Article[]>(() => getStoredArticles());
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('todas');
@@ -37,16 +44,47 @@ export default function Home() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Hydration workaround
+  // Montagem Inicial: Conexão, Seed e Fetch
   useEffect(() => {
-    // eslint-disable-next-line
-    setIsMounted(true);
+    const initializeApp = async () => {
+      try {
+        const db = await getDb();
+        setDbInstanceForSeed(db);
+        
+        const existingArticles = await db.select().from(articlesSchema);
+        if (existingArticles.length === 0) {
+          console.log('Database empty. Running seed...');
+          await seedDatabase();
+        }
+
+        const rawData = await fetchAllRawArticles();
+        const adaptedArticles = rawData.map(raw => toArticleProps(raw.article, raw.checklists, raw.history));
+        
+        setArticles(adaptedArticles);
+      } catch (e) {
+        console.error("Error initializing Tauri SQLite Database: ", e);
+      } finally {
+        setIsLoading(false);
+        setIsMounted(true);
+      }
+    };
+    
+    // Certificar-se de executar apenas no client e no ambiente Tauri
+    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+      initializeApp();
+    } else {
+      setArticles(getStoredArticles());
+      setIsLoading(false);
+      setIsMounted(true);
+    }
   }, []);
 
   // Sync storage listener
   useEffect(() => {
     const handleStorageChange = () => {
-      setArticles(getStoredArticles());
+      if (typeof window !== 'undefined' && !(window as any).__TAURI_INTERNALS__) {
+        setArticles(getStoredArticles());
+      }
     };
     window.addEventListener('jinc_storage_updated', handleStorageChange);
     return () => window.removeEventListener('jinc_storage_updated', handleStorageChange);
@@ -61,18 +99,30 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  // Handler to update articles in state & localStorage
-  const updateArticlesState = (newArticles: Article[]) => {
+  // Handler de atualização otimista (Atualizado para refletir no SQLite)
+  const updateArticlesState = async (newArticles: Article[], savedArticle?: Article, deletedId?: string) => {
     setArticles(newArticles);
-    saveArticles(newArticles);
+    
+    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+      if (savedArticle) {
+        await saveRawArticle(fromArticleProps(savedArticle));
+      }
+      if (deletedId) {
+        await deleteRawArticle(deletedId);
+      }
+    } else {
+      saveArticles(newArticles);
+    }
   };
 
   // Handler for changing an article status
   const handleUpdateStatus = (id: string, newStatus: ArticleStatus) => {
     const previous = articles.find((a) => a.id === id);
+    let changedArticle: Article | undefined;
+    
     const updated = articles.map((art) => {
       if (art.id === id) {
-        return {
+        changedArticle = {
           ...art,
           status: newStatus,
           completedAt: newStatus === 'publicado' ? new Date().toISOString() : art.completedAt,
@@ -86,11 +136,12 @@ export default function Home() {
             ...art.history,
           ],
         };
+        return changedArticle;
       }
       return art;
     });
 
-    updateArticlesState(updated);
+    updateArticlesState(updated, changedArticle);
 
     // Trigger motivational celebration pop-up when an article becomes 'publicado'
     if (previous && previous.status !== 'publicado' && newStatus === 'publicado') {
@@ -100,20 +151,22 @@ export default function Home() {
 
   // Handler for toggling checklist items on cards
   const handleToggleChecklist = (articleId: string, checklistId: string) => {
+    let changedArticle: Article | undefined;
     const updated = articles.map((art) => {
       if (art.id === articleId) {
         const updatedChecklists = art.checklists.map((chk) =>
           chk.id === checklistId ? { ...chk, completed: !chk.completed } : chk
         );
-        return {
+        changedArticle = {
           ...art,
           checklists: updatedChecklists,
           updatedAt: new Date().toISOString(),
         };
+        return changedArticle;
       }
       return art;
     });
-    updateArticlesState(updated);
+    updateArticlesState(updated, changedArticle);
   };
 
   // Handler for saving an article from CMS modal
@@ -125,14 +178,14 @@ export default function Home() {
     } else {
       updated = [savedArticle, ...articles];
     }
-    updateArticlesState(updated);
+    updateArticlesState(updated, savedArticle);
   };
 
   // Handler for deleting an article
   const handleDeleteArticle = (id: string) => {
     if (confirm('Excluir esta pauta da Agenda JINC?')) {
       const updated = articles.filter((a) => a.id !== id);
-      updateArticlesState(updated);
+      updateArticlesState(updated, undefined, id);
       setIsArticleModalOpen(false);
     }
   };
@@ -233,7 +286,7 @@ export default function Home() {
         setIsFocusMode={setIsFocusMode}
         onOpenNewModal={handleOpenNewArticleModal}
         onOpenAiModal={() => setIsAiModalOpen(true)}
-        onArticlesUpdated={(updated) => setArticles(updated)}
+        onArticlesUpdated={(updated) => updateArticlesState(updated)}
       />
 
       {/* Main Body */}
@@ -255,47 +308,55 @@ export default function Home() {
 
           {/* View Container */}
           <div className="flex-1 overflow-hidden min-w-0">
-            {activeView === 'kanban' && (
-              <KanbanBoard
-                articles={filteredArticles}
-                searchTerm={searchTerm}
-                onSelectArticle={(art) => {
-                  setSelectedArticle(art);
-                  setIsArticleModalOpen(true);
-                }}
-                onUpdateArticleStatus={handleUpdateStatus}
-                onToggleChecklist={handleToggleChecklist}
-              />
-            )}
+            {isLoading ? (
+              <div className="flex justify-center items-center h-full min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100"></div>
+              </div>
+            ) : (
+              <>
+                {activeView === 'kanban' && (
+                  <KanbanBoard
+                    articles={filteredArticles}
+                    searchTerm={searchTerm}
+                    onSelectArticle={(art) => {
+                      setSelectedArticle(art);
+                      setIsArticleModalOpen(true);
+                    }}
+                    onUpdateArticleStatus={handleUpdateStatus}
+                    onToggleChecklist={handleToggleChecklist}
+                  />
+                )}
 
-            {activeView === 'lista' && (
-              <ListView
-                articles={filteredArticles}
-                searchTerm={searchTerm}
-                onSelectArticle={(art) => {
-                  setSelectedArticle(art);
-                  setIsArticleModalOpen(true);
-                }}
-                onUpdateStatus={handleUpdateStatus}
-              />
-            )}
+                {activeView === 'lista' && (
+                  <ListView
+                    articles={filteredArticles}
+                    searchTerm={searchTerm}
+                    onSelectArticle={(art) => {
+                      setSelectedArticle(art);
+                      setIsArticleModalOpen(true);
+                    }}
+                    onUpdateStatus={handleUpdateStatus}
+                  />
+                )}
 
-            {activeView === 'calendario' && (
-              <CalendarView
-                articles={filteredArticles}
-                onSelectArticle={(art) => {
-                  setSelectedArticle(art);
-                  setIsArticleModalOpen(true);
-                }}
-              />
-            )}
+                {activeView === 'calendario' && (
+                  <CalendarView
+                    articles={filteredArticles}
+                    onSelectArticle={(art) => {
+                      setSelectedArticle(art);
+                      setIsArticleModalOpen(true);
+                    }}
+                  />
+                )}
 
-            {activeView === 'estatisticas' && (
-              <StatsView articles={articles} />
-            )}
+                {activeView === 'estatisticas' && (
+                  <StatsView articles={articles} />
+                )}
 
-            {activeView === 'documentos' && (
-              <GovernanceView />
+                {activeView === 'documentos' && (
+                  <GovernanceView />
+                )}
+              </>
             )}
           </div>
 

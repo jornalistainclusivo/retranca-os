@@ -42,3 +42,42 @@ export const toArticleProps = (
     completedAt: dbArticle.completedAt || undefined,
   };
 };
+
+export const fromArticleProps = (article: Article): { article: DbArticle; checklists: DbChecklistItem[]; history: DbHistoryEntry[] } => {
+  return {
+    article: {
+      id: article.id,
+      title: article.title,
+      status: article.status,
+      categoryTag: article.categoryTag,
+      tags: JSON.stringify(article.tags),
+      publishDate: article.publishDate,
+      summary: article.summary,
+      objective: article.objective,
+      keyword: article.keyword,
+      persona: article.persona,
+      cta: article.cta,
+      internalLinks: article.internalLinks,
+      externalLinks: article.externalLinks,
+      estimatedTime: article.estimatedTime,
+      spentTime: article.spentTime,
+      notes: article.notes,
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+      completedAt: article.completedAt || null,
+    },
+    checklists: article.checklists.map(c => ({
+      id: c.id,
+      articleId: article.id,
+      label: c.label,
+      completed: c.completed ? 1 : 0,
+      category: c.category || null,
+    })),
+    history: article.history.map(h => ({
+      id: h.id,
+      articleId: article.id,
+      date: h.date,
+      action: h.action,
+    })),
+  };
+};
