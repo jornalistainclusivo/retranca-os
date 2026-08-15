@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: Jornalista Inclusivo API
+  version: 1.0.0
+paths:
+  /api/gemini/editorial:
+    post:
+      summary: Executa funções de IA editorial via Gemini Flash
+      description: Processa ações editoriais (esboços, alt text, SEO, validação de acessibilidade) usando Gemini 3.5 Flash no backend, com suporte a multimodalidade (imagens em Base64).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiRequestPayload'
+      responses:
+        '200':
+          description: Sucesso. Retorna o markdown gerado pelo Gemini.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiResponsePayload'
+        '500':
+          description: Erro na API do Gemini ou timeout.
+components:
+  schemas:
+    AiRequestPayload:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [generate_outline, generate_alt_text, generate_seo, check_accessibility, validate_inclusivity]
+        topic:
+          type: string
+          description: Título ou tema geral da pauta
+        text:
+          type: string
+          description: Contexto em formato de texto longo (MD, TXT, CSV importado)
+        imageDescription:
+          type: string
+          description: Descrição curta da imagem fornecida para geração de Alt Text
+        imageBase64:
+          type: string
+          description: String base64 pura (sem cabeçalho Data URL)
+        imageMimeType:
+          type: string
+          description: Mime type da imagem (ex. image/jpeg)
+    AiResponsePayload:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: string
+          description: Resultado processado em Markdown rico
