@@ -5,6 +5,7 @@
  * Scaffold from Spec. Fill in test bodies.
  * Do not add tests not present in spec.md — update the Spec first.
  */
+import { describe, it } from 'vitest';
 
 describe("Core Platform & AI Assistant", () => {
   describe("Business Rules", () => {
