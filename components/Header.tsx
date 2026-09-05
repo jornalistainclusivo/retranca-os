@@ -45,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onArticlesUpdated,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isPremiumMode = false; // Mock for freemium constraints
 
   // Calculate overall metrics
   const total = articles.length;
@@ -132,9 +133,15 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* AI Assistant Button */}
               <button
-                onClick={onOpenAiModal}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all flex items-center gap-1.5 shadow-2xs"
-                title="Assistente IA de Redação Acessível"
+                onClick={isPremiumMode ? onOpenAiModal : undefined}
+                aria-disabled={!isPremiumMode}
+                tabIndex={isPremiumMode ? 0 : -1}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 shadow-2xs ${
+                  isPremiumMode 
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" 
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                }`}
+                title={isPremiumMode ? "Assistente IA de Redação Acessível" : "Assistente IA (Recurso Premium)"}
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>IA Assistant</span>

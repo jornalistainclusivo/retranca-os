@@ -18,6 +18,8 @@ O Jornalista Inclusivo OS elimina a fricção técnica da acessibilidade web (WC
 ## 2. Escopo Funcional
 *   **Kanban Editorial:** Sistema de estados offline-first.
 *   **CMS de Pauta e Checklists:** Armazenamento ACID seguro localmente.
+*   **Gestão de Governança:** Módulo CRUD offline para documentação técnica e estratégica (BRD/PRD) utilizando a tabela preexistente `governance_docs`.
+*   **Camada Freemium:** Restrição de acesso aos serviços de IA (Gemini), com manuseio inteligente e semanticamente seguro dos botões na interface.
 *   **Adapter Pattern de Isolamento:** Os componentes React UI continuam desconhecendo a fonte de dados, mantendo as `props` idênticas.
 
 ## 3. Arquitetura C4 (Desktop App)
@@ -67,6 +69,8 @@ export const toArticleProps = (
 *   **ORM e Tipagem:** `drizzle-orm/tauri-sqlite` com `zod` para schema declarations e validações seguras das entradas.
 *   **ADR 003 - Tauri IPC:** Chamadas de banco não usam proxy Node/Express. Tudo corre através do plugin SQL embutido no Tauri Core, protegendo a base de dados de exposição de portas localhost.
 *   **ADR 004 - UI Freeze:** O diretório `components/` é inviolável. Refatorações estruturais em página limitar-se-ão a trocar os disparadores (`localStorage` getters) pelas invocações `drizzle` no Client encapsulado.
+*   **ADR 005 - Governança Segura (UX):** Edição de documentos de governança exigirá Markdown sobre `<textarea>` para prevenir Keyboard Traps de editores ricos. Salvamento com botões de ação explícitos ("Salvar Alterações"/"Cancelar") para evitar mutações de banco sem consentimento, garantindo previsibilidade para leitores de tela.
+*   **ADR 006 - Bloqueio Inclusivo de UI (Freemium):** Botões de IA bloqueados na versão gratuita não serão removidos nem ocultados (para evitar shift de layout e perda de funcionalidade descoberta). Eles receberão `aria-disabled="true"`, manipulação de `tabIndex` e contarão com Tooltips explicativas, garantindo o contraste mínimo (AAA) em seus estados visuais desativados.
 
 ## 6. Definition of Done (DoD)
 *   ✅ Executável `.exe` (Tauri) final gerado com sucesso, contendo frontend webview e backend SQLite embutido.

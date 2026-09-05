@@ -496,6 +496,7 @@ export const ALL_INITIAL_ARTICLES: Article[] = [
 
 export const GOVERNANCE_DOCS: GovernanceDoc[] = [
   {
+    id: 'gov_1',
     type: 'BRD',
     title: 'BRD — Documento de Requisitos de Negócio',
     description: 'Objetivos estratégicos do Retranca e valor de entrega do Retranca OS.',
@@ -517,9 +518,10 @@ Redações tradicionais enfrentam gargalos no cumprimento de normas WCAG 2.2 AA,
 `,
   },
   {
+    id: 'gov_2',
     type: 'PRD',
-    title: 'PRD — Documento de Requisitos do Projeto',
-    description: 'Especificações funcionais do Kanban, Checklists, Painel Lateral, CMS Local e Filtros.',
+    title: 'PRD — Documento de Requisitos de Produto',
+    description: 'Escopo funcional, requisitos não-funcionais (offline-first) e jornada do usuário. Painel Lateral, CMS Local e Filtros.',
     lastUpdated: '2026-08-02',
     content: `# Project Requirements Document (PRD)
 ## Funcionalidades e Requisitos do Sistema
@@ -545,9 +547,10 @@ Redações tradicionais enfrentam gargalos no cumprimento de normas WCAG 2.2 AA,
 `,
   },
   {
+    id: 'gov_3',
     type: 'SDD',
-    title: 'SDD — Documento de Projeto de Software',
-    description: 'Arquitetura técnica do Next.js 15, persistência em localStorage e fluxo de componentes.',
+    title: 'SDD — Documento de Arquitetura de Software',
+    description: 'Modelagem do Tauri com SQLite, Drizzle ORM e Next.js App Router. Persistência em localStorage e fluxo de componentes.',
     lastUpdated: '2026-08-02',
     content: `# Software Design Document (SDD)
 ## Arquitetura e Modelagem de Dados
@@ -564,9 +567,10 @@ A aplicação mantém o estado no hook customizado \`useEditorialStorage\` alime
 `,
   },
   {
+    id: 'gov_4',
     type: 'TSD',
-    title: 'TSD — Documento de Especificação Técnica',
-    description: 'Especificação das interfaces TypeScript, cálculo de progresso e conformidade WCAG.',
+    title: 'TSD — Especificação Técnica de Integração',
+    description: 'Especificação do pipeline GitOps, sanitização e deploy no modelo Retranca. Progresso e conformidade WCAG.',
     lastUpdated: '2026-08-02',
     content: `# Technical Specification Document (TSD)
 ## Especificação de Código e Acessibilidade

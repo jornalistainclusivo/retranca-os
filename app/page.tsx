@@ -73,9 +73,12 @@ export default function Home() {
     if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
       initializeApp();
     } else {
-      setArticles(getStoredArticles());
-      setIsLoading(false);
-      setIsMounted(true);
+      const initFallback = async () => {
+        setArticles(getStoredArticles());
+        setIsLoading(false);
+        setIsMounted(true);
+      };
+      initFallback();
     }
   }, []);
 

@@ -25,6 +25,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const isPremiumMode = false; // Mock for freemium constraints
 
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,8 +259,15 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  disabled={loading || !isPremiumMode}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    isPremiumMode 
+                      ? "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50" 
+                      : "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                  }`}
+                  aria-disabled={!isPremiumMode}
+                  tabIndex={isPremiumMode ? 0 : -1}
+                  title={isPremiumMode ? "Gerar com IA" : "Gerar com IA (Recurso Premium)"}
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{loading ? 'Processando...' : 'Gerar com IA'}</span>

@@ -52,7 +52,8 @@ export interface Article {
 }
 
 export interface GovernanceDoc {
-  type: 'BRD' | 'PRD' | 'SDD' | 'TSD';
+  id: string;
+  type: 'BRD' | 'PRD' | 'SDD' | 'TSD' | string;
   title: string;
   description: string;
   lastUpdated: string;

@@ -26,13 +26,15 @@ O **Jornalista Inclusivo OS** é um sistema completo de gestão editorial operan
 - **Soberania de Dados:** Todo o processamento (exceto chamadas explicitas de IA generativa) e armazenamento ocorrem na máquina do usuário via SQLite integrado ao Desktop App. Operação 100% offline para todas as views e edições.
 - **Quadro Kanban Editorial:** Gestão visual de pautas (Ideia, Pesquisa, Escrita, Revisão, Publicado).
 - **CMS Local Integrado:** Mini-CMS completo em cada card de pauta.
+- **Módulo de Governança:** CRUD completo para documentos de governança (BRD, PRD, SDD, TSD). Edição baseada em `<textarea>` Markdown puro (sem WYSIWYG) e salvamento explícito (sem auto-save) para segurança e acessibilidade.
 
 ### Restrição Crítica: "UI Freeze" (Congelamento de Interface)
 - **Regra de Ouro:** Nenhum componente visual existente, classe CSS Tailwind, ou marcação semântica HTML pode ser alterado durante a migração para Desktop/SQLite. 
 - A fidelidade visual, de animações e a estrutura de "props" do protótipo atual devem ser mantidas de forma estrita.
 
-### Assistente IA de Redação (Gemini Flash)
-- **Operação Híbrida/Opcional:** A integração da IA é a única feature que consome rede externa. Se o usuário estiver offline, a aplicação principal continuará funcionando perfeitamente.
+### Assistente IA de Redação (Gemini Flash) & Freemium
+- **Modelo Freemium (Restrição de Features):** Recursos baseados em IA (Esboço, Alt Text gerado por IA, SEO, Validador Inclusivo, Linguagem Simples) estarão **bloqueados** no plano gratuito. A interface de Super Admin liberará tais funcionalidades.
+- **Operação Híbrida/Opcional:** A integração da IA é a única feature que consome rede externa. Se o usuário estiver offline ou no plano gratuito, a aplicação principal continuará funcionando perfeitamente (features de IA aparecerão desativadas semanticamente mas sem quebrar regras de contraste AAA).
 
 ## 4. Requisitos de Acessibilidade (Mandatório)
 - **WCAG 2.2 AAA preservado:** Interface protegida via UI Freeze garantindo suporte a focus-visible com anéis de foco, alta taxa de contraste e atalhos de teclado.

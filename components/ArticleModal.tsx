@@ -88,6 +88,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  
+  const isPremiumMode = false; // Mock for freemium constraints
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
@@ -477,29 +479,57 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => handleAiAction('generate_alt_text')}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-all"
+                onClick={isPremiumMode ? () => handleAiAction('generate_alt_text') : undefined}
+                aria-disabled={!isPremiumMode}
+                tabIndex={isPremiumMode ? 0 : -1}
+                title={isPremiumMode ? "Alt Text WCAG com IA" : "Recurso Premium"}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  isPremiumMode 
+                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                }`}
               >
                 ♿ Alt Text WCAG com IA
               </button>
               <button
                 type="button"
-                onClick={() => handleAiAction('generate_seo')}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-all"
+                onClick={isPremiumMode ? () => handleAiAction('generate_seo') : undefined}
+                aria-disabled={!isPremiumMode}
+                tabIndex={isPremiumMode ? 0 : -1}
+                title={isPremiumMode ? "Otimizar Meta Tags SEO" : "Recurso Premium"}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  isPremiumMode 
+                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                }`}
               >
                 🔍 Otimizar Meta Tags SEO
               </button>
               <button
                 type="button"
-                onClick={() => handleAiAction('check_accessibility')}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-all"
+                onClick={isPremiumMode ? () => handleAiAction('check_accessibility') : undefined}
+                aria-disabled={!isPremiumMode}
+                tabIndex={isPremiumMode ? 0 : -1}
+                title={isPremiumMode ? "Auditoria de Linguagem Simples" : "Recurso Premium"}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  isPremiumMode 
+                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                }`}
               >
                 ✨ Auditoria de Linguagem Simples
               </button>
               <button
                 type="button"
-                onClick={() => handleAiAction('validate_inclusivity')}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 transition-all"
+                onClick={isPremiumMode ? () => handleAiAction('validate_inclusivity') : undefined}
+                aria-disabled={!isPremiumMode}
+                tabIndex={isPremiumMode ? 0 : -1}
+                title={isPremiumMode ? "Validador Inclusivo" : "Recurso Premium"}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  isPremiumMode 
+                    ? "bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900" 
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                }`}
               >
                 🤝 Validador Inclusivo
               </button>
