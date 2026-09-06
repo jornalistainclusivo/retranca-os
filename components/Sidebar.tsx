@@ -159,7 +159,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-              Governança (BRD/PRD)
+              <span className="flex-1 text-left">
+                Bloco de notas
+              </span>
             </span>
           </button>
         </nav>

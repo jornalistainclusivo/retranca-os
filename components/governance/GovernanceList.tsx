@@ -14,12 +14,12 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({ docs, onEdit, on
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-full">
       <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold font-serif text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Governança Editorial
+            Bloco de notas
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gerencie BRDs, PRDs, SDDs e TSDs da sua redação de forma local.
+            Gerencie anotações da sua redação de forma local.
           </p>
         </div>
         <button 
@@ -34,7 +34,7 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({ docs, onEdit, on
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {docs.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            <p>Nenhum documento de governança encontrado.</p>
+            <p>Nenhuma anotação encontrada.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

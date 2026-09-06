@@ -46,10 +46,10 @@ export const getDb = async () => {
         return { rows: [] };
       } else {
         const result: any[] = await sqlite.select(sql, params);
-        if (method === 'values') {
-            return { rows: result.map(Object.values) };
-        }
-        return { rows: result };
+        // O Tauri sqlite.select retorna um array de objetos.
+        // O Drizzle sqlite-proxy SEMPRE espera um array de arrays para consultas de leitura.
+        const mappedRows = result.map(row => Object.values(row));
+        return { rows: mappedRows };
       }
     } catch (e: any) {
       console.error('SQL Execution Error:', e);

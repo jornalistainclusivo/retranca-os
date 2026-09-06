@@ -45,7 +45,7 @@ export const GovernanceEditor: React.FC<GovernanceEditorProps> = ({ doc, onSave,
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-bold font-serif text-slate-900 dark:text-slate-100">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
             {doc.id ? 'Editar Documento' : 'Novo Documento'}
           </h2>
         </div>
@@ -79,11 +79,11 @@ export const GovernanceEditor: React.FC<GovernanceEditorProps> = ({ doc, onSave,
               onChange={handleChange}
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
-              <option value="BRD">BRD (Business Requirements)</option>
-              <option value="PRD">PRD (Product Requirements)</option>
-              <option value="SDD">SDD (Software Design)</option>
-              <option value="TSD">TSD (Technical Spec)</option>
-              <option value="Outro">Outro</option>
+              <option value="PAUTA">Pauta</option>
+              <option value="ENTREVISTA">Entrevista</option>
+              <option value="RASCUNHO">Rascunho</option>
+              <option value="PESQUISA">Pesquisa</option>
+              <option value="OUTRO">Outro</option>
             </select>
           </div>
           <div className="md:col-span-3">
@@ -97,7 +97,7 @@ export const GovernanceEditor: React.FC<GovernanceEditorProps> = ({ doc, onSave,
               name="title"
               value={formData.title}
               onChange={handleChange}
-              placeholder="Ex: Requisitos de Acessibilidade v2"
+              placeholder="Ex: Pauta sobre Acessibilidade"
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>

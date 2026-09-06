@@ -497,98 +497,47 @@ export const ALL_INITIAL_ARTICLES: Article[] = [
 export const GOVERNANCE_DOCS: GovernanceDoc[] = [
   {
     id: 'gov_1',
-    type: 'BRD',
-    title: 'BRD — Documento de Requisitos de Negócio',
-    description: 'Objetivos estratégicos do Retranca e valor de entrega do Retranca OS.',
+    type: 'PAUTA',
+    title: 'Pauta Especial: Inclusão Digital',
+    description: 'Ideias iniciais para a série de reportagens sobre acessibilidade na web.',
     lastUpdated: '2026-08-02',
-    content: `# Business Requirements Document (BRD)
-## Agenda RETRANCA - Retranca OS
+    content: `# Pauta: Inclusão Digital
 
-### 1. Visão do Produto
-O **Retranca** é uma plataforma dedicada a capacitar redações e comunicadores com princípios de acessibilidade digital, linguagem simples, neurodiversidade e jornalismo antirracista/anti-capacitista.
+## Ângulos da reportagem
+- Como ferramentas de tecnologia assistiva têm evoluído.
+- Desafios enfrentados por pessoas com deficiência no mercado de trabalho remoto.
+- Entrevista com especialista em UX inclusivo.
 
-### 2. Problema de Negócio
-Redações tradicionais enfrentam gargalos no cumprimento de normas WCAG 2.2 AA, faltam checklists sistemáticos durante o fechamento de pautas e dependem de ferramentas complexas e pagas de terceiros.
-
-### 3. Objetivos Chave
-- Prover um **Sistema Operacional Editorial (Retranca OS)** leve, responsivo e 100% offline-ready via localStorage.
-- Reduzir o tempo de checagem de acessibilidade em 60% por pauta.
-- Garantir rastreabilidade de todas as 13 etapas essenciais de produção editorial (Checklists SEO, WCAG, IA ética e Distribuição).
-- Promover engajamento através do Modo Motivacional com conquistas e gamificação leve.
+## Referências
+- Diretrizes WCAG 2.2.
+- Casos de sucesso em empresas de tecnologia.
 `,
   },
   {
     id: 'gov_2',
-    type: 'PRD',
-    title: 'PRD — Documento de Requisitos de Produto',
-    description: 'Escopo funcional, requisitos não-funcionais (offline-first) e jornada do usuário. Painel Lateral, CMS Local e Filtros.',
-    lastUpdated: '2026-08-02',
-    content: `# Project Requirements Document (PRD)
-## Funcionalidades e Requisitos do Sistema
+    type: 'RASCUNHO',
+    title: 'Rascunho: Editorial de Domingo',
+    description: 'Primeira versão do texto sobre o impacto da IA no jornalismo.',
+    lastUpdated: '2026-08-03',
+    content: `# O Futuro da Redação
 
-### 1. Módulos Principais
-1. **Dashboard & Calendário Editorial**:
-   - Barra de progresso geral em % da produção.
-   - Indicador dinâmico do total de pautas e concluidas.
-   - Busca em tempo real por palavras-chave em títulos e notas.
-2. **Quadro Kanban de 5 Colunas com Cores Padrão**:
-   - Ideia (Cinza), Pesquisa (Azul), Escrita (Amarelo), Revisão (Laranja), Publicado (Verde).
-3. **Filtros Laterais**:
-   - Filtros de período: Hoje, Esta semana, Este mês, Atrasados.
-   - Filtros por tags: IA, Acessibilidade, Inclusão, SEO, Docs, Blog, Social, Linguagem Simples.
-4. **CMS Editorial Local por Card**:
-   - Campos estendidos: Resumo, Objetivo, Palavra-Chave, Persona, CTA, Links Internos/Externos, Tempo Estimado x Gasto.
-   - Checklists divididos em categorias (Pesquisa, SEO, Acessibilidade, WCAG, IA, Distribuição).
-5. **Modo Motivacional (Gamificação Leve)**:
-   - Pop-up comemorativo ao publicar artigo com mensagem inspiradora.
-   - Conquistas/Badges acumulativas.
-6. **Assistente IA de Redação**:
-   - Integração server-side com Gemini 3.6 Flash para auxílio em Alt Text, SEO Meta tags e sugestão de escopo.
+A inteligência artificial não veio para substituir jornalistas, mas para mudar o fluxo de trabalho.
+Precisamos focar no que nos torna humanos: a empatia, a apuração rigorosa e o questionamento ético.
+
+(Nota: Revisar este parágrafo, está muito genérico)
 `,
   },
   {
     id: 'gov_3',
-    type: 'SDD',
-    title: 'SDD — Documento de Arquitetura de Software',
-    description: 'Modelagem do Tauri com SQLite, Drizzle ORM e Next.js App Router. Persistência em localStorage e fluxo de componentes.',
-    lastUpdated: '2026-08-02',
-    content: `# Software Design Document (SDD)
-## Arquitetura e Modelagem de Dados
+    type: 'ENTREVISTA',
+    title: 'Notas: Entrevista com Especialista',
+    description: 'Pontos principais da conversa com a Dra. Ana.',
+    lastUpdated: '2026-08-04',
+    content: `# Entrevista Dra. Ana
 
-### 1. Stack Tecnológica
-- **Framework**: Next.js 15 (App Router) em TypeScript.
-- **Estilização**: Tailwind CSS v4 e Lucide React Icons.
-- **Animações**: Motion (Framer Motion).
-- **Persistência**: LocalStorage no cliente com sincronização em tempo real e utilitário de Import/Export JSON.
-- **Inteligência Artificial**: Next.js API Routes com SDK @google/genai (Gemini 3.6 Flash).
-
-### 2. Estrutura do Estado
-A aplicação mantém o estado no hook customizado \`useEditorialStorage\` alimentado por eventos do navegador e subscribers em re-render.
+- **Acessibilidade não é apenas código**, é mentalidade.
+- A exclusão digital afeta 20% da população ativa.
+- "Se não funciona para todos, não está pronto."
 `,
-  },
-  {
-    id: 'gov_4',
-    type: 'TSD',
-    title: 'TSD — Especificação Técnica de Integração',
-    description: 'Especificação do pipeline GitOps, sanitização e deploy no modelo Retranca. Progresso e conformidade WCAG.',
-    lastUpdated: '2026-08-02',
-    content: `# Technical Specification Document (TSD)
-## Especificação de Código e Acessibilidade
-
-### 1. Garantia WCAG 2.2 AA no UI
-- Ratios de contraste superiores a 4.5:1 para todo texto legível.
-- Suporte a navegação integral por teclado (focus ring visível \`focus-visible:ring-2\`).
-- Atributos \`aria-label\`, \`aria-expanded\` e \`role="region"\` em modais e gavetas.
-- Modo Escuro nativo com variação controlada de brilho (≤7% variação).
-
-### 2. Cálculo de Progresso
-\`\`\`ts
-const calculateProgress = (articles: Article[]) => {
-  if (!articles.length) return 0;
-  const published = articles.filter(a => a.status === 'publicado').length;
-  return Math.round((published / articles.length) * 100);
-};
-\`\`\`
-`,
-  },
+  }
 ];
