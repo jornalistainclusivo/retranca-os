@@ -1,0 +1,6 @@
+[package]
+name = "spike-b-isolation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]

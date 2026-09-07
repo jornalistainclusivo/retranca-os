@@ -8,3 +8,4 @@ coverage/
 .agents/
 out/
 src-tauri/target/
+spikes/**/target/
