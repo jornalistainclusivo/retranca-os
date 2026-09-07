@@ -1,15 +1,14 @@
 # 🗞️ Jornalista Inclusivo OS (Retranca)
 
-> Sistema Operacional Editorial Desktop focado em acessibilidade digital (WCAG 2.2), linguagem simples (Plain Language) e jornalismo anti-capacitista/antirracista.
+> Sistema Operacional Editorial Desktop (Offline-First) focado em acessibilidade digital (WCAG 2.2), linguagem simples e jornalismo inclusivo.
 
-O Jornalista Inclusivo OS é um Kanban e mini-CMS desktop nativo desenhado para eliminar a fricção técnica na criação de conteúdo acessível. Com soberania local total (offline-first), a plataforma integra a inclusão diretamente no fluxo de concepção.
+O Retranca OS é um Kanban e mini-CMS desktop construído em Tauri v2 e Next.js. Com soberania local total via banco SQLite nativo, ele elimina a fricção técnica para criar conteúdo acessível de maneira privada e segura.
 
 ## 🚀 Quick Start
 
 ### Pré-requisitos
 - Node.js (v18+)
 - Rust e Cargo (para compilação nativa)
-- NPM
 
 ### Instalação e Execução
 
@@ -17,57 +16,49 @@ O Jornalista Inclusivo OS é um Kanban e mini-CMS desktop nativo desenhado para 
    ```bash
    npm install
    ```
-2. (Opcional) Configure variáveis de ambiente copiando `.env.example` para `.env` se for utilizar funcionalidades externas.
+
+2. (Opcional) Copie `.env.example` para `.env` se for utilizar os recursos freemium do Assistente de IA:
+   ```bash
+   cp .env.example .env
+   ```
+
 3. Inicie o ambiente de desenvolvimento desktop (Next.js + Tauri):
    ```bash
    npx tauri dev
    ```
-4. Para gerar o build nativo de produção (.msi / .exe):
-   ```bash
-   npm run build
-   npx tauri build
-   ```
 
 ## ✨ Features
 
-- **Arquitetura Desktop Nativa**: Construído com Tauri v2, garantindo soberania local, segurança e alta performance.
-- **Armazenamento Offline-First**: Banco de dados SQLite local, orquestrado via Drizzle ORM e integração IPC direta (sem servidores Node.js embarcados).
-- **Quadro Kanban Editorial**: Workflow visual (Ideia → Pesquisa → Escrita → Revisão → Publicado).
-- **CMS Local & Metadados**: Formulários estendidos por pauta para gestão de checklists, personas e links.
-- **Gamificação Leve**: Sistema de conquistas ativado na transição de pautas para "Publicado".
-- **Garantia de Acessibilidade (Frozen UI)**: Interface visual blindada para preservar aderência estrita à WCAG 2.2 AAA.
+- **Arquitetura Desktop Nativa**: App standalone super-rápido empacotado via Tauri v2.
+- **Offline-First Absoluto**: Seus dados ficam na sua máquina. O banco SQLite opera diretamente sobre o disco (via Tauri IPC), sem expor portas ou servidores locais.
+- **Workflow Editorial (Kanban)**: Gestão de pautas fluida (Ideia → Pesquisa → Escrita → Revisão → Publicado).
+- **Módulo de Governança Seguro**: Documentação estrita utilizando editores Markdown simples, evitando "Keyboard Traps" (WCAG 2.2 AAA).
+- **Assistente IA Multimodal (Opcional)**: Validação de linguagem inclusiva, alt texts para imagens e SEO, utilizando o Google Gemini.
+- **Gamificação Leve**: Sistema de recompensas e comemoração por publicações.
 
 ## ⚙️ Configuration
 
-A aplicação é projetada para rodar de forma autônoma e offline. Variáveis de ambiente são utilizadas estritamente para integrações opcionais (como as antigas funções de IA via Web).
+A aplicação é autossuficiente e funciona totalmente offline. As variáveis de ambiente são utilizadas estritamente para desbloquear recursos premium/híbridos (IA).
 
 | Variável | Descrição | Padrão |
 | -------- | ----------- | ------- |
-| `GEMINI_API_KEY` | Chave de API do Google Gemini (se aplicável a plugins de IA) | - |
+| `GEMINI_API_KEY` | Chave de API do Google Gemini (para assistente editorial) | - |
 
-## 📚 Documentation (Humans & AI Agents)
+## 📚 Documentação Oficial (Single Source of Truth)
 
-Toda a documentação arquitetural e de produto reside no diretório `/docs`. Nossos documentos seguem rigorosos padrões de governança, servindo como *Single Source of Truth* (SSOT).
+Toda a documentação arquitetural, especificações técnicas e regras de negócio **residem exclusivamente na pasta `/docs`**. Consultas fora dessa pasta para arquitetura são desencorajadas.
 
-- **[PRD (Product Requirements Document)](./docs/PRD.md):** Visão do produto, problemas resolvidos e personas.
-- **[SDD (Software Design Document)](./docs/SDD.md):** Arquitetura técnica e contratos (C4 Model).
-- **[TSD (Technical Specification Document)](./docs/TSD.md):** Detalhes da implementação técnica atual (Tauri, IPC, Drizzle, SQLite).
-- **[Blueprint](./retranca-fullstack-blueprint.md):** Blueprint da arquitetura fullstack desktop.
+- **[PRD (Product Requirements Document)](./docs/PRD.md):** Visão, escopo e requisitos (incluindo Freemium e Inclusão).
+- **[SDD (Software Design Document)](./docs/SDD.md):** Arquitetura C4, Tauri IPC, Banco e Adapters.
+- **[TSD (Technical Specification Document)](./docs/TSD.md):** Setup técnico e implementação de integração contínua (Jest, SQLite).
+- **[Blueprint da Arquitetura](./retranca-fullstack-blueprint.md):** O mapa mestre para a fundação e milestones do projeto Desktop.
 
-### 🤖 LLM & AI Developer Context (llms.txt compatível)
+> **Importante para Agentes Autônomos:** Não procure ou recrie o arquivo `ARCHITECTURE.md` na raiz do projeto. Toda a inteligência arquitetural foi unificada no SDD e Blueprint.
 
-- **Tech Stack:** Next.js 15 (App Router - Static Export), Tauri v2, Rust, SQLite, Drizzle ORM, TailwindCSS v4, Lucide React.
-- **Arquitetura IPC:** Não há Server Actions (Node.js backend). O banco de dados SQLite é gerido localmente via Rust/Tauri IPC e abstraído no client-side via Drizzle ORM.
-- **Core Files:**
-  - `src-tauri/src/lib.rs`: Entrypoint minimalista do core nativo (Tauri), utilizando capacidades Zero-Trust.
-  - `db/schema.ts` e `db/index.ts`: Definições do schema e singleton de conexão SQLite/IPC.
-  - `lib/api/articles.ts`: Camada DAO cliente para operações de banco via IPC.
-  - `lib/adapters/articleAdapter.ts`: Adapter pattern que traduz entidades de banco para as propriedades congeladas de interface.
+## 🤝 Contribuições e UI Freeze
 
-## 🤝 Contributing
-
-O desenvolvimento segue as diretrizes metodológicas da iniciativa JINC Apps. 
-As alterações visuais (`components/`) estão sob **UI Freeze** para garantir conformidade contínua com a WCAG 2.2 AAA. Ao contribuir para o Core Nativo ou camada DAO, exija cobertura de testes unitários e respeite o modelo Zero-Trust de capabilities do Tauri.
+Este projeto encontra-se sob estrita governança da iniciativa JINC Apps. 
+A pasta de componentes visuais (`components/`) está sob **UI Freeze** (Congelamento). Todas as integrações com o banco de dados devem ocorrer na camada client-side por meio de **Adapters** tipados (`lib/adapters/`), garantindo que os componentes mantenham adesão intransigente à acessibilidade (WCAG 2.2 AAA).
 
 ## 📄 License
 
