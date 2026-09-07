@@ -9,6 +9,7 @@ and this project adheres to Semantic Versioning.
 
 ### Added
 - **Phase 5.1 - Native Rust Core & Security:** Implementação de módulos nativos em Rust (`src-tauri/src/hardware.rs` e `src-tauri/src/provisioning.rs`) para detecção de capacidades de Hardware (RAM e CPU) e validação da Supply Chain de modelos locais via PKI (Ed25519) e SHA-256.
+- **Phase 5.2 - Sidecar IPC Supervisor:** Implementação de `src-tauri/src/ai_supervisor.rs` com Job Registry thread-safe (`Mutex<HashMap<String, Child>>`), Tauri Commands assíncronos (`start_inference`, `cancel_inference`), streaming de tokens via `ai-stream-token` events e cancelamento cooperativo via `child.kill()`.
 
 ## [1.1.0] - 2026-09-07
 
