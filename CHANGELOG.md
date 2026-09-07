@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+- **Phase 5.1 - Native Rust Core & Security:** Implementação de módulos nativos em Rust (`src-tauri/src/hardware.rs` e `src-tauri/src/provisioning.rs`) para detecção de capacidades de Hardware (RAM e CPU) e validação da Supply Chain de modelos locais via PKI (Ed25519) e SHA-256.
+
 ## [1.1.0] - 2026-09-07
 
 ### Added

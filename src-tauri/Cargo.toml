@@ -24,3 +24,8 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+sha2 = "0.10.8"
+hex = "0.4.3"
+rand = "0.8.5"
+sysinfo = "0.30.5"
