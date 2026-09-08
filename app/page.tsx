@@ -13,6 +13,8 @@ import { GovernanceView } from '@/components/GovernanceView';
 import { ArticleModal } from '@/components/ArticleModal';
 import { MotivationalModal } from '@/components/MotivationalModal';
 import { AiAssistantModal } from '@/components/AiAssistantModal';
+import { ModelDownloadModal } from '@/components/ModelDownloadModal';
+import type { ModelStatus } from '@/types/ai';
 
 import { fetchAllRawArticles, saveRawArticle, deleteRawArticle } from '@/lib/api/articles';
 import { toArticleProps, fromArticleProps } from '@/lib/adapters/articleAdapter';
@@ -43,6 +45,7 @@ export default function Home() {
   const [isMotivationalModalOpen, setIsMotivationalModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [modelStatus, setModelStatus] = useState<ModelStatus>('MISSING');
 
   // Montagem Inicial: Conexão, Seed e Fetch
   useEffect(() => {
@@ -400,6 +403,22 @@ export default function Home() {
       <AiAssistantModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
+      />
+
+      <ModelDownloadModal 
+        modelStatus={modelStatus}
+        onStartDownload={() => {
+          // For UI/UX testing in Phase 5.4, simulate state transition
+          setModelStatus('DOWNLOADING');
+          if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+            // Em a real scenario, we would invoke a Tauri command here
+            // tauriInvoke('download_model')
+          }
+          // Simulate a download completion after 5 seconds to show VERIFYING
+          setTimeout(() => setModelStatus('VERIFYING'), 5000);
+          setTimeout(() => setModelStatus('READY'), 8000);
+        }}
+        onDismiss={() => setModelStatus('READY')}
       />
 
     </div>

@@ -358,7 +358,13 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
           {/* Streaming Result Output (Typewriter) */}
           {displayResult && (
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 relative">
+            <div
+              className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 relative"
+              aria-live="polite"
+              aria-atomic="false"
+              role="log"
+              aria-label="Resultado da IA Local"
+            >
               <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
                 <span>
                   Resultado da IA Local
