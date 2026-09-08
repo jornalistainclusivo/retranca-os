@@ -2,9 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -13,6 +10,7 @@ const nextConfig: NextConfig = {
   },
   output: 'export', // <-- Alteração principal para o Tauri Desktop
   transpilePackages: ['motion'],
+  turbopack: {}, // Silences Turbopack webpack mismatch error in Next.js 16
   webpack: (config, {dev}) => {
     if (dev && process.env.DISABLE_HMR === 'true') {
       config.watchOptions = {
