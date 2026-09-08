@@ -64,6 +64,24 @@ export default function Home() {
         const adaptedArticles = rawData.map(raw => toArticleProps(raw.article, raw.checklists, raw.history));
         
         setArticles(adaptedArticles);
+
+        // Preflight Check for AI Model
+        if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          try {
+            const result: any = await invoke('preflight_check');
+            if (result.hardware && !result.hardware.local_ai_supported) {
+              setModelStatus('INCOMPATIBLE');
+            } else if (result.model_exists) {
+              setModelStatus('READY');
+            } else {
+              setModelStatus('MISSING');
+            }
+          } catch (e) {
+            console.error('Preflight check failed:', e);
+            setModelStatus('MISSING');
+          }
+        }
       } catch (e) {
         console.error("Error initializing Tauri SQLite Database: ", e);
       } finally {
@@ -407,16 +425,34 @@ export default function Home() {
 
       <ModelDownloadModal 
         modelStatus={modelStatus}
-        onStartDownload={() => {
-          // For UI/UX testing in Phase 5.4, simulate state transition
+        onStartDownload={async () => {
           setModelStatus('DOWNLOADING');
           if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
-            // Em a real scenario, we would invoke a Tauri command here
-            // tauriInvoke('download_model')
+            try {
+              const { invoke } = await import('@tauri-apps/api/core');
+              const { listen } = await import('@tauri-apps/api/event');
+              
+              const unlistenVerifying = await listen('download-verifying', () => {
+                setModelStatus('VERIFYING');
+              });
+
+              // The actual command blocks until success (atomic rename) or fails
+              await invoke('download_model', {
+                jobId: `download_${Date.now()}`,
+                manifestUrl: 'https://cdn.jornalistainclusivo.com/models/v1/manifest.json' // Example public URL
+              });
+
+              unlistenVerifying();
+              setModelStatus('READY');
+            } catch (e) {
+              console.error('Download failed:', e);
+              setModelStatus('FAILED');
+            }
+          } else {
+            // Fallback for non-Tauri dev environment
+            setTimeout(() => setModelStatus('VERIFYING'), 5000);
+            setTimeout(() => setModelStatus('READY'), 8000);
           }
-          // Simulate a download completion after 5 seconds to show VERIFYING
-          setTimeout(() => setModelStatus('VERIFYING'), 5000);
-          setTimeout(() => setModelStatus('READY'), 8000);
         }}
         onDismiss={() => setModelStatus('READY')}
       />

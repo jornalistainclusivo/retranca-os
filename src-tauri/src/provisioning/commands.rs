@@ -1,0 +1,148 @@
+use super::download::download_model_file;
+use super::hardware::{check_hardware, HardwareCapabilities};
+use super::security::{
+    atomic_install, verify_file_hash, verify_manifest_signature, DEV_PUBLIC_KEY_HEX,
+};
+use std::path::PathBuf;
+use tauri::{AppHandle, Manager, Emitter};
+use tokio::sync::{mpsc, Mutex};
+
+/// Estado global para rastrear os canais de cancelamento de download.
+/// A chave é o `job_id`.
+pub struct DownloadRegistry(pub Mutex<std::collections::HashMap<String, mpsc::Sender<()>>>);
+
+#[derive(serde::Serialize)]
+pub struct PreflightResult {
+    hardware: HardwareCapabilities,
+    model_exists: bool,
+}
+
+#[tauri::command]
+pub async fn preflight_check(
+    app: AppHandle,
+) -> Result<PreflightResult, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app_data_dir: {}", e))?;
+    
+    // Certificar-se de que o diretório existe
+    std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+
+    let hw = check_hardware(&app_data_dir);
+    
+    // Verificar se o modelo já existe (usaremos um nome fixo local, ex: "model.gguf")
+    let model_path = app_data_dir.join("model.gguf");
+    let model_exists = model_path.exists();
+
+    Ok(PreflightResult {
+        hardware: hw,
+        model_exists,
+    })
+}
+
+#[tauri::command]
+pub async fn download_model(
+    app: AppHandle,
+    registry: tauri::State<'_, DownloadRegistry>,
+    job_id: String,
+    manifest_url: String, // ex: https://cdn.jornalistainclusivo.com/models/v1/manifest.json
+) -> Result<(), String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app_data_dir: {}", e))?;
+
+    let (cancel_tx, cancel_rx) = mpsc::channel(1);
+
+    {
+        let mut map = registry.0.lock().await;
+        if map.contains_key(&job_id) {
+            return Err("Download for this job_id is already in progress".into());
+        }
+        map.insert(job_id.clone(), cancel_tx);
+    }
+
+    // A partir daqui, usaremos uma função interna para capturar erros e limpar o registry
+    let result = execute_download_pipeline(app.clone(), job_id.clone(), manifest_url, app_data_dir, cancel_rx).await;
+
+    // Remover do registry após término (sucesso ou falha)
+    {
+        let mut map = registry.0.lock().await;
+        map.remove(&job_id);
+    }
+
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn cancel_download(
+    registry: tauri::State<'_, DownloadRegistry>,
+    job_id: String,
+) -> Result<(), String> {
+    let mut map = registry.0.lock().await;
+    if let Some(tx) = map.remove(&job_id) {
+        let _ = tx.send(()).await;
+        Ok(())
+    } else {
+        Err("No active download found for this job_id".into())
+    }
+}
+
+async fn execute_download_pipeline(
+    app: AppHandle,
+    job_id: String,
+    manifest_url: String,
+    app_data_dir: PathBuf,
+    cancel_rx: mpsc::Receiver<()>,
+) -> Result<(), String> {
+    let client = reqwest::Client::new();
+
+    // 1. Fetch Manifest
+    let manifest_resp = client.get(&manifest_url).send().await.map_err(|e| format!("Failed to fetch manifest: {}", e))?;
+    let manifest_text = manifest_resp.text().await.map_err(|e| format!("Failed to read manifest text: {}", e))?;
+
+    // 2. Verify Signature
+    let manifest = verify_manifest_signature(&manifest_text, DEV_PUBLIC_KEY_HEX)
+        .map_err(|e| format!("Security validation failed: {}", e))?;
+
+    let tmp_path = app_data_dir.join(format!("{}.tmp", manifest.filename));
+    let final_path = app_data_dir.join(&manifest.filename);
+
+    // 3. Download to .tmp (handles resume and progress emitting)
+    download_model_file(
+        app.clone(),
+        job_id.clone(),
+        &manifest.download_url,
+        &tmp_path,
+        manifest.size,
+        cancel_rx,
+    ).await.map_err(|e| format!("Download failed: {}", e))?;
+
+    // 4. Emite evento de VERIFYING (UI pode escutar se quiser)
+    let _ = app.emit("download-verifying", &job_id);
+
+    // 5. Verify SHA-256 hash of the downloaded .tmp file
+    // Isso pode bloquear a thread de async (sendo pesado), o ideal é usar spawn_blocking
+    let tmp_path_clone = tmp_path.clone();
+    let expected_sha256 = manifest.sha256.clone();
+    
+    tauri::async_runtime::spawn_blocking(move || {
+        verify_file_hash(&tmp_path_clone, &expected_sha256)
+    })
+    .await
+    .map_err(|e| format!("Join error during hash verification: {}", e))?
+    .map_err(|e| {
+        // Hash falhou, deletar arquivo corrompido
+        let _ = std::fs::remove_file(&tmp_path);
+        format!("Corrupted model, hash mismatch: {}", e)
+    })?;
+
+    // 6. Atomic Install
+    atomic_install(&tmp_path, &final_path).map_err(|e| format!("Failed to install model: {}", e))?;
+
+    // 7. Emit READY
+    let _ = app.emit("download-ready", &job_id);
+
+    Ok(())
+}
