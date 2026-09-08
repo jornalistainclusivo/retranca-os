@@ -1,9 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paperclip, FileImage } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paperclip, FileImage, StopCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { AiAction, GenerationState } from '@/types/ai';
+import {
+  startInference,
+  cancelInference,
+  onStreamToken,
+  onStreamDone,
+  onStreamCanceled,
+  onStreamError,
+} from '@/lib/adapters/localAiAdapter';
 
 interface AiAssistantModalProps {
   isOpen: boolean;
@@ -17,17 +26,40 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   onApplyIdea,
 }) => {
   const [prompt, setPrompt] = useState('');
-  const [action, setAction] = useState<'generate_outline' | 'generate_alt_text' | 'generate_seo' | 'check_accessibility' | 'validate_inclusivity'>('generate_outline');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [action, setAction] = useState<AiAction>('generate_outline');
+  const [genState, setGenState] = useState<GenerationState>('IDLE');
   const [fileName, setFileName] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isPremiumMode = false; // Mock for freemium constraints
 
-  
+  // Streaming result stored in a ref to avoid re-renders per token,
+  // and flushed to state on a 60fps animation frame for the typewriter effect.
+  const streamBufferRef = useRef('');
+  const [displayResult, setDisplayResult] = useState<string | null>(null);
+  const jobIdRef = useRef<string | null>(null);
+  const unlistenRefs = useRef<Array<() => void>>([]);
+  const rafRef = useRef<number | null>(null);
+
+  // Flush buffer to display on animation frame
+  const flushBuffer = useCallback(() => {
+    if (streamBufferRef.current) {
+      setDisplayResult(streamBufferRef.current);
+    }
+    rafRef.current = requestAnimationFrame(flushBuffer);
+  }, []);
+
+  // Cleanup listeners and animation frame on unmount or modal close
+  useEffect(() => {
+    return () => {
+      unlistenRefs.current.forEach((fn) => fn());
+      unlistenRefs.current = [];
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -51,7 +83,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       alert('Formato de arquivo não suportado. Por favor, envie imagens, TXT, MD, CSV ou JSON.');
       setFileName(null);
     }
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -63,47 +95,81 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     e.preventDefault();
     if (!prompt.trim()) return;
 
-    setLoading(true);
-    setResult(null);
+    const jobId = `job_${Date.now()}`;
+    jobIdRef.current = jobId;
+    streamBufferRef.current = '';
+    setDisplayResult(null);
+    setGenState('QUEUED');
+
+    // Cleanup previous listeners
+    unlistenRefs.current.forEach((fn) => fn());
+    unlistenRefs.current = [];
 
     try {
-      const res = await fetch('/api/gemini/editorial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          topic: prompt,
-          text: prompt,
-          imageDescription: prompt,
-          imageBase64,
-          imageMimeType,
-        }),
+      // Register event listeners BEFORE starting inference
+      const unToken = await onStreamToken((ev) => {
+        if (ev.job_id !== jobIdRef.current) return;
+        streamBufferRef.current += ev.token + '\n';
+        setGenState('GENERATING');
       });
-      const data = await res.json();
-      if (data.result) {
-        setResult(data.result);
-      } else {
-        setResult('Erro ao obter resposta da IA.');
-      }
-    } catch (err) {
-      setResult('Erro de conexão com o serviço Gemini.');
-    } finally {
-      setLoading(false);
+      const unDone = await onStreamDone((ev) => {
+        if (ev.job_id !== jobIdRef.current) return;
+        setGenState('COMPLETED');
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        setDisplayResult(streamBufferRef.current);
+      });
+      const unCanceled = await onStreamCanceled((ev) => {
+        if (ev.job_id !== jobIdRef.current) return;
+        setGenState('CANCELLED');
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      });
+      const unError = await onStreamError((ev) => {
+        if (ev.job_id !== jobIdRef.current) return;
+        streamBufferRef.current += `\n\nErro: ${ev.message}`;
+        setDisplayResult(streamBufferRef.current);
+        setGenState('ERROR');
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      });
+
+      unlistenRefs.current = [unToken, unDone, unCanceled, unError];
+
+      // Start the animation-frame flush loop
+      rafRef.current = requestAnimationFrame(flushBuffer);
+
+      // Start the actual inference via Tauri IPC
+      setGenState('LOADING_MODEL');
+      await startInference(jobId, action, prompt);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
+      setGenState('ERROR');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!jobIdRef.current) return;
+    setGenState('CANCELLING');
+    try {
+      await cancelInference(jobIdRef.current);
+    } catch {
+      setGenState('ERROR');
     }
   };
 
   const handleCopy = () => {
-    if (result) {
-      navigator.clipboard.writeText(result);
+    if (displayResult) {
+      navigator.clipboard.writeText(displayResult);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
+  const isLoading = genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING';
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[85vh]">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center space-x-2.5">
@@ -112,7 +178,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
             </span>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Assistente IA de Redação (Retranca)
+                Assistente IA de Redação (Local)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Gere Alt Text WCAG 2.2, esboços em Linguagem Simples e otimizações SEO
@@ -130,7 +196,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
-          
+
           {/* Action Types */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <button
@@ -155,7 +221,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                   : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
               }`}
             >
-              <Eye className="w-4 h-4 text-indigo-600" />
+              <Eye className="w-4 h-4 text-blue-600" />
               <span>Alt Text WCAG</span>
             </button>
 
@@ -181,7 +247,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                   : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
               }`}
             >
-              <FileText className="w-4 h-4 text-purple-600" />
+              <FileText className="w-4 h-4 text-teal-600" />
               <span>Linguagem Simples</span>
             </button>
 
@@ -222,6 +288,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                     : 'Ex: Tecnologias Assistivas no Jornalismo Regional'
                 }
                 className="w-full min-h-[100px] px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium resize-y"
+                disabled={isLoading}
               />
               {fileName && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium border border-blue-200 dark:border-blue-800">
@@ -241,8 +308,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                 </div>
               )}
               <div className="flex items-center justify-between mt-1">
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept="image/*,.txt,.md,.csv,.json"
@@ -257,30 +324,47 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading || !isPremiumMode}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                    isPremiumMode 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50" 
-                      : "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                  }`}
-                  aria-disabled={!isPremiumMode}
-                  tabIndex={isPremiumMode ? 0 : -1}
-                  title={isPremiumMode ? "Gerar com IA" : "Gerar com IA (Recurso Premium)"}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Processando...' : 'Gerar com IA'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {isLoading && (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="px-3 py-2 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                      aria-label="Cancelar geração"
+                    >
+                      <StopCircle className="w-3.5 h-3.5" />
+                      <span>Cancelar</span>
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isLoading || !isPremiumMode}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isPremiumMode
+                        ? "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        : "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                    }`}
+                    aria-disabled={!isPremiumMode || isLoading}
+                    tabIndex={isPremiumMode ? 0 : -1}
+                    title={isPremiumMode ? "Gerar com IA Local" : "Gerar com IA (Recurso Premium)"}
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isLoading ? 'Processando...' : 'Gerar com IA'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </form>
 
-          {/* Result Output */}
-          {result && (
+          {/* Streaming Result Output (Typewriter) */}
+          {displayResult && (
             <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 relative">
               <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
-                <span>Resultado Sugerido pelo Gemini:</span>
+                <span>
+                  Resultado da IA Local
+                  {genState === 'GENERATING' && <span className="ml-1 animate-pulse">●</span>}
+                  {genState === 'CANCELLED' && <span className="ml-1 text-amber-500">(Cancelado)</span>}
+                </span>
                 <button
                   onClick={handleCopy}
                   className="p-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[10px]"
@@ -292,7 +376,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
               <div className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-blue max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-blue-600 hover:prose-a:text-blue-500">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {result}
+                  {displayResult}
                 </ReactMarkdown>
               </div>
             </div>

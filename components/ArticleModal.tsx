@@ -1,5 +1,14 @@
 'use client';
 
+import type { AiAction, GenerationState } from '@/types/ai';
+import {
+  startInference,
+  cancelInference,
+  onStreamToken,
+  onStreamDone,
+  onStreamError,
+} from '@/lib/adapters/localAiAdapter';
+
 import React, { useState } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
 import { 
@@ -88,6 +97,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const aiJobIdRef = React.useRef<string | null>(null);
   
   const isPremiumMode = false; // Mock for freemium constraints
 
@@ -169,30 +179,37 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     onClose();
   };
 
-  // Quick AI Assistant action call
-  const handleAiAction = async (actionType: 'generate_alt_text' | 'generate_seo' | 'check_accessibility' | 'validate_inclusivity') => {
+  // Quick AI Assistant action call via local Tauri IPC
+  const handleAiAction = async (actionType: AiAction) => {
     setAiLoading(true);
     setAiResponse(null);
+
+    const jobId = `article_ai_${Date.now()}`;
+    aiJobIdRef.current = jobId;
+    let buffer = '';
+
     try {
-      const res = await fetch('/api/gemini/editorial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: actionType,
-          topic: formData.title,
-          text: formData.notes || formData.summary,
-          imageDescription: formData.title,
-        }),
+      const unToken = await onStreamToken((ev) => {
+        if (ev.job_id !== aiJobIdRef.current) return;
+        buffer += ev.token + '\n';
+        setAiResponse(buffer);
       });
-      const data = await res.json();
-      if (data.result) {
-        setAiResponse(data.result);
-      } else {
-        setAiResponse('Erro ao obter sugestão da inteligência artificial.');
-      }
-    } catch (err: any) {
-      setAiResponse('Erro de conexão ao executar IA.');
-    } finally {
+      const unDone = await onStreamDone((ev) => {
+        if (ev.job_id !== aiJobIdRef.current) return;
+        setAiLoading(false);
+        unToken(); unDone(); unErr();
+      });
+      const unErr = await onStreamError((ev) => {
+        if (ev.job_id !== aiJobIdRef.current) return;
+        setAiResponse(`Erro: ${ev.message}`);
+        setAiLoading(false);
+        unToken(); unDone(); unErr();
+      });
+
+      await startInference(jobId, actionType, formData.notes || formData.summary || formData.title);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
     }
   };
@@ -471,7 +488,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-800 dark:text-indigo-300">
                 <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
-                <span>Assistência de IA para esta Pauta (Gemini 3.6 Flash)</span>
+                <span>Assistência de IA para esta Pauta (IA Local)</span>
               </div>
               {aiLoading && <span className="text-xs text-indigo-600 font-medium">Gerando...</span>}
             </div>
@@ -537,7 +554,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             {aiResponse && (
               <div className="mt-3 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-                <div className="font-bold text-indigo-600 mb-1">Resultado da IA:</div>
+                <div className="font-bold text-indigo-600 mb-1">Resultado da IA Local:</div>
                 {aiResponse}
               </div>
             )}
