@@ -439,7 +439,6 @@ export default function Home() {
               // The actual command blocks until success (atomic rename) or fails
               await invoke('download_model', {
                 jobId: `download_${Date.now()}`,
-                manifestUrl: 'https://cdn.jornalistainclusivo.com/models/v1/manifest.json' // Example public URL
               });
 
               unlistenVerifying();

@@ -11,6 +11,8 @@ use tokio::sync::{mpsc, Mutex};
 /// A chave é o `job_id`.
 pub struct DownloadRegistry(pub Mutex<std::collections::HashMap<String, mpsc::Sender<()>>>);
 
+const TRUSTED_MANIFEST_URL: &str = "https://cdn.jornalistainclusivo.com/models/v1/manifest.json";
+
 #[derive(serde::Serialize)]
 pub struct PreflightResult {
     hardware: HardwareCapabilities,
@@ -31,9 +33,21 @@ pub async fn preflight_check(
 
     let hw = check_hardware(&app_data_dir);
     
-    // Verificar se o modelo já existe (usaremos um nome fixo local, ex: "model.gguf")
-    let model_path = app_data_dir.join("model.gguf");
-    let model_exists = model_path.exists();
+    // Verificar se o modelo já existe lendo o manifest local
+    let local_manifest_path = app_data_dir.join("manifest.json");
+    let model_exists = if local_manifest_path.exists() {
+        if let Ok(manifest_text) = std::fs::read_to_string(&local_manifest_path) {
+            if let Ok(signed_manifest) = serde_json::from_str::<super::security::SignedManifest>(&manifest_text) {
+                app_data_dir.join(&signed_manifest.manifest.filename).exists()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    };
 
     Ok(PreflightResult {
         hardware: hw,
@@ -46,7 +60,6 @@ pub async fn download_model(
     app: AppHandle,
     registry: tauri::State<'_, DownloadRegistry>,
     job_id: String,
-    manifest_url: String, // ex: https://cdn.jornalistainclusivo.com/models/v1/manifest.json
 ) -> Result<(), String> {
     let app_data_dir = app
         .path()
@@ -64,7 +77,7 @@ pub async fn download_model(
     }
 
     // A partir daqui, usaremos uma função interna para capturar erros e limpar o registry
-    let result = execute_download_pipeline(app.clone(), job_id.clone(), manifest_url, app_data_dir, cancel_rx).await;
+    let result = execute_download_pipeline(app.clone(), job_id.clone(), TRUSTED_MANIFEST_URL.to_string(), app_data_dir, cancel_rx).await;
 
     // Remover do registry após término (sucesso ou falha)
     {
@@ -140,6 +153,10 @@ async fn execute_download_pipeline(
 
     // 6. Atomic Install
     atomic_install(&tmp_path, &final_path).map_err(|e| format!("Failed to install model: {}", e))?;
+
+    // 6.1 Save manifest locally
+    let local_manifest_path = app_data_dir.join("manifest.json");
+    std::fs::write(&local_manifest_path, &manifest_text).map_err(|e| format!("Failed to save manifest locally: {}", e))?;
 
     // 7. Emit READY
     let _ = app.emit("download-ready", &job_id);

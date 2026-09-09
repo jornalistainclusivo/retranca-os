@@ -8,7 +8,7 @@ use std::path::Path;
 /// O Trust Anchor: Chave pública Ed25519 de desenvolvimento.
 /// AVISO: Esta chave é apenas para desenvolvimento/testes locais e NÃO DEVE
 /// ser usada em produção. (A chave privada nunca é comitada).
-pub const DEV_PUBLIC_KEY_HEX: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"; // Placeholder, será sobrescrito se quisermos uma real, mas para os testes geramos chaves dinâmicas ou chaves de teste específicas.
+pub const DEV_PUBLIC_KEY_HEX: &str = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Manifest {
