@@ -5,10 +5,24 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
-/// O Trust Anchor: Chave pública Ed25519 de desenvolvimento.
-/// AVISO: Esta chave é apenas para desenvolvimento/testes locais e NÃO DEVE
-/// ser usada em produção. (A chave privada nunca é comitada).
-pub const DEV_PUBLIC_KEY_HEX: &str = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
+/// Retorna a chave pública Ed25519 (Trust Anchor) para validação do manifesto.
+/// Em release, exige a presença da variável de ambiente PROD_PUBLIC_KEY_HEX.
+/// Em debug, usa uma chave de desenvolvimento explícita caso a de produção não exista.
+pub fn get_trust_anchor() -> String {
+    if let Some(key) = option_env!("PROD_PUBLIC_KEY_HEX") {
+        key.to_string()
+    } else {
+        #[cfg(debug_assertions)]
+        {
+            // AVISO: Esta chave é apenas para desenvolvimento/testes locais
+            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a".to_string()
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            panic!("PROD_PUBLIC_KEY_HEX env var must be set during release build");
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Manifest {
@@ -79,8 +93,8 @@ pub fn verify_manifest_signature(
     public_key_hex: &str,
 ) -> Result<Manifest, SecurityError> {
     // 1. Decodificar a chave pública
-    let pub_key_bytes = hex::decode(public_key_hex).map_err(|_| SecurityError::KeyParseError)?;
-    let public_key = VerifyingKey::try_from(pub_key_bytes.as_slice())
+    let public_key_bytes = hex::decode(public_key_hex).map_err(|_| SecurityError::KeyParseError)?;
+    let public_key = VerifyingKey::try_from(public_key_bytes.as_slice())
         .map_err(|_| SecurityError::KeyParseError)?;
 
     // 2. Parse do SignedManifest

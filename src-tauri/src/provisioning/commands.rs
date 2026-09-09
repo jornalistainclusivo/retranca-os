@@ -1,7 +1,7 @@
 use super::download::download_model_file;
 use super::hardware::{check_hardware, HardwareCapabilities};
 use super::security::{
-    atomic_install, verify_file_hash, verify_manifest_signature, DEV_PUBLIC_KEY_HEX,
+    atomic_install, verify_file_hash, verify_manifest_signature, get_trust_anchor,
 };
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Emitter};
@@ -35,19 +35,37 @@ pub async fn preflight_check(
     
     // Verificar se o modelo já existe lendo o manifest local
     let local_manifest_path = app_data_dir.join("manifest.json");
-    let model_exists = if local_manifest_path.exists() {
+    let mut model_exists = false;
+
+    if local_manifest_path.exists() {
         if let Ok(manifest_text) = std::fs::read_to_string(&local_manifest_path) {
-            if let Ok(signed_manifest) = serde_json::from_str::<super::security::SignedManifest>(&manifest_text) {
-                app_data_dir.join(&signed_manifest.manifest.filename).exists()
-            } else {
-                false
+            // Validar assinatura contra o Trust Anchor
+            let trust_anchor = get_trust_anchor();
+            if let Ok(manifest) = verify_manifest_signature(&manifest_text, &trust_anchor) {
+                let model_path = app_data_dir.join(&manifest.filename);
+                // Verificar se o arquivo existe
+                if model_path.exists() {
+                    if let Ok(metadata) = std::fs::metadata(&model_path) {
+                        // Verificar o tamanho
+                        if metadata.len() == manifest.size {
+                            // Verificar SHA-256 em thread separada
+                            let model_path_clone = model_path.clone();
+                            let expected_hash = manifest.sha256.clone();
+                            let sha256_matches = tauri::async_runtime::spawn_blocking(move || {
+                                verify_file_hash(&model_path_clone, &expected_hash).is_ok()
+                            })
+                            .await
+                            .unwrap_or(false);
+
+                            if sha256_matches {
+                                model_exists = true;
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            false
         }
-    } else {
-        false
-    };
+    }
 
     Ok(PreflightResult {
         hardware: hw,
@@ -116,7 +134,8 @@ async fn execute_download_pipeline(
     let manifest_text = manifest_resp.text().await.map_err(|e| format!("Failed to read manifest text: {}", e))?;
 
     // 2. Verify Signature
-    let manifest = verify_manifest_signature(&manifest_text, DEV_PUBLIC_KEY_HEX)
+    let trust_anchor = get_trust_anchor();
+    let manifest = verify_manifest_signature(&manifest_text, &trust_anchor)
         .map_err(|e| format!("Security validation failed: {}", e))?;
 
     let tmp_path = app_data_dir.join(format!("{}.tmp", manifest.filename));
