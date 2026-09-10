@@ -6,24 +6,26 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AiAction, GenerationState } from '@/types/ai';
 import {
-  startInference,
-  cancelInference,
   onStreamToken,
   onStreamDone,
   onStreamCanceled,
   onStreamError,
 } from '@/lib/adapters/localAiAdapter';
+import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter';
+import type { ProviderType } from '@/types/ai';
 
 interface AiAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyIdea?: (title: string, summary: string) => void;
+  provider?: ProviderType;
 }
 
 export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   isOpen,
   onClose,
   onApplyIdea,
+  provider = 'NONE',
 }) => {
   const [prompt, setPrompt] = useState('');
   const [action, setAction] = useState<AiAction>('generate_outline');
@@ -33,7 +35,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPremiumMode = false; // Mock for freemium constraints
+  const isPremiumMode = true; // Unlock for local AI testing
 
   // Streaming result stored in a ref to avoid re-renders per token,
   // and flushed to state on a 60fps animation frame for the typewriter effect.
@@ -138,7 +140,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
       // Start the actual inference via Tauri IPC
       setGenState('LOADING_MODEL');
-      await startInference(jobId, action, prompt);
+      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
+      await providerImpl.startInference(jobId, action, prompt);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
@@ -150,7 +153,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     if (!jobIdRef.current) return;
     setGenState('CANCELLING');
     try {
-      await cancelInference(jobIdRef.current);
+      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
+      await providerImpl.cancelInference(jobIdRef.current);
     } catch {
       setGenState('ERROR');
     }

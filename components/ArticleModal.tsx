@@ -1,13 +1,14 @@
 'use client';
 
-import type { AiAction, GenerationState } from '@/types/ai';
+import type { AiAction } from '@/types/ai';
+
 import {
-  startInference,
-  cancelInference,
   onStreamToken,
   onStreamDone,
   onStreamError,
 } from '@/lib/adapters/localAiAdapter';
+import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter';
+import type { ProviderType } from '@/types/ai';
 
 import React, { useState } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
@@ -40,6 +41,7 @@ interface ArticleModalProps {
   onDelete: (id: string) => void;
   isFocusMode: boolean;
   setIsFocusMode: (focus: boolean) => void;
+  provider?: ProviderType;
 }
 
 const CATEGORIES: CategoryTag[] = [
@@ -69,6 +71,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   onDelete,
   isFocusMode,
   setIsFocusMode,
+  provider = 'NONE',
 }) => {
   const [prevArticleId, setPrevArticleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Article>(() => article || {
@@ -99,7 +102,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const aiJobIdRef = React.useRef<string | null>(null);
   
-  const isPremiumMode = false; // Mock for freemium constraints
+  const isPremiumMode = true; // Unlock for local AI testing
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
@@ -206,7 +209,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         unToken(); unDone(); unErr();
       });
 
-      await startInference(jobId, actionType, formData.notes || formData.summary || formData.title);
+      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
+      await providerImpl.startInference(jobId, actionType, formData.notes || formData.summary || formData.title);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);

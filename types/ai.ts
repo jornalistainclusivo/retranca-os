@@ -65,12 +65,29 @@ export interface DownloadProgressEvent {
   bytes_total: number;
 }
 
-// ─── Hardware Info (mirroring Rust struct) ────────────────────────────────────
+// ─── AI Capabilities (mirroring Rust struct) ───────────────────────────────────
+
+export type ProviderType = 'SIDECAR' | 'OLLAMA' | 'CLOUD' | 'NONE';
+
+export interface OllamaStatus {
+  detected: boolean;
+  endpoint: string;
+  reachable: boolean;
+  models: string[];
+}
 
 export interface HardwareInfo {
   total_ram_gb: number;
   arch: string;
   is_supported: boolean;
+}
+
+export interface LocalAiCapabilities {
+  hardware: HardwareInfo;
+  model_exists: boolean;
+  ollama: OllamaStatus;
+  sidecar_ready: boolean;
+  selected_provider: ProviderType;
 }
 
 // ─── Inference Request Payload ───────────────────────────────────────────────

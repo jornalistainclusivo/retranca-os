@@ -5,12 +5,14 @@ import { Download, AlertTriangle, CheckCircle2, Loader2, XCircle, HardDrive } fr
 import type { ModelStatus, DownloadProgressEvent } from '@/types/ai';
 
 interface ModelDownloadModalProps {
+  isOpen: boolean;
   modelStatus: ModelStatus;
   onStartDownload: () => void;
   onDismiss: () => void;
 }
 
 export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
+  isOpen,
   modelStatus,
   onStartDownload,
   onDismiss,
@@ -46,7 +48,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
     };
   }, [modelStatus]);
 
-  if (modelStatus === 'READY') return null;
+  if (!isOpen) return null;
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';

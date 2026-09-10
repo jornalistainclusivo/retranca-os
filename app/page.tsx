@@ -14,7 +14,7 @@ import { ArticleModal } from '@/components/ArticleModal';
 import { MotivationalModal } from '@/components/MotivationalModal';
 import { AiAssistantModal } from '@/components/AiAssistantModal';
 import { ModelDownloadModal } from '@/components/ModelDownloadModal';
-import type { ModelStatus } from '@/types/ai';
+import type { ModelStatus, LocalAiCapabilities, ProviderType } from '@/types/ai';
 
 import { fetchAllRawArticles, saveRawArticle, deleteRawArticle } from '@/lib/api/articles';
 import { toArticleProps, fromArticleProps } from '@/lib/adapters/articleAdapter';
@@ -46,6 +46,9 @@ export default function Home() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [modelStatus, setModelStatus] = useState<ModelStatus>('MISSING');
+  const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false);
+  const [capabilities, setCapabilities] = useState<LocalAiCapabilities | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<ProviderType>('NONE');
 
   // Montagem Inicial: Conexão, Seed e Fetch
   useEffect(() => {
@@ -69,14 +72,29 @@ export default function Home() {
         if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
           const { invoke } = await import('@tauri-apps/api/core');
           try {
-            const result: any = await invoke('preflight_check');
-            if (result.hardware && !result.hardware.local_ai_supported) {
+            const result = await invoke<LocalAiCapabilities>('preflight_check');
+            const caps = { ...result };
+            
+            if (caps.hardware && !caps.hardware.is_supported) {
               setModelStatus('INCOMPATIBLE');
-            } else if (result.model_exists) {
+            } else if (caps.model_exists) {
               setModelStatus('READY');
             } else {
               setModelStatus('MISSING');
             }
+
+            // Derive provider
+            if (caps.ollama?.reachable) {
+              caps.selected_provider = 'OLLAMA';
+            } else if (caps.sidecar_ready) {
+              caps.selected_provider = 'SIDECAR';
+            } else {
+              caps.selected_provider = 'NONE';
+            }
+            
+            setCapabilities(caps);
+            setSelectedProvider(caps.selected_provider);
+
           } catch (e) {
             console.error('Preflight check failed:', e);
             setModelStatus('MISSING');
@@ -294,6 +312,11 @@ export default function Home() {
 
   const publishedCount = articles.filter((a) => a.status === 'publicado').length;
 
+  const showDownloadModal = 
+    modelStatus !== 'READY' && 
+    !isDownloadModalDismissed && 
+    selectedProvider === 'NONE';
+
   if (!isMounted) return null;
 
   return (
@@ -408,6 +431,7 @@ export default function Home() {
         onClose={() => setIsArticleModalOpen(false)}
         onSave={handleSaveArticle}
         onDelete={handleDeleteArticle}
+        provider={capabilities?.selected_provider ?? 'NONE'}
         isFocusMode={isFocusMode}
         setIsFocusMode={setIsFocusMode}
       />
@@ -421,9 +445,11 @@ export default function Home() {
       <AiAssistantModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
+        provider={selectedProvider}
       />
 
       <ModelDownloadModal 
+        isOpen={showDownloadModal}
         modelStatus={modelStatus}
         onStartDownload={async () => {
           setModelStatus('DOWNLOADING');
@@ -443,6 +469,7 @@ export default function Home() {
 
               unlistenVerifying();
               setModelStatus('READY');
+              setSelectedProvider('SIDECAR');
             } catch (e) {
               console.error('Download failed:', e);
               setModelStatus('FAILED');
@@ -450,10 +477,13 @@ export default function Home() {
           } else {
             // Fallback for non-Tauri dev environment
             setTimeout(() => setModelStatus('VERIFYING'), 5000);
-            setTimeout(() => setModelStatus('READY'), 8000);
+            setTimeout(() => {
+              setModelStatus('READY');
+              setSelectedProvider('SIDECAR');
+            }, 8000);
           }
         }}
-        onDismiss={() => setModelStatus('READY')}
+        onDismiss={() => setIsDownloadModalDismissed(true)}
       />
 
     </div>

@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onArticlesUpdated,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPremiumMode = false; // Mock for freemium constraints
+  const isPremiumMode = true; // Unlock for local AI testing
 
   // Calculate overall metrics
   const total = articles.length;

@@ -3,6 +3,7 @@ use super::hardware::{check_hardware, HardwareCapabilities};
 use super::security::{
     atomic_install, verify_file_hash, verify_manifest_signature, get_trust_anchor,
 };
+use super::ollama::{check_ollama_capabilities, OllamaStatus};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Emitter};
 use tokio::sync::{mpsc, Mutex};
@@ -17,6 +18,9 @@ const TRUSTED_MANIFEST_URL: &str = "https://cdn.jornalistainclusivo.com/models/v
 pub struct PreflightResult {
     hardware: HardwareCapabilities,
     model_exists: bool,
+    ollama: OllamaStatus,
+    sidecar_ready: bool,
+    selected_provider: String,
 }
 
 #[tauri::command]
@@ -67,9 +71,23 @@ pub async fn preflight_check(
         }
     }
 
+    let ollama = check_ollama_capabilities().await;
+    let sidecar_ready = model_exists;
+    
+    let selected_provider = if ollama.reachable {
+        "OLLAMA".to_string()
+    } else if sidecar_ready {
+        "SIDECAR".to_string()
+    } else {
+        "NONE".to_string()
+    };
+
     Ok(PreflightResult {
         hardware: hw,
         model_exists,
+        ollama,
+        sidecar_ready,
+        selected_provider,
     })
 }
 

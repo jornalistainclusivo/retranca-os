@@ -15,26 +15,7 @@ import type {
   AiAction,
 } from '@/types/ai';
 
-// ─── Dynamic Tauri Import (SSR-safe) ────────────────────────────────────────
-
-let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
-let tauriListen: ((event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>) | null = null;
-
-async function ensureTauri() {
-  if (typeof window === 'undefined') return false;
-  if (tauriInvoke && tauriListen) return true;
-
-  try {
-    const core = await import('@tauri-apps/api/core');
-    const eventMod = await import('@tauri-apps/api/event');
-    tauriInvoke = core.invoke;
-    tauriListen = eventMod.listen as typeof tauriListen;
-    return true;
-  } catch {
-    // Not running inside Tauri (e.g. browser dev, tests)
-    return false;
-  }
-}
+import { ensureTauri, tauriInvoke, tauriListen } from './tauriContext';
 
 // ─── Hardware Detection ──────────────────────────────────────────────────────
 
@@ -46,35 +27,7 @@ export async function checkHardware(): Promise<HardwareInfo> {
   return tauriInvoke('check_hardware', {}) as Promise<HardwareInfo>;
 }
 
-// ─── Inference ───────────────────────────────────────────────────────────────
-
-const SIDECAR_BINARY = 'llama-sidecar'; // Resolved by Tauri at runtime
-
-export async function startInference(
-  jobId: string,
-  action: AiAction,
-  prompt: string,
-): Promise<void> {
-  const ready = await ensureTauri();
-  if (!ready || !tauriInvoke) {
-    throw new Error('Tauri runtime not available');
-  }
-
-  await tauriInvoke('start_inference', {
-    job_id: jobId,
-    program: SIDECAR_BINARY,
-    args: ['--action', action, '--prompt', prompt],
-  });
-}
-
-export async function cancelInference(jobId: string): Promise<void> {
-  const ready = await ensureTauri();
-  if (!ready || !tauriInvoke) {
-    throw new Error('Tauri runtime not available');
-  }
-
-  await tauriInvoke('cancel_inference', { job_id: jobId });
-}
+// Note: startInference and cancelInference have been moved to aiProviderRouter.ts
 
 // ─── Event Listeners ─────────────────────────────────────────────────────────
 

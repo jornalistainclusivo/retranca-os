@@ -78,15 +78,15 @@ describe('localAiAdapter', () => {
   });
 
   it('startInference throws when not inside Tauri', async () => {
-    const { startInference } = await import('@/lib/adapters/localAiAdapter');
+    const { SidecarProvider } = await import('@/lib/adapters/aiProviderRouter');
     await expect(
-      startInference('job-1', 'generate_outline', 'test prompt'),
+      SidecarProvider.startInference('job-1', 'generate_outline', 'test prompt'),
     ).rejects.toThrow('Tauri runtime not available');
   });
 
   it('cancelInference throws when not inside Tauri', async () => {
-    const { cancelInference } = await import('@/lib/adapters/localAiAdapter');
-    await expect(cancelInference('job-1')).rejects.toThrow(
+    const { SidecarProvider } = await import('@/lib/adapters/aiProviderRouter');
+    await expect(SidecarProvider.cancelInference('job-1')).rejects.toThrow(
       'Tauri runtime not available',
     );
   });
