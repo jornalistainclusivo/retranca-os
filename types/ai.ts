@@ -77,9 +77,9 @@ export interface OllamaStatus {
 }
 
 export interface HardwareInfo {
-  total_ram_gb: number;
-  arch: string;
-  is_supported: boolean;
+  total_ram_bytes: number;
+  architecture: string;
+  local_ai_supported: boolean;
 }
 
 export interface LocalAiCapabilities {

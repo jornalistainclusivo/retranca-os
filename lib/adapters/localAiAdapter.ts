@@ -22,7 +22,7 @@ import { ensureTauri, tauriInvoke, tauriListen } from './tauriContext';
 export async function checkHardware(): Promise<HardwareInfo> {
   const ready = await ensureTauri();
   if (!ready || !tauriInvoke) {
-    return { total_ram_gb: 0, arch: 'unknown', is_supported: false };
+    return { total_ram_bytes: 0, architecture: 'unknown', local_ai_supported: false };
   }
   return tauriInvoke('check_hardware', {}) as Promise<HardwareInfo>;
 }

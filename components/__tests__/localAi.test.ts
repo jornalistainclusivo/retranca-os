@@ -57,8 +57,8 @@ describe('AI State Machine Types', () => {
   });
 
   it('HardwareInfo correctly marks unsupported hardware', () => {
-    const hw: HardwareInfo = { total_ram_gb: 2.0, arch: 'armv7', is_supported: false };
-    expect(hw.is_supported).toBe(false);
+    const hw: HardwareInfo = { total_ram_bytes: 2_000_000_000, architecture: 'armv7', local_ai_supported: false };
+    expect(hw.local_ai_supported).toBe(false);
   });
 });
 
@@ -74,7 +74,7 @@ describe('localAiAdapter', () => {
     // and the adapter should return a safe fallback.
     const { checkHardware } = await import('@/lib/adapters/localAiAdapter');
     const result = await checkHardware();
-    expect(result).toEqual({ total_ram_gb: 0, arch: 'unknown', is_supported: false });
+    expect(result).toEqual({ total_ram_bytes: 0, architecture: 'unknown', local_ai_supported: false });
   });
 
   it('startInference throws when not inside Tauri', async () => {

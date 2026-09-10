@@ -77,3 +77,25 @@ pub fn check_hardware(app_data_dir: &std::path::Path) -> HardwareCapabilities {
         warnings,
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hardware_capabilities_serialization() {
+        let caps = HardwareCapabilities {
+            architecture: "x86_64".to_string(),
+            cpu_features: vec!["avx2".to_string()],
+            total_ram_bytes: 32_000_000_000,
+            available_disk_bytes: 100_000_000_000,
+            local_ai_supported: true,
+            warnings: vec![],
+        };
+        let serialized = serde_json::to_string(&caps).unwrap();
+        assert!(serialized.contains("\"architecture\":\"x86_64\""));
+        assert!(serialized.contains("\"total_ram_bytes\":32000000000"));
+        assert!(serialized.contains("\"local_ai_supported\":true"));
+        assert!(!serialized.contains("\"total_ram_gb\""));
+        assert!(!serialized.contains("\"is_supported\""));
+    }
+}

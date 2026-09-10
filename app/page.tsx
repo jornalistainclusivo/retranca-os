@@ -75,7 +75,7 @@ export default function Home() {
             const result = await invoke<LocalAiCapabilities>('preflight_check');
             const caps = { ...result };
             
-            if (caps.hardware && !caps.hardware.is_supported) {
+            if (caps.hardware && !caps.hardware.local_ai_supported) {
               setModelStatus('INCOMPATIBLE');
             } else if (caps.model_exists) {
               setModelStatus('READY');

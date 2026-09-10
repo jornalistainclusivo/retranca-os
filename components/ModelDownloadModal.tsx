@@ -75,7 +75,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
             </span>
             <div>
               <h2 id="model-download-title" className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Modelo de IA Local
+                Modelo de IA do Retranca
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Provisionamento do modelo para inferência offline
@@ -94,7 +94,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 <Download className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-800 dark:text-amber-200">
                   <p className="font-bold mb-1">Download necessário</p>
-                  <p>O modelo de IA local ainda não foi provisionado neste dispositivo. O download é necessário para ativar as funcionalidades de IA offline.</p>
+                  <p>O modelo de IA do Retranca ainda não foi provisionado neste dispositivo. O download é necessário para executá-lo offline.</p>
                 </div>
               </div>
               <button
@@ -168,8 +168,8 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-red-800 dark:text-red-200">
                   <p className="font-bold mb-1">Hardware incompatível</p>
-                  <p>Este dispositivo não atende aos requisitos mínimos para execução do modelo de IA local (mínimo 4 GB RAM, arquitetura x86_64 ou aarch64).</p>
-                  <p className="mt-1">As funcionalidades de IA não estarão disponíveis neste dispositivo.</p>
+                  <p>Este dispositivo não atende aos requisitos mínimos para execução do modelo de IA distribuído pelo Retranca (mínimo 8 GB RAM, arquitetura x86_64 com AVX2 ou aarch64).</p>
+                  <p className="mt-1">Outros provedores de IA local (como Ollama) ainda podem ser utilizados, caso estejam disponíveis.</p>
                 </div>
               </div>
               <button
