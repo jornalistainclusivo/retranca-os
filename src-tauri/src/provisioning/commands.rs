@@ -74,13 +74,7 @@ pub async fn preflight_check(
     let ollama = check_ollama_capabilities().await;
     let sidecar_ready = model_exists;
     
-    let selected_provider = if ollama.reachable {
-        "OLLAMA".to_string()
-    } else if sidecar_ready {
-        "SIDECAR".to_string()
-    } else {
-        "NONE".to_string()
-    };
+    let selected_provider = determine_provider(&ollama, sidecar_ready);
 
     Ok(PreflightResult {
         hardware: hw,
@@ -199,4 +193,85 @@ async fn execute_download_pipeline(
     let _ = app.emit("download-ready", &job_id);
 
     Ok(())
+}
+
+pub fn determine_provider(ollama: &OllamaStatus, sidecar_ready: bool) -> String {
+    if ollama.reachable && !ollama.models.is_empty() {
+        "OLLAMA".to_string()
+    } else if sidecar_ready {
+        "SIDECAR".to_string()
+    } else {
+        "NONE".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provisioning::ollama::OllamaStatus;
+
+    #[test]
+    fn test_provider_selection_case_a() {
+        // Case A: Sidecar READY, Ollama reachable, Ollama has models => OLLAMA
+        let ollama = OllamaStatus {
+            detected: true,
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            reachable: true,
+            models: vec!["model1".to_string()],
+        };
+        let sidecar_ready = true;
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "OLLAMA");
+    }
+
+    #[test]
+    fn test_provider_selection_case_b() {
+        // Case B: Sidecar NOT READY, Ollama reachable, Ollama has at least one model => OLLAMA
+        let ollama = OllamaStatus {
+            detected: true,
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            reachable: true,
+            models: vec!["model1".to_string()],
+        };
+        let sidecar_ready = false;
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "OLLAMA");
+    }
+
+    #[test]
+    fn test_provider_selection_case_c() {
+        // Case C: Sidecar NOT READY, Ollama reachable, Ollama has zero models => NONE
+        let ollama = OllamaStatus {
+            detected: true,
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            reachable: true,
+            models: vec![],
+        };
+        let sidecar_ready = false;
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "NONE");
+    }
+
+    #[test]
+    fn test_provider_selection_case_d() {
+        // Case D: Sidecar NOT READY, Ollama unreachable => NONE
+        let ollama = OllamaStatus {
+            detected: false,
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            reachable: false,
+            models: vec![],
+        };
+        let sidecar_ready = false;
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "NONE");
+    }
+    
+    #[test]
+    fn test_provider_selection_sidecar_fallback() {
+        // Sidecar READY, Ollama unreachable => SIDECAR
+        let ollama = OllamaStatus {
+            detected: false,
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            reachable: false,
+            models: vec![],
+        };
+        let sidecar_ready = true;
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "SIDECAR");
+    }
 }

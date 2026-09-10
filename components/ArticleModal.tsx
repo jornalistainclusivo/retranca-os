@@ -102,7 +102,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const aiJobIdRef = React.useRef<string | null>(null);
   
-  const isPremiumMode = true; // Unlock for local AI testing
+  const isPremiumMode = false; // Mock for freemium constraints
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);

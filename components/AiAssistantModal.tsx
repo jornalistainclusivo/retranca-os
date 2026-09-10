@@ -35,7 +35,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPremiumMode = true; // Unlock for local AI testing
+  const isPremiumMode = false; // Mock for freemium constraints
 
   // Streaming result stored in a ref to avoid re-renders per token,
   // and flushed to state on a 60fps animation frame for the typewriter effect.

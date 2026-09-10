@@ -40,6 +40,15 @@ pub async fn start_ollama_inference(
     model: String,
     prompt: String,
 ) -> Result<(), String> {
+    let trimmed_model = model.trim();
+    if trimmed_model.is_empty() {
+        return Err("Model name cannot be empty".to_string());
+    }
+    if trimmed_model.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err("Model name contains invalid characters".to_string());
+    }
+    let model = trimmed_model.to_string();
+
     let job_id_clone = job_id.clone();
     let app_clone = app.clone();
 

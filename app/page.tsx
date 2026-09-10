@@ -83,15 +83,9 @@ export default function Home() {
               setModelStatus('MISSING');
             }
 
-            // Derive provider
-            if (caps.ollama?.reachable) {
-              caps.selected_provider = 'OLLAMA';
-            } else if (caps.sidecar_ready) {
-              caps.selected_provider = 'SIDECAR';
-            } else {
-              caps.selected_provider = 'NONE';
-            }
-            
+            // Use provider selection from the Rust backend directly.
+            // The backend enforces: ollama.reachable && !ollama.models.is_empty() → OLLAMA
+            // Do NOT override selected_provider in the frontend.
             setCapabilities(caps);
             setSelectedProvider(caps.selected_provider);
 
@@ -314,8 +308,7 @@ export default function Home() {
 
   const showDownloadModal = 
     modelStatus !== 'READY' && 
-    !isDownloadModalDismissed && 
-    selectedProvider === 'NONE';
+    !isDownloadModalDismissed;
 
   if (!isMounted) return null;
 
