@@ -16,7 +16,7 @@ A arquitetura mantém a pilha tecnológica atual (React/TypeScript + Tauri/Rust 
 *   **Fronteira Confiável:** Atua como o maestro de segurança e orquestração.
 *   **Revalidação de Pré-requisitos:** Confirma se o JSON recebido possui as evidências obrigatórias para a `AiAction` solicitada.
 *   **Context Budget:** Executa a política autoritativa de tamanho de contexto (admitindo ou suprimindo campos).
-*   **Prompt Assembly:** Carrega as *System Instructions* confiáveis estáticas e envelopa os dados editoriais não confiáveis (Untrusted Data) com segurança contra injeção.
+*   **Prompt Assembly:** Carrega as *System Instructions* confiáveis estáticas e envelopa os dados editoriais não confiáveis (Untrusted Data) com mecanismos de mitigação estrutural contra injeção.
 *   **Integração com Provider:** Repassa o payload montado e validado para a abstração de provedor (Ollama Gateway / Sidecar) e faz o streaming da resposta de volta ao Frontend.
 
 ## 3. Contratos de Dados e IPC (TypeScript ↔ Rust)
@@ -116,11 +116,11 @@ match action {
 
 ## 6. Prompt Assembly e Delimitação Segura
 
-A estratégia de isolamento (*Prompt Injection Mitigation*) será a demarcação estrutural de tags, separando claramente o que é comando (Trusted) e o que é dado do usuário (Untrusted).
+A estratégia de isolamento (*Prompt Injection Mitigation*) atua como mitigação estrutural, não garantindo imunidade semântica absoluta contra o LLM. Ela demarca tags para separar claramente o que é comando (Trusted) e o que é dado do usuário (Untrusted). Essa separação é primariamente lógica na etapa de Prompt Assembly: provedores atuais podem receber a composição como uma única string final, enquanto futuros provedores poderão mapear essa estrutura nativamente para *roles* (System/User).
 
 1.  **System Instructions (Trusted):** Injetadas baseadas na Ação. Exigem neutralidade (anti-chatbot).
 2.  **Task Instructions (Trusted):** O comando principal e escopo da projeção.
-3.  **Untrusted Editorial Data:** Dados escapados.
+3.  **Untrusted Editorial Data:** Dados escapados. O escaping protege os delimitadores, mas não impede interpretações adversariais complexas.
 
 **Template Lógico de Montagem:**
 ```xml
@@ -143,10 +143,10 @@ Verifique a densidade e oportunidade da palavra-chave especificada nos metadados
 
 Evitamos a adição de complexidade desnecessária (como tokenizers nativos robustos em C++) implementando uma heurística simples:
 
-*   **Estimativa Conservadora:** Utilizar aproximação de caracteres (ex: `char_count / 4 ≈ tokens`). O backend deve possuir hard-limits baseados no modelo esperado local (ex: buffer arbitrário limitando payloads para 4K tokens no caso de pequenos modelos).
+*   **Estimativa Conservadora:** Utilizar aproximação de caracteres (ex: `char_count / 4 ≈ tokens`). O limite de budget deve ser configurável ou *capability-aware* (dinâmico por provedor/modelo ativo), evitando hard-limits arquiteturais fixos em código. Nenhuma dependência pesada de tokenizer é obrigatória.
 *   **Omissão Integral:** Se a projeção da ação incluir campos secundários, o tamanho agregado é avaliado. O Rust omitirá categorias opcionais *por inteiro* em vez de mutilá-las, se houver perigo de estourar a janela.
 *   **Sem Truncamento no Meio:** Nunca campos essenciais são cortados passivamente. Se o item essencial (ex: `EditorialContent`) exceder sozinho a viabilidade do sistema local, o backend cancela a operação e retorna um erro.
-*   **Warnings de UX:** Quando dados opcionais são descartados no backend, o primeiro evento emitido na geração de texto deverá carregar uma flag informacional (`context_reduced: true`), que a UI exibirá como um banner de atenção ao usuário (ex: "Notas extras foram ignoradas por limite de tamanho").
+*   **Warnings de UX:** Quando dados opcionais são descartados no backend, o sistema emitirá um evento IPC dedicado de aviso pré-stream (ex: `AiContextNoticeEvent`) ou usará um campo opcional formal já definido no DTO de resposta, acionando um banner na UI (ex: "Notas extras foram ignoradas por limite de tamanho"). Não inventaremos *flags* informais não-tipadas no evento de stream.
 
 ## 8. Tratamento de Erros e Estados IPC
 
@@ -158,8 +158,9 @@ A interface IPC utilizará fluxos e tipos existentes com semântica estendida:
 ## 9. Tratamento Especial: Alt Text e Media Asset (Restrição)
 
 O PRD determina uma trava estrutural severa contra inferência de Alt Text sem objeto de mídia correspondente:
-*   Para evitar depender obrigatoriamente de modelos nativos locais (Llava, etc.) para multimodais neste momento da evolução do sistema, suportaremos a passagem do descritivo visual humano: `MediaAsset { type: 'visual_description', data: '...texto' }`.
-*   O Rust acata e insere no Prompt os dados visuais. Se, por ventura, a ação `Alt Text WCAG` não portar nenhum item iterável dentro de `context.media`, o processo causa `hard-fail` na validação de dependência CA2.
+*   Para viabilizar a feature no fluxo textual da 6.3, suportaremos a passagem do descritivo visual humano: `MediaAsset { type: 'visual_description', data: '...texto' }`.
+*   O tipo `image_asset` só será acatado e repassado se o provedor ativo declarar formalmente capacidade multimodal; caso contrário, o backend aborta retornando o erro IPC `Error_UnsupportedCapability`. Sob nenhuma hipótese o payload Base64 bruto será inserido em um prompt puramente textual.
+*   O Rust acata e insere no Prompt os dados visuais válidos. Se a ação `Alt Text WCAG` não portar nenhum item iterável dentro de `context.media`, o processo causa `hard-fail` na validação de dependência CA2.
 
 ## 10. Tratamento Especial: EditorialContent Sob-demanda
 
