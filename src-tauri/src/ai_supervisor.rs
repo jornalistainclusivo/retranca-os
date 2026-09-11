@@ -34,8 +34,7 @@ struct ErrorEvent {
 
 /// Spawn a sidecar (or any subprocess) and stream stdout tokens to the frontend.
 /// Each line of stdout from the child process is emitted as an `ai-stream-token` event.
-#[tauri::command]
-pub async fn start_inference(
+pub async fn start_inference_internal(
     app: AppHandle,
     registry: State<'_, JobRegistry>,
     job_id: String,
@@ -111,6 +110,18 @@ pub async fn start_inference(
     });
 
     Ok(())
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+pub async fn start_inference(
+    app: AppHandle,
+    registry: State<'_, JobRegistry>,
+    job_id: String,
+    program: String,
+    args: Vec<String>,
+) -> Result<(), String> {
+    start_inference_internal(app, registry, job_id, program, args).await
 }
 
 /// Kill the running sidecar associated with `job_id`, reap it, and emit

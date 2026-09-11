@@ -37,7 +37,10 @@ export type AiAction =
   | 'generate_alt_text'
   | 'generate_seo'
   | 'check_accessibility'
-  | 'validate_inclusivity';
+  | 'validate_inclusivity'
+  | 'research_gaps'
+  | 'plain_language'
+  | 'editorial_review';
 
 // ─── Tauri Event Payloads (mirroring Rust structs) ───────────────────────────
 
@@ -56,6 +59,14 @@ export interface AiStreamCanceledEvent {
 
 export interface AiStreamErrorEvent {
   job_id: string;
+  message: string;
+  error_code?: 'MISSING_PREREQUISITES' | 'CONTEXT_EXCEEDED' | 'UNSUPPORTED_CAPABILITY' | 'VALIDATION_ERROR' | string;
+}
+
+export interface AiContextNoticeEvent {
+  job_id: string;
+  notice_code: string;
+  omitted_fields: string[];
   message: string;
 }
 
@@ -97,4 +108,37 @@ export interface InferenceRequest {
   action: AiAction;
   prompt: string;
   context?: string;
+}
+
+// ─── Editorial AI Context DTOs (Phase 6.3) ───────────────────────────────────
+
+export interface MediaAsset {
+  type: string;
+  format: string;
+  visual_description?: string;
+  image_asset?: string;
+}
+
+export interface EditorialContent {
+  title?: string;
+  summary?: string;
+  body?: string;
+  media_assets?: MediaAsset[];
+}
+
+export interface EditorialContext {
+  content: EditorialContent;
+  format_constraints?: string;
+  audience_persona?: string;
+  seo_keyword?: string;
+  notes?: string;
+  links?: string[];
+}
+
+export interface AiOrchestrationRequest {
+  job_id: string;
+  action: AiAction;
+  context: EditorialContext;
+  provider: ProviderType;
+  model?: string;
 }

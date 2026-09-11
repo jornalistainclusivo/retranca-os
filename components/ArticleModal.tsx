@@ -10,9 +10,10 @@ import {
   onStreamToken,
   onStreamDone,
   onStreamError,
+  onStreamNotice,
 } from '@/lib/adapters/localAiAdapter';
 import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter';
-import type { ProviderType } from '@/types/ai';
+import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
 import React, { useState } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
@@ -208,6 +209,10 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     let buffer = '';
 
     try {
+      const unNotice = await onStreamNotice((ev) => {
+        if (ev.job_id !== aiJobIdRef.current) return;
+        console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
+      });
       const unToken = await onStreamToken((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         buffer += ev.token;
@@ -216,17 +221,34 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       const unDone = await onStreamDone((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         setAiLoading(false);
-        unToken(); unDone(); unErr();
+        unToken(); unDone(); unErr(); unNotice();
       });
       const unErr = await onStreamError((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         setAiResponse(`Erro: ${ev.message}`);
         setAiLoading(false);
-        unToken(); unDone(); unErr();
+        unToken(); unDone(); unErr(); unNotice();
       });
 
+      const request: AiOrchestrationRequest = {
+        job_id: jobId,
+        action: actionType,
+        provider: provider,
+        model: selectedModel || undefined,
+        context: {
+          content: {
+            title: formData.title,
+            summary: formData.summary,
+            body: formData.objective,
+          },
+          audience_persona: formData.persona,
+          seo_keyword: formData.keyword,
+          notes: formData.notes,
+        }
+      };
+
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.startInference(jobId, actionType, formData.notes || formData.summary || formData.title, selectedModel || undefined);
+      await providerImpl.startInference(request);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);

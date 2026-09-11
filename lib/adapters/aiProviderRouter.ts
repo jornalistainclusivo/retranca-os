@@ -1,4 +1,4 @@
-import type { AiAction } from '@/types/ai';
+import type { AiAction, AiOrchestrationRequest } from '@/types/ai';
 
 // We reuse ensureTauri from localAiAdapter or create a shared context.
 // For now we'll import it from localAiAdapter or rewrite it to export.
@@ -6,21 +6,17 @@ import type { AiAction } from '@/types/ai';
 import { tauriInvoke, ensureTauri } from './tauriContext';
 
 export interface AiProvider {
-  startInference(jobId: string, action: AiAction, prompt: string, model?: string): Promise<void>;
+  startInference(request: AiOrchestrationRequest): Promise<void>;
   cancelInference(jobId: string): Promise<void>;
 }
 
 export const SidecarProvider: AiProvider = {
-  async startInference(jobId: string, action: AiAction, prompt: string, model?: string) {
+  async startInference(request: AiOrchestrationRequest) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
-    const SIDECAR_BINARY = 'llama-sidecar';
-    await tauriInvoke('start_inference', {
-      jobId,
-      program: SIDECAR_BINARY,
-      args: ['--action', action, '--prompt', prompt],
-    });
+    request.provider = 'SIDECAR';
+    await tauriInvoke('start_orchestrated_inference', { request });
   },
   async cancelInference(jobId: string) {
     const ready = await ensureTauri();
@@ -30,19 +26,16 @@ export const SidecarProvider: AiProvider = {
 };
 
 export const OllamaProvider: AiProvider = {
-  async startInference(jobId: string, action: AiAction, prompt: string, model?: string) {
+  async startInference(request: AiOrchestrationRequest) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
-    if (!model) {
+    if (!request.model) {
       throw new Error("Phase 6.2: Seleção explícita de modelo pendente. Selecione um modelo Ollama em Developer Tools.");
     }
 
-    await tauriInvoke('start_ollama_inference', {
-      jobId,
-      model,
-      prompt,
-    });
+    request.provider = 'OLLAMA';
+    await tauriInvoke('start_orchestrated_inference', { request });
   },
   async cancelInference(jobId: string) {
     const ready = await ensureTauri();
