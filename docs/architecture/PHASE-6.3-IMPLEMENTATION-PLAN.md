@@ -78,7 +78,7 @@ Não haverá substituição destrutiva de `InferenceRequest`.
 2. **Camada Tauri IPC (`src-tauri/src/commands/`)**
    * Expor `start_orchestrated_inference`.
    * Suprimir comandos antigos para _release_.
-3. **Frontend Types e Adapters (`src/types/`, `lib/adapters/`)**
+3. **Frontend Types e Adapters (`types/`, `lib/adapters/`)**
    * Adicionar novo contrato e eventos.
    * Ajustar o chamador de _Provider_.
 4. **UI React (`components/ArticleModal.tsx`)**
@@ -87,4 +87,4 @@ Não haverá substituição destrutiva de `InferenceRequest`.
 
 ## 5. Plano de Testes Obrigatório
 
-*   **Security Enforcement Test:** Adicionar script / teste integracional comprovando que uma chamada maliciosa IPC diretamente a `start_ollama_inference` ou `start_inference` em build *release* será fatalmente rejeitada pelo Tauri, confirmando que apenas o validador (`start_orchestrated_inference`) transaciona requisições ao LLM local.
+*   **Security Enforcement Test:** Adicionar script / teste integracional comprovando que uma chamada IPC maliciosa direcionada aos comandos brutos (`start_ollama_inference` ou `start_inference`) em build *release* falhará de forma limpa, uma vez que tais comandos não estarão registrados nem disponíveis no `invoke_handler` de produção. Nenhum crash da aplicação é esperado, confirmando que apenas o validador (`start_orchestrated_inference`) transaciona requisições ao LLM local.
