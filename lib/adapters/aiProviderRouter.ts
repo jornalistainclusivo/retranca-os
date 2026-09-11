@@ -17,7 +17,7 @@ export const SidecarProvider: AiProvider = {
 
     const SIDECAR_BINARY = 'llama-sidecar';
     await tauriInvoke('start_inference', {
-      job_id: jobId,
+      jobId,
       program: SIDECAR_BINARY,
       args: ['--action', action, '--prompt', prompt],
     });
@@ -25,7 +25,7 @@ export const SidecarProvider: AiProvider = {
   async cancelInference(jobId: string) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
-    await tauriInvoke('cancel_inference', { job_id: jobId });
+    await tauriInvoke('cancel_inference', { jobId });
   }
 };
 
@@ -39,9 +39,9 @@ export const OllamaProvider: AiProvider = {
     }
 
     await tauriInvoke('start_ollama_inference', {
-      job_id: jobId,
-      model: model,
-      prompt: prompt,
+      jobId,
+      model,
+      prompt,
     });
   },
   async cancelInference(jobId: string) {

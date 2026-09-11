@@ -112,7 +112,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       // Register event listeners BEFORE starting inference
       const unToken = await onStreamToken((ev) => {
         if (ev.job_id !== jobIdRef.current) return;
-        streamBufferRef.current += ev.token + '\n';
+        streamBufferRef.current += ev.token;
         setGenState('GENERATING');
       });
       const unDone = await onStreamDone((ev) => {

@@ -27,20 +27,74 @@ struct OllamaGenerateRequest<'a> {
     stream: bool,
 }
 
-#[derive(Deserialize)]
-struct OllamaGenerateResponse {
-    response: String,
-    done: bool,
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct OllamaGenerateResponse {
+    pub response: String,
+    pub done: bool,
 }
 
 #[derive(Deserialize)]
-struct OllamaTag {
-    name: String,
+pub struct OllamaTag {
+    pub name: String,
 }
 
 #[derive(Deserialize)]
-struct OllamaTagsResponse {
-    models: Vec<OllamaTag>,
+pub struct OllamaTagsResponse {
+    pub models: Vec<OllamaTag>,
+}
+
+pub struct NdJsonStreamParser {
+    buffer: String,
+}
+
+impl NdJsonStreamParser {
+    pub fn new() -> Self {
+        Self {
+            buffer: String::new(),
+        }
+    }
+
+    pub fn push_chunk(&mut self, chunk: &[u8]) -> Vec<OllamaGenerateResponse> {
+        let mut results = Vec::new();
+        if let Ok(text) = std::str::from_utf8(chunk) {
+            self.buffer.push_str(text);
+            while let Some(pos) = self.buffer.find('\n') {
+                let line = self.buffer[..pos].trim().to_string();
+                self.buffer.drain(..=pos);
+
+                if line.is_empty() {
+                    continue;
+                }
+
+                if let Ok(parsed) = serde_json::from_str::<OllamaGenerateResponse>(&line) {
+                    results.push(parsed);
+                }
+            }
+        }
+        results
+    }
+}
+
+pub async fn validate_model(client: &Client, base_url: &str, model: &str) -> Result<bool, String> {
+    let tags_resp = client
+        .get(format!("{}/api/tags", base_url))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !tags_resp.status().is_success() {
+        return Err(format!("Invalid HTTP status: {}", tags_resp.status()));
+    }
+
+    let tags = tags_resp
+        .json::<OllamaTagsResponse>()
+        .await
+        .map_err(|e| format!("Invalid JSON: {}", e))?;
+
+    Ok(tags
+        .models
+        .iter()
+        .any(|t| t.name == model || t.name == format!("{}:latest", model)))
 }
 
 #[tauri::command]
@@ -79,22 +133,27 @@ pub async fn start_ollama_inference(
         };
 
         // Validate model exists
-        if let Ok(tags_resp) = client.get("http://127.0.0.1:11434/api/tags").send().await {
-            if let Ok(tags) = tags_resp.json::<OllamaTagsResponse>().await {
-                let model_exists = tags
-                    .models
-                    .iter()
-                    .any(|t| t.name == model || t.name == format!("{}:latest", model));
-                if !model_exists {
-                    let _ = app_clone.emit(
-                        "ai-stream-error",
-                        ErrorEvent {
-                            job_id: job_id_clone.clone(),
-                            message: format!("Model {} is not available in local Ollama", model),
-                        },
-                    );
-                    return;
-                }
+        match validate_model(&client, "http://127.0.0.1:11434", &model).await {
+            Ok(true) => {} // model exists
+            Ok(false) => {
+                let _ = app_clone.emit(
+                    "ai-stream-error",
+                    ErrorEvent {
+                        job_id: job_id_clone.clone(),
+                        message: format!("Model {} is not available in local Ollama", model),
+                    },
+                );
+                return;
+            }
+            Err(e) => {
+                let _ = app_clone.emit(
+                    "ai-stream-error",
+                    ErrorEvent {
+                        job_id: job_id_clone.clone(),
+                        message: format!("Model validation failed: {}", e),
+                    },
+                );
+                return;
             }
         }
 
@@ -115,28 +174,17 @@ pub async fn start_ollama_inference(
                     );
                     return;
                 }
+                let mut parser = NdJsonStreamParser::new();
                 while let Ok(Some(chunk)) = response.chunk().await {
-                    // Parse JSON chunks (Ollama sends NDJSON)
-                    if let Ok(text) = std::str::from_utf8(&chunk) {
-                        for line in text.lines() {
-                            if line.trim().is_empty() {
-                                continue;
-                            }
-                            if let Ok(parsed) = serde_json::from_str::<OllamaGenerateResponse>(line)
-                            {
-                                let _ = app_clone.emit(
-                                    "ai-stream-token",
-                                    TokenEvent {
-                                        job_id: job_id_clone.clone(),
-                                        token: parsed.response,
-                                    },
-                                );
-
-                                if parsed.done {
-                                    // Not strictly breaking the chunk loop, just stopping processing
-                                }
-                            }
-                        }
+                    let parsed_results = parser.push_chunk(&chunk);
+                    for parsed in parsed_results {
+                        let _ = app_clone.emit(
+                            "ai-stream-token",
+                            TokenEvent {
+                                job_id: job_id_clone.clone(),
+                                token: parsed.response,
+                            },
+                        );
                     }
                 }
 
@@ -184,4 +232,68 @@ pub async fn get_ollama_models() -> Result<Vec<String>, String> {
         .await
         .map_err(|e| e.to_string())?;
     Ok(tags.models.into_iter().map(|m| m.name).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_model_fails_closed_on_network_error() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let client = Client::new();
+            let res = validate_model(&client, "http://127.0.0.1:0", "gemma4").await;
+            assert!(res.is_err(), "Must fail closed on network error");
+        });
+    }
+
+    #[test]
+    fn test_validate_model_fails_closed_on_invalid_json() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let mut server = mockito::Server::new_async().await;
+            let mock = server
+                .mock("GET", "/api/tags")
+                .with_status(200)
+                .with_body("invalid json")
+                .create_async()
+                .await;
+
+            let client = Client::new();
+            let res = validate_model(&client, &server.url(), "gemma4").await;
+            assert!(res.is_err(), "Must fail closed on invalid json");
+            mock.assert_async().await;
+        });
+    }
+
+    #[test]
+    fn test_validate_model_fails_closed_on_invalid_status() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let mut server = mockito::Server::new_async().await;
+            let mock = server
+                .mock("GET", "/api/tags")
+                .with_status(500)
+                .create_async()
+                .await;
+
+            let client = Client::new();
+            let res = validate_model(&client, &server.url(), "gemma4").await;
+            assert!(res.is_err(), "Must fail closed on 500 status");
+            mock.assert_async().await;
+        });
+    }
+
+    #[test]
+    fn test_ndjson_parser_tolerates_chunk_boundaries() {
+        let mut parser = NdJsonStreamParser::new();
+        let chunk1 = b"{\"response\":\"hel\",\"done\":false";
+        let chunk2 = b"}\n{\"response\":\"lo\",\"done\":false}\n";
+
+        let res1 = parser.push_chunk(chunk1);
+        assert_eq!(res1.len(), 0, "Should not parse partial chunk");
+
+        let res2 = parser.push_chunk(chunk2);
+        assert_eq!(res2.len(), 2, "Should parse two items after chunk boundary");
+        assert_eq!(res2[0].response, "hel");
+        assert_eq!(res2[1].response, "lo");
+    }
 }

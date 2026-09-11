@@ -1,5 +1,8 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 import type { AiAction } from '@/types/ai';
 
 import { useEntitlement } from '@/lib/contexts/EntitlementContext';
@@ -31,7 +34,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Maximize,
-  Minimize
+  Minimize,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface ArticleModalProps {
@@ -101,6 +106,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const aiJobIdRef = React.useRef<string | null>(null);
   
   const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
@@ -109,7 +115,16 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     setPrevArticleId(article.id);
     setFormData({ ...article });
     setAiResponse(null);
+    setCopied(false);
   }
+
+  const handleCopy = () => {
+    if (aiResponse) {
+      navigator.clipboard.writeText(aiResponse);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (!isOpen || !article) return null;
 
@@ -195,7 +210,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     try {
       const unToken = await onStreamToken((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
-        buffer += ev.token + '\n';
+        buffer += ev.token;
         setAiResponse(buffer);
       });
       const unDone = await onStreamDone((ev) => {
@@ -558,9 +573,31 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
 
             {aiResponse && (
-              <div className="mt-3 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-                <div className="font-bold text-indigo-600 mb-1">Resultado da IA Local:</div>
-                {aiResponse}
+              <div 
+                className="mt-3 p-4 bg-white dark:bg-zinc-900 rounded-lg border border-indigo-200 dark:border-indigo-800"
+                aria-live={aiLoading ? "off" : "polite"}
+                aria-atomic="false"
+                role="log"
+                aria-label="Resultado da IA Local"
+              >
+                <div className="flex items-center justify-between font-bold text-indigo-600 mb-2 text-xs">
+                  <span>
+                    Resultado da IA Local{aiLoading && <span className="ml-1 animate-pulse">●</span>}:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 text-[10px]"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+                  </button>
+                </div>
+                <div className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-indigo max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-indigo-600 hover:prose-a:text-indigo-500">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {aiResponse}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
