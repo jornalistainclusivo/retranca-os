@@ -107,6 +107,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [analysisContent, setAnalysisContent] = useState('');
   const [copied, setCopied] = useState(false);
   const aiJobIdRef = React.useRef<string | null>(null);
   
@@ -236,14 +237,28 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         provider: provider,
         model: selectedModel || undefined,
         context: {
-          content: {
-            title: formData.title,
-            summary: formData.summary,
-            body: formData.objective,
+          articleId: formData.id,
+          editorialStatus: formData.status,
+          categoryTag: formData.categoryTag,
+          metadata: {
+            title: formData.title || undefined,
+            summary: formData.summary || undefined,
+            objective: formData.objective || undefined,
+            keyword: formData.keyword || undefined,
+            persona: formData.persona || undefined,
+            cta: formData.cta || undefined,
           },
-          audience_persona: formData.persona,
-          seo_keyword: formData.keyword,
-          notes: formData.notes,
+          notes: formData.notes || undefined,
+          links: {
+             internal: formData.internalLinks || undefined,
+             external: formData.externalLinks || undefined,
+          },
+          checklistsState: {
+             total: formData.checklists.length,
+             completed: completedChecklists,
+             pendingItems: formData.checklists.filter(c => !c.completed).map(c => c.label)
+          },
+          content: analysisContent.trim() ? { source: 'pasted', text: analysisContent.trim() } : undefined,
         }
       };
 
@@ -428,6 +443,19 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Conteúdo para análise (Texto completo)
+                </label>
+                <textarea
+                  rows={2}
+                  value={analysisContent}
+                  onChange={(e) => setAnalysisContent(e.target.value)}
+                  placeholder="Cole o texto da matéria para validação (opcional)..."
+                  className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Palavra-Chave SEO
                 </label>
                 <input
@@ -536,62 +564,107 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('generate_alt_text') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Alt Text WCAG com IA" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                ♿ Alt Text WCAG com IA
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('generate_seo') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Otimizar Meta Tags SEO" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                🔍 Otimizar Meta Tags SEO
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('check_accessibility') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Auditoria de Linguagem Simples" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                ✨ Auditoria de Linguagem Simples
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('validate_inclusivity') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Validador Inclusivo" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                🤝 Validador Inclusivo
-              </button>
+              {(() => {
+                const hasContent = !!analysisContent.trim();
+                const hasSummary = !!formData.summary?.trim();
+                const hasKeyword = !!formData.keyword?.trim();
+                const hasObjective = !!formData.objective?.trim();
+
+                const evaluateAction = (action: AiAction) => {
+                  let available = false;
+                  let missing = '';
+                  
+                  switch (action) {
+                    case 'generate_alt_text':
+                      available = false; // Need images for alt text
+                      missing = 'Mídias';
+                      break;
+                    case 'generate_seo':
+                      available = hasKeyword && (hasContent || hasSummary);
+                      missing = !hasKeyword ? 'Keyword SEO' : 'Resumo/Conteúdo';
+                      break;
+                    case 'check_accessibility':
+                    case 'validate_inclusivity':
+                    case 'plain_language':
+                      available = hasContent || hasSummary;
+                      missing = 'Resumo/Conteúdo';
+                      break;
+                    case 'research_gaps':
+                      available = !!formData.title?.trim() || hasObjective;
+                      missing = 'Título ou Objetivo';
+                      break;
+                    default:
+                      available = true;
+                  }
+                  return { available, missing };
+                };
+
+                const altTextCheck = evaluateAction('generate_alt_text');
+                const seoCheck = evaluateAction('generate_seo');
+                const accessibilityCheck = evaluateAction('check_accessibility');
+                const inclusivityCheck = evaluateAction('validate_inclusivity');
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && altTextCheck.available ? () => handleAiAction('generate_alt_text') : undefined}
+                      aria-disabled={!isPremiumMode || !altTextCheck.available}
+                      tabIndex={isPremiumMode && altTextCheck.available ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : !altTextCheck.available ? `Requer: ${altTextCheck.missing}` : "Alt Text WCAG com IA"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                        isPremiumMode && altTextCheck.available
+                          ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      ♿ Alt Text WCAG {(!altTextCheck.available && isPremiumMode) && `(Falta ${altTextCheck.missing})`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && seoCheck.available ? () => handleAiAction('generate_seo') : undefined}
+                      aria-disabled={!isPremiumMode || !seoCheck.available}
+                      tabIndex={isPremiumMode && seoCheck.available ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : !seoCheck.available ? `Requer: ${seoCheck.missing}` : "Otimizar Meta Tags SEO"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                        isPremiumMode && seoCheck.available
+                          ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      🔍 Otimizar Meta Tags SEO {(!seoCheck.available && isPremiumMode) && `(Falta ${seoCheck.missing})`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && accessibilityCheck.available ? () => handleAiAction('check_accessibility') : undefined}
+                      aria-disabled={!isPremiumMode || !accessibilityCheck.available}
+                      tabIndex={isPremiumMode && accessibilityCheck.available ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : !accessibilityCheck.available ? `Requer: ${accessibilityCheck.missing}` : "Auditoria de Linguagem Simples"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                        isPremiumMode && accessibilityCheck.available
+                          ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      ✨ Auditoria de Linguagem Simples {(!accessibilityCheck.available && isPremiumMode) && `(Falta ${accessibilityCheck.missing})`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && inclusivityCheck.available ? () => handleAiAction('validate_inclusivity') : undefined}
+                      aria-disabled={!isPremiumMode || !inclusivityCheck.available}
+                      tabIndex={isPremiumMode && inclusivityCheck.available ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : !inclusivityCheck.available ? `Requer: ${inclusivityCheck.missing}` : "Validador Inclusivo"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                        isPremiumMode && inclusivityCheck.available
+                          ? "bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900" 
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      🤝 Validador Inclusivo {(!inclusivityCheck.available && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
             {aiResponse && (

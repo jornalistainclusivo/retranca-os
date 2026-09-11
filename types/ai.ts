@@ -112,27 +112,46 @@ export interface InferenceRequest {
 
 // ─── Editorial AI Context DTOs (Phase 6.3) ───────────────────────────────────
 
-export interface MediaAsset {
-  type: string;
-  format: string;
-  visual_description?: string;
-  image_asset?: string;
+export interface EditorialMetadata {
+  title?: string;
+  summary?: string;
+  objective?: string;
+  keyword?: string;
+  persona?: string;
+  cta?: string;
+}
+
+export interface EditorialLinks {
+  internal?: string;
+  external?: string;
+}
+
+export interface EditorialChecklistsState {
+  total: number;
+  completed: number;
+  pendingItems: string[];
 }
 
 export interface EditorialContent {
-  title?: string;
-  summary?: string;
-  body?: string;
-  media_assets?: MediaAsset[];
+  source: string;
+  text: string;
+}
+
+export interface MediaAsset {
+  type: string;
+  data: string;
 }
 
 export interface EditorialContext {
-  content: EditorialContent;
-  format_constraints?: string;
-  audience_persona?: string;
-  seo_keyword?: string;
+  articleId: string;
+  editorialStatus: string;
+  categoryTag: string;
+  metadata: EditorialMetadata;
   notes?: string;
-  links?: string[];
+  links?: EditorialLinks;
+  checklistsState?: EditorialChecklistsState;
+  content?: EditorialContent;
+  media?: MediaAsset[];
 }
 
 export interface AiOrchestrationRequest {

@@ -80,7 +80,17 @@ describe('localAiAdapter', () => {
   it('startInference throws when not inside Tauri', async () => {
     const { SidecarProvider } = await import('@/lib/adapters/aiProviderRouter');
     await expect(
-      SidecarProvider.startInference('job-1', 'generate_outline', 'test prompt'),
+      SidecarProvider.startInference({
+        job_id: 'job-1',
+        action: 'generate_outline',
+        provider: 'SIDECAR',
+        context: {
+          articleId: 'test',
+          editorialStatus: 'Rascunho',
+          categoryTag: 'Geral',
+          metadata: { summary: 'test prompt' }
+        }
+      }),
     ).rejects.toThrow('Tauri runtime not available');
   });
 

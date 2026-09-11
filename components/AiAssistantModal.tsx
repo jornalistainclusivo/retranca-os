@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paperclip, FileImage, StopCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { AiAction, GenerationState } from '@/types/ai';
+import type { AiAction, GenerationState, AiOrchestrationRequest } from '@/types/ai';
 import { useEntitlement } from '@/lib/contexts/EntitlementContext';
 import {
   onStreamToken,
@@ -47,11 +47,11 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const rafRef = useRef<number | null>(null);
 
   // Flush buffer to display on animation frame
-  const flushBuffer = useCallback(() => {
+  const flushBuffer = useCallback(function flush() {
     if (streamBufferRef.current) {
       setDisplayResult(streamBufferRef.current);
     }
-    rafRef.current = requestAnimationFrame(flushBuffer);
+    rafRef.current = requestAnimationFrame(flush);
   }, []);
 
   // Cleanup listeners and animation frame on unmount or modal close
@@ -142,7 +142,28 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       // Start the actual inference via Tauri IPC
       setGenState('LOADING_MODEL');
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.startInference(jobId, action, prompt, selectedModel || undefined);
+      
+      const request: AiOrchestrationRequest = {
+        job_id: jobId,
+        action,
+        provider: provider === 'OLLAMA' ? 'OLLAMA' : 'SIDECAR',
+        model: selectedModel || undefined,
+        context: {
+          articleId: 'standalone-modal',
+          editorialStatus: 'Rascunho',
+          categoryTag: 'Geral',
+          metadata: {
+            title: fileName || 'Documento',
+            summary: prompt,
+          },
+          content: {
+            source: 'user_input',
+            text: prompt,
+          }
+        }
+      };
+      
+      await providerImpl.startInference(request);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
