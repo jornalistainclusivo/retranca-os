@@ -102,7 +102,12 @@ pub async fn start_inference(
             }
         }
         // EOF reached — child finished naturally
-        let _ = app_clone.emit("ai-stream-done", DoneEvent { job_id: job_id_clone });
+        let _ = app_clone.emit(
+            "ai-stream-done",
+            DoneEvent {
+                job_id: job_id_clone,
+            },
+        );
     });
 
     Ok(())
@@ -124,7 +129,9 @@ pub async fn cancel_inference(
         .ok_or_else(|| format!("No running job found for id: {}", job_id))?;
 
     // Force-kill; on Windows this calls TerminateProcess, on Unix it sends SIGKILL
-    child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+    child
+        .kill()
+        .map_err(|e| format!("Failed to kill process: {}", e))?;
     // Reap the process so it does not become a zombie
     let _ = child.wait();
 

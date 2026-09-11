@@ -5,6 +5,7 @@ import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paper
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AiAction, GenerationState } from '@/types/ai';
+import { useEntitlement } from '@/lib/contexts/EntitlementContext';
 import {
   onStreamToken,
   onStreamDone,
@@ -35,7 +36,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPremiumMode = false; // Mock for freemium constraints
+  const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
 
   // Streaming result stored in a ref to avoid re-renders per token,
   // and flushed to state on a 60fps animation frame for the typewriter effect.
@@ -141,9 +142,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       // Start the actual inference via Tauri IPC
       setGenState('LOADING_MODEL');
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.startInference(jobId, action, prompt);
+      await providerImpl.startInference(jobId, action, prompt, selectedModel || undefined);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
       setGenState('ERROR');
     }

@@ -6,12 +6,12 @@ import type { AiAction } from '@/types/ai';
 import { tauriInvoke, ensureTauri } from './tauriContext';
 
 export interface AiProvider {
-  startInference(jobId: string, action: AiAction, prompt: string): Promise<void>;
+  startInference(jobId: string, action: AiAction, prompt: string, model?: string): Promise<void>;
   cancelInference(jobId: string): Promise<void>;
 }
 
 export const SidecarProvider: AiProvider = {
-  async startInference(jobId: string, action: AiAction, prompt: string) {
+  async startInference(jobId: string, action: AiAction, prompt: string, model?: string) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
@@ -30,21 +30,19 @@ export const SidecarProvider: AiProvider = {
 };
 
 export const OllamaProvider: AiProvider = {
-  async startInference(jobId: string, action: AiAction, prompt: string) {
+  async startInference(jobId: string, action: AiAction, prompt: string, model?: string) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
-    // We fetch preflight check to ensure Ollama capability is exposed.
-    const caps = (await tauriInvoke('preflight_check')) as any;
-    const models = caps?.ollama?.models || [];
-    
-    if (models.length === 0) {
-      throw new Error("Nenhum modelo Ollama disponível.");
+    if (!model) {
+      throw new Error("Phase 6.2: Seleção explícita de modelo pendente. Selecione um modelo Ollama em Developer Tools.");
     }
 
-    // Condition #11 / Defect #2: Do not invent a model-selection policy.
-    // If the architecture cannot safely select a model, expose Ollama capability without enabling production inference.
-    throw new Error("Phase 6.1: Ollama capability is exposed, mas a inferência em produção requer seleção explícita de modelo, que ainda não foi implementada.");
+    await tauriInvoke('start_ollama_inference', {
+      job_id: jobId,
+      model: model,
+      prompt: prompt,
+    });
   },
   async cancelInference(jobId: string) {
     const ready = await ensureTauri();

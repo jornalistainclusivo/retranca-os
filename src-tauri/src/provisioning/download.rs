@@ -60,7 +60,7 @@ pub async fn download_model_file(
     mut cancel_rx: tokio::sync::mpsc::Receiver<()>,
 ) -> Result<(), DownloadError> {
     let client = reqwest::Client::new();
-    
+
     // 1. Detectar tamanho existente do arquivo .tmp
     let mut downloaded_bytes = 0u64;
     if tmp_path.exists() {
@@ -72,12 +72,15 @@ pub async fn download_model_file(
     // Se já temos o tamanho completo esperado (ou mais), não precisamos baixar,
     // mas o chamador precisa verificar as hashes depois.
     if downloaded_bytes >= expected_size {
-        let _ = app.emit("download-progress", DownloadProgressEvent {
-            job_id: job_id.clone(),
-            bytes_downloaded: expected_size,
-            bytes_total: expected_size,
-            progress: 100,
-        });
+        let _ = app.emit(
+            "download-progress",
+            DownloadProgressEvent {
+                job_id: job_id.clone(),
+                bytes_downloaded: expected_size,
+                bytes_total: expected_size,
+                progress: 100,
+            },
+        );
         return Ok(());
     }
 
@@ -100,16 +103,14 @@ pub async fn download_model_file(
         // Opcional: Validar o formato do header Content-Range se necessário.
     }
 
-    let total_size = response.content_length()
+    let total_size = response
+        .content_length()
         .map(|len| len + downloaded_bytes)
         .unwrap_or(expected_size); // Fallback ao expected do manifest
 
     // 4. Abrir o arquivo para append/write
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open(tmp_path)?;
-    
+    let mut file = OpenOptions::new().create(true).write(true).open(tmp_path)?;
+
     // Posicionar no final do arquivo caso seja append de um range
     if downloaded_bytes > 0 {
         file.seek(SeekFrom::Start(downloaded_bytes))?;
@@ -122,12 +123,19 @@ pub async fn download_model_file(
     let mut last_progress_emit = std::time::Instant::now();
 
     // Emit initial progress
-    let _ = app.emit("download-progress", DownloadProgressEvent {
-        job_id: job_id.clone(),
-        bytes_downloaded: downloaded_bytes,
-        bytes_total: total_size,
-        progress: if total_size > 0 { ((downloaded_bytes as f64 / total_size as f64) * 100.0) as u8 } else { 0 },
-    });
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgressEvent {
+            job_id: job_id.clone(),
+            bytes_downloaded: downloaded_bytes,
+            bytes_total: total_size,
+            progress: if total_size > 0 {
+                ((downloaded_bytes as f64 / total_size as f64) * 100.0) as u8
+            } else {
+                0
+            },
+        },
+    );
 
     while let Some(chunk_result) = stream.next().await {
         // Check for cancellation
@@ -146,26 +154,32 @@ pub async fn download_model_file(
             } else {
                 0
             };
-            let _ = app.emit("download-progress", DownloadProgressEvent {
-                job_id: job_id.clone(),
-                bytes_downloaded: downloaded_bytes,
-                bytes_total: total_size,
-                progress,
-            });
+            let _ = app.emit(
+                "download-progress",
+                DownloadProgressEvent {
+                    job_id: job_id.clone(),
+                    bytes_downloaded: downloaded_bytes,
+                    bytes_total: total_size,
+                    progress,
+                },
+            );
             last_progress_emit = std::time::Instant::now();
         }
     }
-    
+
     // Ensure data is synced to disk
     file.sync_all()?;
 
     // Emit 100% final progress
-    let _ = app.emit("download-progress", DownloadProgressEvent {
-        job_id,
-        bytes_downloaded: downloaded_bytes,
-        bytes_total: total_size,
-        progress: 100,
-    });
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgressEvent {
+            job_id,
+            bytes_downloaded: downloaded_bytes,
+            bytes_total: total_size,
+            progress: 100,
+        },
+    );
 
     Ok(())
 }

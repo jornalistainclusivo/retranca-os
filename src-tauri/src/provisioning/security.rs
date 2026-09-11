@@ -9,17 +9,19 @@ use std::path::Path;
 /// Em release, exige a presença da variável de ambiente PROD_PUBLIC_KEY_HEX.
 /// Em debug, usa uma chave de desenvolvimento explícita caso a de produção não exista.
 pub fn get_trust_anchor() -> String {
-    if let Some(key) = option_env!("PROD_PUBLIC_KEY_HEX") {
-        key.to_string()
-    } else {
-        #[cfg(debug_assertions)]
-        {
-            // AVISO: Esta chave é apenas para desenvolvimento/testes locais
-            "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a".to_string()
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            panic!("PROD_PUBLIC_KEY_HEX env var must be set during release build");
+    #[cfg(not(debug_assertions))]
+    {
+        option_env!("PROD_PUBLIC_KEY_HEX")
+            .expect("PROD_PUBLIC_KEY_HEX env var must be set during release build")
+            .to_string()
+    }
+    #[cfg(debug_assertions)]
+    {
+        if let Some(key) = option_env!("PROD_PUBLIC_KEY_HEX") {
+            key.to_string()
+        } else {
+            // AVISO: Esta chave é apenas para desenvolvimento/testes locais (Fixture)
+            "e820a2e5b3c8030ed980bee4a64246361516b058f484e15170f4de4bd6f5b93f".to_string()
         }
     }
 }
@@ -61,9 +63,15 @@ impl std::fmt::Display for SecurityError {
         match self {
             SecurityError::InvalidSignature => write!(f, "Invalid Ed25519 signature"),
             SecurityError::KeyParseError => write!(f, "Failed to parse public key"),
-            SecurityError::SignatureParseError => write!(f, "Failed to parse signature (must be valid base64)"),
+            SecurityError::SignatureParseError => {
+                write!(f, "Failed to parse signature (must be valid base64)")
+            }
             SecurityError::HashMismatch { expected, actual } => {
-                write!(f, "SHA-256 hash mismatch. Expected: {}, Actual: {}", expected, actual)
+                write!(
+                    f,
+                    "SHA-256 hash mismatch. Expected: {}, Actual: {}",
+                    expected, actual
+                )
             }
             SecurityError::IoError(e) => write!(f, "IO Error: {}", e),
             SecurityError::JsonError(e) => write!(f, "JSON Error: {}", e),
@@ -105,7 +113,8 @@ pub fn verify_manifest_signature(
     let sig_bytes = general_purpose::STANDARD
         .decode(&signed_manifest.signature)
         .map_err(|_| SecurityError::SignatureParseError)?;
-    let signature = Signature::from_slice(&sig_bytes).map_err(|_| SecurityError::SignatureParseError)?;
+    let signature =
+        Signature::from_slice(&sig_bytes).map_err(|_| SecurityError::SignatureParseError)?;
 
     // 4. Recriar o payload canônico para verificação
     // ATENÇÃO: Em produção, o ideal é serializar garantindo a ordem das chaves,
@@ -172,7 +181,7 @@ mod tests {
     #[test]
     fn test_valid_manifest_signature() {
         let (pub_hex, signing_key) = generate_test_keys();
-        
+
         let manifest = Manifest {
             model_id: "test-model".to_string(),
             version: "1.0.0".to_string(),
@@ -197,7 +206,7 @@ mod tests {
         };
 
         let json_str = serde_json::to_string(&signed).unwrap();
-        
+
         let result = verify_manifest_signature(&json_str, &pub_hex);
         assert!(result.is_ok(), "Signature should be valid");
         assert_eq!(result.unwrap().model_id, "test-model");
@@ -207,7 +216,7 @@ mod tests {
     fn test_invalid_manifest_signature() {
         let (pub_hex, signing_key) = generate_test_keys();
         let (_pub2_hex, signing_key2) = generate_test_keys();
-        
+
         let manifest = Manifest {
             model_id: "test-model".to_string(),
             version: "1.0.0".to_string(),
@@ -233,7 +242,7 @@ mod tests {
         };
 
         let json_str = serde_json::to_string(&signed).unwrap();
-        
+
         let result = verify_manifest_signature(&json_str, &pub_hex);
         assert!(matches!(result, Err(SecurityError::InvalidSignature)));
     }
@@ -241,7 +250,7 @@ mod tests {
     #[test]
     fn test_modified_manifest() {
         let (pub_hex, signing_key) = generate_test_keys();
-        
+
         let mut manifest = Manifest {
             model_id: "test-model".to_string(),
             version: "1.0.0".to_string(),
@@ -269,7 +278,7 @@ mod tests {
         };
 
         let json_str = serde_json::to_string(&signed).unwrap();
-        
+
         let result = verify_manifest_signature(&json_str, &pub_hex);
         assert!(matches!(result, Err(SecurityError::InvalidSignature)));
     }
@@ -279,13 +288,13 @@ mod tests {
         let mut temp_file = NamedTempFile::new().unwrap();
         let content = b"hello world";
         temp_file.write_all(content).unwrap();
-        
+
         let mut hasher = Sha256::new();
         hasher.update(content);
         let expected_hash = hex::encode(hasher.finalize());
 
         assert!(verify_file_hash(temp_file.path(), &expected_hash).is_ok());
-        
+
         // Test mismatch
         let wrong_hash = expected_hash.replace('a', "b"); // just alter it slightly
         if wrong_hash != expected_hash {

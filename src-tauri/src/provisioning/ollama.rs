@@ -24,18 +24,20 @@ struct OllamaModel {
 pub async fn check_ollama_capabilities() -> OllamaStatus {
     let endpoint = "http://127.0.0.1:11434".to_string();
     let url = format!("{}/api/tags", endpoint);
-    
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_millis(500))
         .build();
 
     let client = match client {
         Ok(c) => c,
-        Err(_) => return OllamaStatus {
-            detected: false,
-            endpoint,
-            reachable: false,
-            models: vec![],
+        Err(_) => {
+            return OllamaStatus {
+                detected: false,
+                endpoint,
+                reachable: false,
+                models: vec![],
+            }
         }
     };
 
@@ -66,14 +68,12 @@ pub async fn check_ollama_capabilities() -> OllamaStatus {
                     models: vec![],
                 }
             }
-        },
-        Err(_) => {
-            OllamaStatus {
-                detected: false,
-                endpoint,
-                reachable: false,
-                models: vec![],
-            }
         }
+        Err(_) => OllamaStatus {
+            detected: false,
+            endpoint,
+            reachable: false,
+            models: vec![],
+        },
     }
 }

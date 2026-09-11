@@ -14,7 +14,7 @@ pub struct HardwareCapabilities {
 pub fn check_hardware(app_data_dir: &std::path::Path) -> HardwareCapabilities {
     let mut sys = System::new_all();
     sys.refresh_all();
-    
+
     let mut warnings = Vec::new();
     let mut cpu_features = Vec::new();
 
@@ -28,7 +28,7 @@ pub fn check_hardware(app_data_dir: &std::path::Path) -> HardwareCapabilities {
             warnings.push("AVX2 instructions not supported. Inference will be extremely slow or incompatible.".to_string());
         }
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     {
         // NEON is standard on aarch64
@@ -38,13 +38,15 @@ pub fn check_hardware(app_data_dir: &std::path::Path) -> HardwareCapabilities {
     let total_ram_bytes = sys.total_memory();
     // Requisito: > 8GB recomendado. 8GB = 8 * 1024 * 1024 * 1024 = 8589934592
     if total_ram_bytes < 8_000_000_000 {
-        warnings.push("Total RAM is less than 8GB. OOM crashes may occur during model loading.".to_string());
+        warnings.push(
+            "Total RAM is less than 8GB. OOM crashes may occur during model loading.".to_string(),
+        );
     }
 
     // Check disk space on the drive where app_data_dir resides
     let mut available_disk_bytes = 0;
     let disks = Disks::new_with_refreshed_list();
-    
+
     // Find the disk containing app_data_dir
     let mut found_disk = false;
     for disk in disks.iter() {
@@ -54,7 +56,7 @@ pub fn check_hardware(app_data_dir: &std::path::Path) -> HardwareCapabilities {
             break;
         }
     }
-    
+
     // If not found by prefix (e.g., due to symlinks or mount resolution), just grab the first disk or 0
     if !found_disk {
         if let Some(disk) = disks.iter().next() {

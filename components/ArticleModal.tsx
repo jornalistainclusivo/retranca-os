@@ -2,6 +2,7 @@
 
 import type { AiAction } from '@/types/ai';
 
+import { useEntitlement } from '@/lib/contexts/EntitlementContext';
 import {
   onStreamToken,
   onStreamDone,
@@ -102,7 +103,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const aiJobIdRef = React.useRef<string | null>(null);
   
-  const isPremiumMode = false; // Mock for freemium constraints
+  const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
@@ -210,9 +211,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       });
 
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.startInference(jobId, actionType, formData.notes || formData.summary || formData.title);
+      await providerImpl.startInference(jobId, actionType, formData.notes || formData.summary || formData.title, selectedModel || undefined);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
     }

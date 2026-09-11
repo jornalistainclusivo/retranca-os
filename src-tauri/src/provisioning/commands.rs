@@ -1,18 +1,35 @@
 use super::download::download_model_file;
 use super::hardware::{check_hardware, HardwareCapabilities};
-use super::security::{
-    atomic_install, verify_file_hash, verify_manifest_signature, get_trust_anchor,
-};
 use super::ollama::{check_ollama_capabilities, OllamaStatus};
+use super::security::{
+    atomic_install, get_trust_anchor, verify_file_hash, verify_manifest_signature,
+};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{mpsc, Mutex};
 
 /// Estado global para rastrear os canais de cancelamento de download.
 /// A chave é o `job_id`.
 pub struct DownloadRegistry(pub Mutex<std::collections::HashMap<String, mpsc::Sender<()>>>);
 
-const TRUSTED_MANIFEST_URL: &str = "https://cdn.jornalistainclusivo.com/models/v1/manifest.json";
+pub fn get_manifest_url() -> String {
+    #[cfg(not(debug_assertions))]
+    {
+        option_env!("PROD_MODEL_MANIFEST_URL")
+            .expect("PROD_MODEL_MANIFEST_URL env var must be set during release build")
+            .to_string()
+    }
+    #[cfg(debug_assertions)]
+    {
+        if let Some(url) = option_env!("DEV_MODEL_MANIFEST_URL") {
+            url.to_string()
+        } else if let Some(url) = option_env!("PROD_MODEL_MANIFEST_URL") {
+            url.to_string()
+        } else {
+            "http://127.0.0.1:3142/manifest.json".to_string()
+        }
+    }
+}
 
 #[derive(serde::Serialize)]
 pub struct PreflightResult {
@@ -24,19 +41,17 @@ pub struct PreflightResult {
 }
 
 #[tauri::command]
-pub async fn preflight_check(
-    app: AppHandle,
-) -> Result<PreflightResult, String> {
+pub async fn preflight_check(app: AppHandle) -> Result<PreflightResult, String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app_data_dir: {}", e))?;
-    
+
     // Certificar-se de que o diretório existe
     std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
 
     let hw = check_hardware(&app_data_dir);
-    
+
     // Verificar se o modelo já existe lendo o manifest local
     let local_manifest_path = app_data_dir.join("manifest.json");
     let mut model_exists = false;
@@ -73,7 +88,7 @@ pub async fn preflight_check(
 
     let ollama = check_ollama_capabilities().await;
     let sidecar_ready = model_exists;
-    
+
     let selected_provider = determine_provider(&ollama, sidecar_ready);
 
     Ok(PreflightResult {
@@ -107,7 +122,14 @@ pub async fn download_model(
     }
 
     // A partir daqui, usaremos uma função interna para capturar erros e limpar o registry
-    let result = execute_download_pipeline(app.clone(), job_id.clone(), TRUSTED_MANIFEST_URL.to_string(), app_data_dir, cancel_rx).await;
+    let result = execute_download_pipeline(
+        app.clone(),
+        job_id.clone(),
+        get_manifest_url(),
+        app_data_dir,
+        cancel_rx,
+    )
+    .await;
 
     // Remover do registry após término (sucesso ou falha)
     {
@@ -142,8 +164,18 @@ async fn execute_download_pipeline(
     let client = reqwest::Client::new();
 
     // 1. Fetch Manifest
-    let manifest_resp = client.get(&manifest_url).send().await.map_err(|e| format!("Failed to fetch manifest: {}", e))?;
-    let manifest_text = manifest_resp.text().await.map_err(|e| format!("Failed to read manifest text: {}", e))?;
+    let manifest_resp = client
+        .get(&manifest_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch manifest: {}", e))?;
+    let manifest_resp = manifest_resp
+        .error_for_status()
+        .map_err(|e| format!("HTTP error fetching manifest: {}", e))?;
+    let manifest_text = manifest_resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read manifest text: {}", e))?;
 
     // 2. Verify Signature
     let trust_anchor = get_trust_anchor();
@@ -161,7 +193,9 @@ async fn execute_download_pipeline(
         &tmp_path,
         manifest.size,
         cancel_rx,
-    ).await.map_err(|e| format!("Download failed: {}", e))?;
+    )
+    .await
+    .map_err(|e| format!("Download failed: {}", e))?;
 
     // 4. Emite evento de VERIFYING (UI pode escutar se quiser)
     let _ = app.emit("download-verifying", &job_id);
@@ -170,7 +204,7 @@ async fn execute_download_pipeline(
     // Isso pode bloquear a thread de async (sendo pesado), o ideal é usar spawn_blocking
     let tmp_path_clone = tmp_path.clone();
     let expected_sha256 = manifest.sha256.clone();
-    
+
     tauri::async_runtime::spawn_blocking(move || {
         verify_file_hash(&tmp_path_clone, &expected_sha256)
     })
@@ -183,11 +217,13 @@ async fn execute_download_pipeline(
     })?;
 
     // 6. Atomic Install
-    atomic_install(&tmp_path, &final_path).map_err(|e| format!("Failed to install model: {}", e))?;
+    atomic_install(&tmp_path, &final_path)
+        .map_err(|e| format!("Failed to install model: {}", e))?;
 
     // 6.1 Save manifest locally
     let local_manifest_path = app_data_dir.join("manifest.json");
-    std::fs::write(&local_manifest_path, &manifest_text).map_err(|e| format!("Failed to save manifest locally: {}", e))?;
+    std::fs::write(&local_manifest_path, &manifest_text)
+        .map_err(|e| format!("Failed to save manifest locally: {}", e))?;
 
     // 7. Emit READY
     let _ = app.emit("download-ready", &job_id);
@@ -261,7 +297,7 @@ mod tests {
         let sidecar_ready = false;
         assert_eq!(determine_provider(&ollama, sidecar_ready), "NONE");
     }
-    
+
     #[test]
     fn test_provider_selection_sidecar_fallback() {
         // Sidecar READY, Ollama unreachable => SIDECAR

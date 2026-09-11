@@ -1,7 +1,7 @@
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
-use reqwest::Client;
 
 #[derive(Serialize, Clone)]
 struct TokenEvent {
@@ -33,6 +33,16 @@ struct OllamaGenerateResponse {
     done: bool,
 }
 
+#[derive(Deserialize)]
+struct OllamaTag {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct OllamaTagsResponse {
+    models: Vec<OllamaTag>,
+}
+
 #[tauri::command]
 pub async fn start_ollama_inference(
     app: AppHandle,
@@ -44,7 +54,10 @@ pub async fn start_ollama_inference(
     if trimmed_model.is_empty() {
         return Err("Model name cannot be empty".to_string());
     }
-    if trimmed_model.chars().any(|c| c.is_control() || c.is_whitespace()) {
+    if trimmed_model
+        .chars()
+        .any(|c| c.is_control() || c.is_whitespace())
+    {
         return Err("Model name contains invalid characters".to_string());
     }
     let model = trimmed_model.to_string();
@@ -65,7 +78,28 @@ pub async fn start_ollama_inference(
             stream: true,
         };
 
-        match client.post("http://127.0.0.1:11434/api/generate")
+        // Validate model exists
+        if let Ok(tags_resp) = client.get("http://127.0.0.1:11434/api/tags").send().await {
+            if let Ok(tags) = tags_resp.json::<OllamaTagsResponse>().await {
+                let model_exists = tags
+                    .models
+                    .iter()
+                    .any(|t| t.name == model || t.name == format!("{}:latest", model));
+                if !model_exists {
+                    let _ = app_clone.emit(
+                        "ai-stream-error",
+                        ErrorEvent {
+                            job_id: job_id_clone.clone(),
+                            message: format!("Model {} is not available in local Ollama", model),
+                        },
+                    );
+                    return;
+                }
+            }
+        }
+
+        match client
+            .post("http://127.0.0.1:11434/api/generate")
             .json(&req_body)
             .send()
             .await
@@ -88,7 +122,8 @@ pub async fn start_ollama_inference(
                             if line.trim().is_empty() {
                                 continue;
                             }
-                            if let Ok(parsed) = serde_json::from_str::<OllamaGenerateResponse>(line) {
+                            if let Ok(parsed) = serde_json::from_str::<OllamaGenerateResponse>(line)
+                            {
                                 let _ = app_clone.emit(
                                     "ai-stream-token",
                                     TokenEvent {
@@ -96,7 +131,7 @@ pub async fn start_ollama_inference(
                                         token: parsed.response,
                                     },
                                 );
-                                
+
                                 if parsed.done {
                                     // Not strictly breaking the chunk loop, just stopping processing
                                 }
@@ -105,7 +140,12 @@ pub async fn start_ollama_inference(
                     }
                 }
 
-                let _ = app_clone.emit("ai-stream-done", DoneEvent { job_id: job_id_clone });
+                let _ = app_clone.emit(
+                    "ai-stream-done",
+                    DoneEvent {
+                        job_id: job_id_clone,
+                    },
+                );
             }
             Err(e) => {
                 let _ = app_clone.emit(
@@ -120,4 +160,28 @@ pub async fn start_ollama_inference(
     });
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_ollama_models() -> Result<Vec<String>, String> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let resp = client
+        .get("http://127.0.0.1:11434/api/tags")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.status().is_success() {
+        return Err(format!("Ollama API returned error: {}", resp.status()));
+    }
+
+    let tags = resp
+        .json::<OllamaTagsResponse>()
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(tags.models.into_iter().map(|m| m.name).collect())
 }

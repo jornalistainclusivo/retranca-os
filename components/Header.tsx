@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { Article } from '@/types/editorial';
+import { useEntitlement } from '@/lib/contexts/EntitlementContext';
 import { exportArticlesJSON, importArticlesJSON, resetToSeedData } from '@/lib/storage';
 import { 
   Search, 
@@ -45,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   onArticlesUpdated,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPremiumMode = false; // Mock for freemium constraints
+  const { isPremium: isPremiumMode } = useEntitlement();
 
   // Calculate overall metrics
   const total = articles.length;
