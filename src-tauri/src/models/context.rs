@@ -13,6 +13,58 @@ pub enum AiAction {
     EditorialReview,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ArticleStatus {
+    #[serde(rename = "ideia")]
+    Ideia,
+    #[serde(rename = "pesquisa")]
+    Pesquisa,
+    #[serde(rename = "escrita")]
+    Escrita,
+    #[serde(rename = "revisao")]
+    Revisao,
+    #[serde(rename = "publicado")]
+    Publicado,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum CategoryTag {
+    #[serde(rename = "IA")]
+    Ia,
+    #[serde(rename = "Acessibilidade")]
+    Acessibilidade,
+    #[serde(rename = "Inclusão")]
+    Inclusao,
+    #[serde(rename = "SEO")]
+    Seo,
+    #[serde(rename = "Docs")]
+    Docs,
+    #[serde(rename = "Blog")]
+    Blog,
+    #[serde(rename = "Social")]
+    Social,
+    #[serde(rename = "Linguagem Simples")]
+    LinguagemSimples,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ContentSource {
+    #[serde(rename = "tiptap")]
+    Tiptap,
+    #[serde(rename = "markdown")]
+    Markdown,
+    #[serde(rename = "plaintext")]
+    Plaintext,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum MediaAssetType {
+    #[serde(rename = "image_asset")]
+    ImageAsset,
+    #[serde(rename = "visual_description")]
+    VisualDescription,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EditorialMetadata {
@@ -42,14 +94,14 @@ pub struct EditorialChecklistsState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EditorialContent {
-    pub source: String,
+    pub source: ContentSource,
     pub text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaAsset {
-    pub r#type: String,
+    pub r#type: MediaAssetType,
     pub data: String,
 }
 
@@ -57,8 +109,8 @@ pub struct MediaAsset {
 #[serde(rename_all = "camelCase")]
 pub struct EditorialContext {
     pub article_id: String,
-    pub editorial_status: String,
-    pub category_tag: String,
+    pub editorial_status: ArticleStatus,
+    pub category_tag: CategoryTag,
     pub metadata: EditorialMetadata,
     pub notes: Option<String>,
     pub links: Option<EditorialLinks>,

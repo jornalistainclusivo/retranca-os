@@ -85,9 +85,9 @@ describe('localAiAdapter', () => {
         action: 'generate_outline',
         provider: 'SIDECAR',
         context: {
-          articleId: 'test',
-          editorialStatus: 'Rascunho',
-          categoryTag: 'Geral',
+          articleId: 'test-article-1',
+          editorialStatus: 'ideia',
+          categoryTag: 'Blog',
           metadata: { summary: 'test prompt' }
         }
       }),

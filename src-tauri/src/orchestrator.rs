@@ -35,7 +35,7 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
             }
             if let Some(media_list) = &req.context.media {
                 for m in media_list {
-                    if m.r#type == "image_asset" {
+                    if m.r#type == crate::models::context::MediaAssetType::ImageAsset {
                         return Err("UNSUPPORTED_CAPABILITY: Provedor não suporta image_asset (multimodal). Use visual_description.".to_string());
                     }
                 }
@@ -61,7 +61,6 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
 }
 
 pub fn project_context(action: &AiAction, mut context: EditorialContext) -> EditorialContext {
-    // Only keep fields needed for the action
     let mut title = None;
     let mut summary = None;
     let mut objective = None;
@@ -69,42 +68,53 @@ pub fn project_context(action: &AiAction, mut context: EditorialContext) -> Edit
     let mut persona = None;
     let mut content = None;
     let mut media = None;
+    let mut notes = None;
+    let mut links = None;
+    let mut checklists_state = None;
+    let mut cta = None;
 
     match action {
-        AiAction::GenerateSeo => {
-            keyword = context.metadata.keyword.take();
+        AiAction::ResearchGaps => {
             title = context.metadata.title.take();
-            summary = context.metadata.summary.take();
+            objective = context.metadata.objective.take();
+            notes = context.notes.take();
+            links = context.links.take();
+            keyword = context.metadata.keyword.take();
+        },
+        AiAction::PlainLanguage => {
             content = context.content.take();
+            summary = context.metadata.summary.take();
             persona = context.metadata.persona.take();
+        },
+        AiAction::ValidateInclusivity => {
+            content = context.content.take();
+            summary = context.metadata.summary.take();
         },
         AiAction::GenerateAltText => {
             media = context.media.take();
             title = context.metadata.title.take();
         },
+        AiAction::GenerateSeo => {
+            keyword = context.metadata.keyword.take();
+            content = context.content.take();
+            summary = context.metadata.summary.take();
+            title = context.metadata.title.take();
+            objective = context.metadata.objective.take();
+            persona = context.metadata.persona.take();
+            cta = context.metadata.cta.take();
+        },
         AiAction::EditorialReview => {
             content = context.content.take();
             objective = context.metadata.objective.take();
-            persona = context.metadata.persona.take();
-            title = context.metadata.title.take();
+            notes = context.notes.take();
+            links = context.links.take();
+            checklists_state = context.checklists_state.take();
         },
-        AiAction::PlainLanguage | AiAction::ValidateInclusivity => {
-            content = context.content.take();
-            summary = context.metadata.summary.take();
-        },
-        AiAction::ResearchGaps => {
-            title = context.metadata.title.take();
-            objective = context.metadata.objective.take();
-            content = context.content.take();
-        },
-        AiAction::GenerateOutline => {
+        AiAction::GenerateOutline | AiAction::CheckAccessibility => {
             title = context.metadata.title.take();
             summary = context.metadata.summary.take();
             objective = context.metadata.objective.take();
-        },
-        _ => {
-            // Keep everything as fallback
-            return context;
+            content = context.content.take();
         }
     }
 
@@ -113,49 +123,82 @@ pub fn project_context(action: &AiAction, mut context: EditorialContext) -> Edit
     context.metadata.objective = objective;
     context.metadata.keyword = keyword;
     context.metadata.persona = persona;
-    context.metadata.cta = None;
+    context.metadata.cta = cta;
     context.content = content;
     context.media = media;
-    context.notes = None;
-    context.links = None;
-    context.checklists_state = None;
+    context.notes = notes;
+    context.links = links;
+    context.checklists_state = checklists_state;
 
     context
 }
 
-pub fn apply_budget(mut context: EditorialContext) -> Result<(EditorialContext, Vec<String>), String> {
+pub fn apply_budget(action: &AiAction, mut context: EditorialContext) -> Result<(EditorialContext, Vec<String>), String> {
     let mut omitted_fields = Vec::new();
-    let mut current_len = 0;
     
-    if let Some(t) = &context.metadata.title { current_len += t.len(); }
-    if let Some(s) = &context.metadata.summary { current_len += s.len(); }
-    if let Some(o) = &context.metadata.objective { current_len += o.len(); }
-    if let Some(k) = &context.metadata.keyword { current_len += k.len(); }
-    if let Some(p) = &context.metadata.persona { current_len += p.len(); }
-    
-    if let Some(c) = &context.content {
-        current_len += c.text.len();
-    }
-    if let Some(m) = &context.media {
-        for asset in m {
-            current_len += asset.data.len();
+    let get_len = |ctx: &EditorialContext| -> usize {
+        let mut len = 0;
+        if let Some(t) = &ctx.metadata.title { len += t.len(); }
+        if let Some(s) = &ctx.metadata.summary { len += s.len(); }
+        if let Some(o) = &ctx.metadata.objective { len += o.len(); }
+        if let Some(k) = &ctx.metadata.keyword { len += k.len(); }
+        if let Some(p) = &ctx.metadata.persona { len += p.len(); }
+        if let Some(c) = &ctx.metadata.cta { len += c.len(); }
+        if let Some(c) = &ctx.content { len += c.text.len(); }
+        if let Some(m) = &ctx.media {
+            for asset in m { len += asset.data.len(); }
         }
-    }
-    
+        if let Some(n) = &ctx.notes { len += n.len(); }
+        // We roughly estimate links and checklists as 500 bytes each if present, or just use string repr if needed.
+        if ctx.links.is_some() { len += 300; }
+        if ctx.checklists_state.is_some() { len += 500; }
+        len
+    };
+
+    let mut current_len = get_len(&context);
+
+    // Try dropping optional fields if we exceed budget
     if current_len > FALLBACK_CONTEXT_LIMIT {
-        // Drop notes
-        if let Some(_) = &context.notes {
-            omitted_fields.push("notes".to_string());
-            context.notes = None;
-        }
-        omitted_fields.push("content_truncated".to_string());
-    } else {
-        if let Some(notes) = &context.notes {
-            if current_len + notes.len() > FALLBACK_CONTEXT_LIMIT {
-                context.notes = None;
-                omitted_fields.push("notes".to_string());
+        let mut drop_field = |field_name: &str| {
+            if current_len > FALLBACK_CONTEXT_LIMIT {
+                match field_name {
+                    "notes" => if context.notes.is_some() { context.notes = None; omitted_fields.push(field_name.to_string()); },
+                    "links" => if context.links.is_some() { context.links = None; omitted_fields.push(field_name.to_string()); },
+                    "checklistsState" => if context.checklists_state.is_some() { context.checklists_state = None; omitted_fields.push(field_name.to_string()); },
+                    "persona" => if context.metadata.persona.is_some() { context.metadata.persona = None; omitted_fields.push(field_name.to_string()); },
+                    "title" => if context.metadata.title.is_some() { context.metadata.title = None; omitted_fields.push(field_name.to_string()); },
+                    "objective" => if context.metadata.objective.is_some() { context.metadata.objective = None; omitted_fields.push(field_name.to_string()); },
+                    "cta" => if context.metadata.cta.is_some() { context.metadata.cta = None; omitted_fields.push(field_name.to_string()); },
+                    "keyword" => if context.metadata.keyword.is_some() { context.metadata.keyword = None; omitted_fields.push(field_name.to_string()); },
+                    _ => {}
+                }
+                current_len = get_len(&context);
             }
+        };
+
+        // Action-specific optional fields to drop
+        match action {
+            AiAction::ResearchGaps => {
+                drop_field("notes"); drop_field("links"); drop_field("keyword");
+            },
+            AiAction::PlainLanguage => {
+                drop_field("persona");
+            },
+            AiAction::GenerateAltText => {
+                drop_field("title");
+            },
+            AiAction::GenerateSeo => {
+                drop_field("persona"); drop_field("cta"); drop_field("objective"); drop_field("title");
+            },
+            AiAction::EditorialReview => {
+                drop_field("notes"); drop_field("links"); drop_field("checklistsState");
+            },
+            _ => {}
         }
+    }
+
+    if current_len > FALLBACK_CONTEXT_LIMIT {
+        return Err("CONTEXT_EXCEEDED: Campos essenciais excedem o limite de contexto do modelo.".to_string());
     }
     
     Ok((context, omitted_fields))
@@ -209,7 +252,11 @@ pub fn assemble_prompt(action: &AiAction, context: &EditorialContext) -> String 
     if let Some(media) = &context.media {
         write!(&mut prompt, "<media>\n").unwrap();
         for m in media {
-            write!(&mut prompt, "  <asset type=\"{}\">{}</asset>\n", escape_xml(&m.r#type), escape_xml(&m.data)).unwrap();
+            let type_str = match m.r#type {
+                crate::models::context::MediaAssetType::ImageAsset => "image_asset",
+                crate::models::context::MediaAssetType::VisualDescription => "visual_description",
+            };
+            write!(&mut prompt, "  <asset type=\"{}\">{}</asset>\n", escape_xml(type_str), escape_xml(&m.data)).unwrap();
         }
         write!(&mut prompt, "</media>\n").unwrap();
     }
@@ -232,7 +279,7 @@ pub async fn start_orchestrated_inference(
     let projected_context = project_context(&request.action, request.context);
 
     // 3. Budget and Optional Field Omission
-    let (budgeted_context, omitted_fields) = apply_budget(projected_context)?;
+    let (budgeted_context, omitted_fields) = apply_budget(&request.action, projected_context)?;
 
     // 4. Emit Notice if fields were omitted
     if !omitted_fields.is_empty() {

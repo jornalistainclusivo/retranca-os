@@ -149,17 +149,14 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         provider: provider === 'OLLAMA' ? 'OLLAMA' : 'SIDECAR',
         model: selectedModel || undefined,
         context: {
-          articleId: 'standalone-modal',
-          editorialStatus: 'Rascunho',
-          categoryTag: 'Geral',
+          articleId: `session-${Date.now()}`,
+          editorialStatus: 'ideia',
+          categoryTag: 'Blog',
           metadata: {
             title: fileName || 'Documento',
             summary: prompt,
           },
-          content: {
-            source: 'user_input',
-            text: prompt,
-          }
+          content: prompt.trim() ? { source: 'plaintext', text: prompt.trim() } : undefined,
         }
       };
       

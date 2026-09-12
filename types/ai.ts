@@ -6,6 +6,8 @@
  * and must match the Rust event payloads in `ai_supervisor.rs`.
  */
 
+import type { ArticleStatus, CategoryTag } from './editorial';
+
 // ─── Model Provisioning State Machine ────────────────────────────────────────
 
 /** Represents the lifecycle of the local AI model on disk. */
@@ -133,19 +135,19 @@ export interface EditorialChecklistsState {
 }
 
 export interface EditorialContent {
-  source: string;
+  source: 'tiptap' | 'markdown' | 'plaintext';
   text: string;
 }
 
 export interface MediaAsset {
-  type: string;
+  type: 'image_asset' | 'visual_description';
   data: string;
 }
 
 export interface EditorialContext {
   articleId: string;
-  editorialStatus: string;
-  categoryTag: string;
+  editorialStatus: ArticleStatus;
+  categoryTag: CategoryTag;
   metadata: EditorialMetadata;
   notes?: string;
   links?: EditorialLinks;
