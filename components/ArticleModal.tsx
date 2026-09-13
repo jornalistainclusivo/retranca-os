@@ -17,6 +17,7 @@ import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
 import React, { useState, useEffect } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
+import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
 import { 
   X, 
   Save, 
@@ -627,49 +628,6 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 const hasKeyword = !!formData.keyword?.trim();
                 const hasObjective = !!formData.objective?.trim();
 
-                const evaluateAction = (action: AiAction) => {
-                  let available = false;
-                  let recommended = false;
-                  let missing = '';
-                  
-                  switch (action) {
-                    case 'research_gaps':
-                      available = !!formData.title?.trim() || hasObjective;
-                      recommended = formData.status === 'ideia' || formData.status === 'pesquisa';
-                      missing = 'Título/Objetivo';
-                      break;
-                    case 'plain_language':
-                      available = hasContent || hasSummary;
-                      recommended = formData.status === 'escrita' || formData.status === 'revisao';
-                      missing = 'Resumo/Conteúdo';
-                      break;
-                    case 'validate_inclusivity':
-                      available = hasContent || hasSummary;
-                      recommended = formData.status === 'escrita' || formData.status === 'revisao';
-                      missing = 'Resumo/Conteúdo';
-                      break;
-                    case 'generate_alt_text':
-                      available = !!visualDescription.trim();
-                      recommended = formData.status === 'escrita' || formData.status === 'revisao';
-                      missing = 'Descrição Visual';
-                      break;
-                    case 'generate_seo':
-                      available = hasKeyword && (hasContent || hasSummary);
-                      recommended = formData.status === 'revisao';
-                      missing = !hasKeyword ? 'Keyword SEO' : 'Resumo/Conteúdo';
-                      break;
-                    case 'editorial_review':
-                      available = hasContent && hasObjective;
-                      recommended = formData.status === 'revisao';
-                      missing = !hasContent ? 'Conteúdo' : 'Objetivo';
-                      break;
-                    default:
-                      available = true;
-                  }
-                  const state = available ? (recommended ? 'RECOMMENDED' : 'AVAILABLE') : 'UNAVAILABLE';
-                  return { state, missing };
-                };
-
                 const getButtonStyles = (state: string, isPremium: boolean) => {
                   if (!isPremium || state === 'UNAVAILABLE') {
                     return "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60";
@@ -680,12 +638,22 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   return "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100";
                 };
 
-                const researchCheck = evaluateAction('research_gaps');
-                const plainCheck = evaluateAction('plain_language');
-                const inclusivityCheck = evaluateAction('validate_inclusivity');
-                const altTextCheck = evaluateAction('generate_alt_text');
-                const seoCheck = evaluateAction('generate_seo');
-                const editorialCheck = evaluateAction('editorial_review');
+                const evalContext = {
+                  status: formData.status,
+                  title: formData.title,
+                  objective: formData.objective,
+                  summary: formData.summary,
+                  content: analysisContent,
+                  keyword: formData.keyword,
+                  visualDescription: visualDescription
+                };
+
+                const researchCheck = evaluateAiAction('research_gaps', evalContext);
+                const plainCheck = evaluateAiAction('plain_language', evalContext);
+                const inclusivityCheck = evaluateAiAction('validate_inclusivity', evalContext);
+                const altTextCheck = evaluateAiAction('generate_alt_text', evalContext);
+                const seoCheck = evaluateAiAction('generate_seo', evalContext);
+                const editorialCheck = evaluateAiAction('editorial_review', evalContext);
 
                 return (
                   <>

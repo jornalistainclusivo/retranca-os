@@ -200,45 +200,45 @@ pub fn apply_budget(
     let get_len = |ctx: &ProjectedEditorialContext| -> usize {
         let mut len = 0;
         if let Some(t) = &ctx.metadata.title {
-            len += t.len();
+            len += t.chars().count();
         }
         if let Some(s) = &ctx.metadata.summary {
-            len += s.len();
+            len += s.chars().count();
         }
         if let Some(o) = &ctx.metadata.objective {
-            len += o.len();
+            len += o.chars().count();
         }
         if let Some(k) = &ctx.metadata.keyword {
-            len += k.len();
+            len += k.chars().count();
         }
         if let Some(p) = &ctx.metadata.persona {
-            len += p.len();
+            len += p.chars().count();
         }
         if let Some(c) = &ctx.metadata.cta {
-            len += c.len();
+            len += c.chars().count();
         }
         if let Some(c) = &ctx.content {
-            len += c.text.len();
+            len += c.text.chars().count();
         }
         if let Some(m) = &ctx.media {
             for asset in m {
-                len += asset.data.len();
+                len += asset.data.chars().count();
             }
         }
         if let Some(n) = &ctx.notes {
-            len += n.len();
+            len += n.chars().count();
         }
         if let Some(l) = &ctx.links {
             if let Some(i) = &l.internal {
-                len += i.len();
+                len += i.chars().count();
             }
             if let Some(e) = &l.external {
-                len += e.len();
+                len += e.chars().count();
             }
         }
         if let Some(ch) = &ctx.checklists_state {
             for item in &ch.pending_items {
-                len += item.len();
+                len += item.chars().count();
             }
             len += 100; // rough xml overhead
         }
@@ -360,7 +360,7 @@ pub fn assemble_prompt(action: &AiAction, context: &ProjectedEditorialContext) -
     write!(&mut prompt, "{}\n\n", task_instruction).unwrap();
 
     if context.content.is_none() && context.metadata.summary.is_some() {
-        write!(&mut prompt, "AVISO DE ESCOPO: A análise a seguir é baseada apenas no resumo da pauta, não no texto completo. Resultados podem ser parciais.\n\n").unwrap();
+        write!(&mut prompt, "INSTRUÇÃO OBRIGATÓRIA: O seu output DEVE iniciar EXATAMENTE com a seguinte frase:\nAtenção: Análise baseada estritamente no Resumo.\n\n").unwrap();
     }
 
     write!(&mut prompt, "<article_data>\n").unwrap();
