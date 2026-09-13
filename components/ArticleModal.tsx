@@ -15,7 +15,7 @@ import {
 import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter';
 import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
 import { 
   X, 
@@ -114,6 +114,15 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const unlistenFnsRef = React.useRef<(() => void)[]>([]);
   
   const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
+
+  useEffect(() => {
+    return () => {
+      if (unlistenFnsRef.current.length > 0) {
+        unlistenFnsRef.current.forEach(unlisten => unlisten());
+        unlistenFnsRef.current = [];
+      }
+    };
+  }, []);
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
@@ -297,6 +306,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
+      
+      // Execute cleanup listeners safely since we are exiting early
+      if (unlistenFnsRef.current.length > 0) {
+        unlistenFnsRef.current.forEach(unlisten => unlisten());
+        unlistenFnsRef.current = [];
+      }
     }
   };
 

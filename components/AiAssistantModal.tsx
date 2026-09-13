@@ -54,14 +54,21 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     rafRef.current = requestAnimationFrame(flush);
   }, []);
 
+  // Helper para garantir limpeza segura de listeners
+  const cleanupListeners = useCallback(() => {
+    if (unlistenRefs.current.length > 0) {
+      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+    }
+  }, []);
+
   // Cleanup listeners and animation frame on unmount or modal close
   useEffect(() => {
     return () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      cleanupListeners();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [cleanupListeners]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,8 +112,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     setGenState('QUEUED');
 
     // Cleanup previous listeners
-    unlistenRefs.current.forEach((fn) => fn());
-    unlistenRefs.current = [];
+    cleanupListeners();
 
     try {
       // Register event listeners BEFORE starting inference
@@ -120,11 +126,13 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         setGenState('COMPLETED');
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setDisplayResult(streamBufferRef.current);
+        cleanupListeners();
       });
       const unCanceled = await onStreamCanceled((ev) => {
         if (ev.job_id !== jobIdRef.current) return;
         setGenState('CANCELLED');
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        cleanupListeners();
       });
       const unError = await onStreamError((ev) => {
         if (ev.job_id !== jobIdRef.current) return;
@@ -132,6 +140,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         setDisplayResult(streamBufferRef.current);
         setGenState('ERROR');
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        cleanupListeners();
       });
 
       unlistenRefs.current = [unToken, unDone, unCanceled, unError];
@@ -170,6 +179,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
       setGenState('ERROR');
+      cleanupListeners();
     }
   };
 

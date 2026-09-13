@@ -25,20 +25,41 @@ fn escape_xml(input: &str) -> String {
         .replace("'", "&apos;")
 }
 
+fn is_blank(opt: &Option<String>) -> bool {
+    opt.as_ref().map_or(true, |s| s.trim().is_empty())
+}
+
+fn is_content_blank(opt: &Option<crate::models::context::EditorialContent>) -> bool {
+    opt.as_ref().map_or(true, |c| c.text.trim().is_empty())
+}
+
+pub fn action_id(action: &AiAction) -> &'static str {
+    match action {
+        AiAction::GenerateOutline => "generate_outline",
+        AiAction::GenerateAltText => "generate_alt_text",
+        AiAction::GenerateSeo => "generate_seo",
+        AiAction::CheckAccessibility => "check_accessibility",
+        AiAction::ValidateInclusivity => "validate_inclusivity",
+        AiAction::ResearchGaps => "research_gaps",
+        AiAction::PlainLanguage => "plain_language",
+        AiAction::EditorialReview => "editorial_review",
+    }
+}
+
 pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String> {
     let meta = &req.context.metadata;
     let content = &req.context.content;
 
     match req.action {
         AiAction::ResearchGaps => {
-            if meta.title.is_none() && meta.objective.is_none() {
+            if is_blank(&meta.title) && is_blank(&meta.objective) {
                 return Err(
                     "MISSING_PREREQUISITES: Research Gaps requer title OR objective".to_string(),
                 );
             }
         }
         AiAction::PlainLanguage | AiAction::ValidateInclusivity => {
-            if content.is_none() && meta.summary.is_none() {
+            if is_content_blank(content) && is_blank(&meta.summary) {
                 return Err(format!(
                     "MISSING_PREREQUISITES: {:?} requer content OR summary",
                     req.action
@@ -50,10 +71,9 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
                 .context
                 .media
                 .as_ref()
-                .map(|m| !m.is_empty())
-                .unwrap_or(false);
+                .map_or(false, |m| m.iter().any(|asset| asset.r#type == crate::models::context::MediaAssetType::VisualDescription && !asset.data.trim().is_empty()));
             if !has_media {
-                return Err("MISSING_PREREQUISITES: GenerateAltText requer media".to_string());
+                return Err("MISSING_PREREQUISITES: GenerateAltText requer media com visual_description não vazia".to_string());
             }
             if let Some(media_list) = &req.context.media {
                 for m in media_list {
@@ -64,17 +84,17 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
             }
         }
         AiAction::GenerateSeo => {
-            if meta.keyword.is_none() || meta.keyword.as_ref().unwrap().trim().is_empty() {
+            if is_blank(&meta.keyword) {
                 return Err("MISSING_PREREQUISITES: GenerateSeo requer keyword".to_string());
             }
-            if content.is_none() && meta.summary.is_none() {
+            if is_content_blank(content) && is_blank(&meta.summary) {
                 return Err(
                     "MISSING_PREREQUISITES: GenerateSeo requer content OR summary".to_string(),
                 );
             }
         }
         AiAction::EditorialReview => {
-            if content.is_none() || meta.objective.is_none() {
+            if is_content_blank(content) || is_blank(&meta.objective) {
                 return Err(
                     "MISSING_PREREQUISITES: Editorial Review requer content AND objective"
                         .to_string(),
@@ -409,6 +429,53 @@ pub fn assemble_prompt(action: &AiAction, context: &ProjectedEditorialContext) -
     prompt
 }
 
+pub fn resolve_dispatch_plan(
+    job_id: String,
+    action: &AiAction,
+    provider: &str,
+    model: Option<String>,
+    prompt: String,
+) -> Result<DispatchPlan, String> {
+    let provider_upper = provider.to_uppercase();
+    if provider_upper == "OLLAMA" {
+        if model.is_none() || model.as_ref().unwrap().trim().is_empty() {
+            return Err("VALIDATION_ERROR: Model must be explicitly selected for OLLAMA".to_string());
+        }
+        Ok(DispatchPlan::Ollama {
+            job_id,
+            model: model.unwrap(),
+            prompt,
+        })
+    } else if provider_upper == "SIDECAR" {
+        Ok(DispatchPlan::Sidecar {
+            job_id,
+            program: "llama-sidecar".to_string(),
+            args: vec![
+                "--action".to_string(),
+                action_id(action).to_string(),
+                "--prompt".to_string(),
+                prompt,
+            ],
+        })
+    } else {
+        Err(format!("UNSUPPORTED_CAPABILITY: Provedor não suportado: {}", provider))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DispatchPlan {
+    Ollama {
+        job_id: String,
+        model: String,
+        prompt: String,
+    },
+    Sidecar {
+        job_id: String,
+        program: String,
+        args: Vec<String>,
+    },
+}
+
 #[tauri::command]
 pub async fn start_orchestrated_inference(
     app: AppHandle,
@@ -443,36 +510,15 @@ pub async fn start_orchestrated_inference(
     let prompt = assemble_prompt(&request.action, &budgeted_context);
 
     // 6. Dispatch
-    let provider_upper = request.provider.to_uppercase();
-    if provider_upper == "OLLAMA" {
-        if request.model.is_none() || request.model.as_ref().unwrap().trim().is_empty() {
-            return Err(
-                "VALIDATION_ERROR: Model must be explicitly selected for OLLAMA".to_string(),
-            );
+    let plan = resolve_dispatch_plan(request.job_id, &request.action, &request.provider, request.model, prompt)?;
+
+    match plan {
+        DispatchPlan::Ollama { job_id, model, prompt } => {
+            crate::ollama_gateway::start_ollama_inference_internal(app, job_id, model, prompt).await
         }
-        let model = request.model.unwrap();
-        // Call internal ollama function
-        crate::ollama_gateway::start_ollama_inference_internal(app, request.job_id, model, prompt)
-            .await
-    } else if provider_upper == "SIDECAR" {
-        crate::ai_supervisor::start_inference_internal(
-            app,
-            registry,
-            request.job_id,
-            "llama-sidecar".to_string(),
-            vec![
-                "--action".to_string(),
-                format!("{:?}", request.action).to_lowercase(),
-                "--prompt".to_string(),
-                prompt
-            ],
-        )
-        .await
-    } else {
-        Err(format!(
-            "UNSUPPORTED_CAPABILITY: Provedor não suportado: {}",
-            request.provider
-        ))
+        DispatchPlan::Sidecar { job_id, program, args } => {
+            crate::ai_supervisor::start_inference_internal(app, registry, job_id, program, args).await
+        }
     }
 }
 
@@ -594,10 +640,16 @@ mod tests {
     #[test]
     fn test_image_asset_fail_closed() {
         let mut ctx = dummy_context();
-        ctx.media = Some(vec![crate::models::context::MediaAsset {
-            r#type: crate::models::context::MediaAssetType::ImageAsset,
-            data: "data".to_string(),
-        }]);
+        ctx.media = Some(vec![
+            crate::models::context::MediaAsset {
+                r#type: crate::models::context::MediaAssetType::VisualDescription,
+                data: "data".to_string(),
+            },
+            crate::models::context::MediaAsset {
+                r#type: crate::models::context::MediaAssetType::ImageAsset,
+                data: "data".to_string(),
+            }
+        ]);
         let req = AiOrchestrationRequest {
             job_id: "1".to_string(),
             action: AiAction::GenerateAltText,
@@ -607,5 +659,144 @@ mod tests {
         };
         let err = validate_prerequisites(&req).unwrap_err();
         assert!(err.contains("UNSUPPORTED_CAPABILITY"));
+    }
+
+    #[test]
+    fn test_action_id_serialization() {
+        assert_eq!(action_id(&AiAction::GenerateOutline), "generate_outline");
+        assert_eq!(action_id(&AiAction::GenerateAltText), "generate_alt_text");
+        assert_eq!(action_id(&AiAction::GenerateSeo), "generate_seo");
+        assert_eq!(action_id(&AiAction::CheckAccessibility), "check_accessibility");
+        assert_eq!(action_id(&AiAction::ValidateInclusivity), "validate_inclusivity");
+        assert_eq!(action_id(&AiAction::ResearchGaps), "research_gaps");
+        assert_eq!(action_id(&AiAction::PlainLanguage), "plain_language");
+        assert_eq!(action_id(&AiAction::EditorialReview), "editorial_review");
+    }
+
+    #[test]
+    fn test_resolve_dispatch_plan_ollama() {
+        let plan = resolve_dispatch_plan(
+            "1".to_string(),
+            &AiAction::PlainLanguage,
+            "OLLAMA",
+            Some("llama3".to_string()),
+            "prompt".to_string(),
+        ).unwrap();
+        match plan {
+            DispatchPlan::Ollama { job_id, model, prompt } => {
+                assert_eq!(job_id, "1");
+                assert_eq!(model, "llama3");
+                assert_eq!(prompt, "prompt");
+            }
+            _ => panic!("Expected Ollama plan"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_dispatch_plan_sidecar() {
+        let plan = resolve_dispatch_plan(
+            "1".to_string(),
+            &AiAction::PlainLanguage,
+            "SIDECAR",
+            None, // should not require model
+            "prompt".to_string(),
+        ).unwrap();
+        match plan {
+            DispatchPlan::Sidecar { job_id, program, args } => {
+                assert_eq!(job_id, "1");
+                assert_eq!(program, "llama-sidecar");
+                assert_eq!(args, vec!["--action", "plain_language", "--prompt", "prompt"]);
+            }
+            _ => panic!("Expected Sidecar plan"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_dispatch_plan_unsupported() {
+        let res = resolve_dispatch_plan(
+            "1".to_string(),
+            &AiAction::PlainLanguage,
+            "UNSUPPORTED",
+            None,
+            "prompt".to_string(),
+        );
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("UNSUPPORTED_CAPABILITY"));
+    }
+
+    #[test]
+    fn test_resolve_dispatch_plan_ollama_missing_model() {
+        let res = resolve_dispatch_plan(
+            "1".to_string(),
+            &AiAction::PlainLanguage,
+            "OLLAMA",
+            Some("   ".to_string()), // blank model
+            "prompt".to_string(),
+        );
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("VALIDATION_ERROR"));
+    }
+
+    #[test]
+    fn test_validate_prerequisites_whitespace_rejection() {
+        let mut req = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateSeo,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("model".to_string()),
+        };
+        // Just whitespace
+        req.context.metadata.keyword = Some("   ".to_string());
+        req.context.content = Some(EditorialContent { source: ContentSource::Pasted, text: "   ".to_string() });
+        assert!(validate_prerequisites(&req).is_err());
+
+        // Actual content
+        req.context.metadata.keyword = Some("test".to_string());
+        req.context.content = Some(EditorialContent { source: ContentSource::Pasted, text: "text".to_string() });
+        assert!(validate_prerequisites(&req).is_ok());
+    }
+
+    #[test]
+    fn test_validate_prerequisites_visual_description_accepted() {
+        let mut req = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateAltText,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("model".to_string()),
+        };
+        // Whitespace only visual_description should fail
+        req.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "   ".to_string(),
+        }]);
+        assert!(validate_prerequisites(&req).is_err());
+
+        // Valid visual_description should pass
+        req.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "valid".to_string(),
+        }]);
+        assert!(validate_prerequisites(&req).is_ok());
+    }
+
+    #[test]
+    fn test_assemble_prompt_contains_escaped_cta_and_links() {
+        let mut ctx = dummy_context();
+        ctx.metadata.keyword = Some("test".to_string());
+        ctx.metadata.cta = Some("Click <here> & win".to_string());
+        ctx.links = EditorialLinks { internal: Some("http://internal?a=1&b=2".to_string()), external: None };
+        ctx.checklists_state.pending_items = vec!["Do <this>".to_string()];
+
+        let mut projected = project_context(&AiAction::GenerateSeo, ctx);
+        // GenerateSeo doesn't normally include checklists_state and links, so let's mock it for the assembler test
+        projected.links = Some(EditorialLinks { internal: Some("http://internal?a=1&b=2".to_string()), external: None });
+        projected.checklists_state = Some(EditorialChecklistsState { total: 1, completed: 0, pending_items: vec!["Do <this>".to_string()] });
+
+        let prompt = assemble_prompt(&AiAction::GenerateSeo, &projected);
+        assert!(prompt.contains("Click &lt;here&gt; &amp; win"));
+        assert!(prompt.contains("http://internal?a=1&amp;b=2"));
+        assert!(prompt.contains("Do &lt;this&gt;"));
     }
 }
