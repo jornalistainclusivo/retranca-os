@@ -11,6 +11,7 @@ import type {
   AiStreamDoneEvent,
   AiStreamCanceledEvent,
   AiStreamErrorEvent,
+  AiContextNoticeEvent,
   HardwareInfo,
   AiAction,
 } from '@/types/ai';
@@ -74,5 +75,16 @@ export async function onStreamError(
 
   return tauriListen('ai-stream-error', (e) => {
     handler(e.payload as AiStreamErrorEvent);
+  });
+}
+
+export async function onStreamNotice(
+  handler: (event: AiContextNoticeEvent) => void,
+): Promise<UnlistenFn> {
+  const ready = await ensureTauri();
+  if (!ready || !tauriListen) return () => {};
+
+  return tauriListen('ai-stream-notice', (e) => {
+    handler(e.payload as AiContextNoticeEvent);
   });
 }

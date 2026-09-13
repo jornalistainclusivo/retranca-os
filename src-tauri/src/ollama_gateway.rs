@@ -97,8 +97,7 @@ pub async fn validate_model(client: &Client, base_url: &str, model: &str) -> Res
         .any(|t| t.name == model || t.name == format!("{}:latest", model)))
 }
 
-#[tauri::command]
-pub async fn start_ollama_inference(
+pub async fn start_ollama_inference_internal(
     app: AppHandle,
     job_id: String,
     model: String,
@@ -208,6 +207,17 @@ pub async fn start_ollama_inference(
     });
 
     Ok(())
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+pub async fn start_ollama_inference(
+    app: AppHandle,
+    job_id: String,
+    model: String,
+    prompt: String,
+) -> Result<(), String> {
+    start_ollama_inference_internal(app, job_id, model, prompt).await
 }
 
 #[tauri::command]

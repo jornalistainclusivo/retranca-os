@@ -10,12 +10,14 @@ import {
   onStreamToken,
   onStreamDone,
   onStreamError,
+  onStreamNotice,
 } from '@/lib/adapters/localAiAdapter';
 import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter';
-import type { ProviderType } from '@/types/ai';
+import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
+import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
 import { 
   X, 
   Save, 
@@ -33,6 +35,7 @@ import {
   History,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Maximize,
   Minimize,
   Copy,
@@ -106,15 +109,30 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
+  const [analysisContent, setAnalysisContent] = useState('');
+  const [visualDescription, setVisualDescription] = useState('');
   const [copied, setCopied] = useState(false);
   const aiJobIdRef = React.useRef<string | null>(null);
+  const aiJobActiveRef = React.useRef(false);
+  const unlistenFnsRef = React.useRef<(() => void)[]>([]);
   
   const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
+
+  useEffect(() => {
+    return () => {
+      if (unlistenFnsRef.current.length > 0) {
+        unlistenFnsRef.current.forEach(unlisten => unlisten());
+        unlistenFnsRef.current = [];
+      }
+    };
+  }, []);
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
     setFormData({ ...article });
     setAiResponse(null);
+    setContextNotices([]);
     setCopied(false);
   }
 
@@ -200,37 +218,140 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
   // Quick AI Assistant action call via local Tauri IPC
   const handleAiAction = async (actionType: AiAction) => {
+    if (aiJobActiveRef.current) return;
+    aiJobActiveRef.current = true;
+
+    // Cleanup previous listeners to prevent duplicates and memory leaks
+    if (unlistenFnsRef.current.length > 0) {
+      unlistenFnsRef.current.forEach(unlisten => unlisten());
+      unlistenFnsRef.current = [];
+    }
+
     setAiLoading(true);
     setAiResponse(null);
+    setContextNotices([]);
 
     const jobId = `article_ai_${Date.now()}`;
     aiJobIdRef.current = jobId;
     let buffer = '';
 
     try {
-      const unToken = await onStreamToken((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        buffer += ev.token;
-        setAiResponse(buffer);
-      });
-      const unDone = await onStreamDone((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        setAiLoading(false);
-        unToken(); unDone(); unErr();
-      });
-      const unErr = await onStreamError((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        setAiResponse(`Erro: ${ev.message}`);
-        setAiLoading(false);
-        unToken(); unDone(); unErr();
-      });
+      const localUnlistens: (() => void)[] = [];
+      const cleanupLocal = () => {
+        localUnlistens.forEach(u => u());
+        localUnlistens.length = 0;
+      };
 
-      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.startInference(jobId, actionType, formData.notes || formData.summary || formData.title, selectedModel || undefined);
+      const cleanupListeners = () => {
+        if (unlistenFnsRef.current.length > 0) {
+          unlistenFnsRef.current.forEach(unlisten => unlisten());
+          unlistenFnsRef.current = [];
+        }
+      };
+
+      try {
+        const unNotice = await onStreamNotice((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
+            setContextNotices(prev => {
+              // do not overwrite, check for distinct notice
+              if (prev.some(n => n.notice_code === ev.notice_code)) return prev;
+              return [...prev, { notice_code: ev.notice_code, message: ev.message, omitted: ev.omitted_fields || [] }];
+            });
+          } else {
+            console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
+          }
+        });
+        localUnlistens.push(unNotice);
+
+        const unToken = await onStreamToken((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          buffer += ev.token;
+          setAiResponse(buffer);
+        });
+        localUnlistens.push(unToken);
+
+        const unDone = await onStreamDone((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          setAiLoading(false);
+          aiJobActiveRef.current = false;
+          cleanupListeners();
+        });
+        localUnlistens.push(unDone);
+
+        const unError = await onStreamError((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          buffer += `\n\nErro: ${ev.message}`;
+          setAiResponse(buffer);
+          setAiLoading(false);
+          aiJobActiveRef.current = false;
+          cleanupListeners();
+        });
+        localUnlistens.push(unError);
+      } catch (err) {
+        cleanupLocal();
+        aiJobActiveRef.current = false;
+        throw err;
+      }
+      
+      unlistenFnsRef.current = localUnlistens;
+
+      const request: AiOrchestrationRequest = {
+        job_id: jobId,
+        action: actionType,
+        provider: provider,
+        model: selectedModel || undefined,
+        context: {
+          articleId: formData.id,
+          editorialStatus: formData.status,
+          categoryTag: formData.categoryTag,
+          metadata: {
+            title: formData.title || undefined,
+            summary: formData.summary || undefined,
+            objective: formData.objective || undefined,
+            keyword: formData.keyword || undefined,
+            persona: formData.persona || undefined,
+            cta: formData.cta || undefined,
+          },
+          notes: formData.notes || undefined,
+          links: {
+             internal: formData.internalLinks || undefined,
+             external: formData.externalLinks || undefined,
+          },
+          checklistsState: {
+             total: formData.checklists.length,
+             completed: completedChecklists,
+             pendingItems: formData.checklists.filter(c => !c.completed).map(c => c.label)
+          },
+          content: analysisContent.trim() ? { source: 'pasted', text: analysisContent.trim() } : undefined,
+          media: visualDescription.trim() ? [{ type: 'visual_description', data: visualDescription.trim() }] : undefined,
+        }
+      };
+
+      let providerImpl;
+      if (provider === 'OLLAMA') {
+        if (!selectedModel) {
+          throw new Error('Nenhum modelo OLLAMA selecionado.');
+        }
+        providerImpl = OllamaProvider;
+      } else if (provider === 'SIDECAR') {
+        providerImpl = SidecarProvider;
+      } else {
+        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
+      }
+
+      await providerImpl.startInference(request);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
+      aiJobActiveRef.current = false;
+      
+      // Execute cleanup listeners safely since we are exiting early
+      if (unlistenFnsRef.current.length > 0) {
+        unlistenFnsRef.current.forEach(unlisten => unlisten());
+        unlistenFnsRef.current = [];
+      }
     }
   };
 
@@ -406,6 +527,32 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Conteúdo para análise (Texto completo)
+                </label>
+                <textarea
+                  rows={2}
+                  value={analysisContent}
+                  onChange={(e) => setAnalysisContent(e.target.value)}
+                  placeholder="Cole o texto da matéria para validação (opcional)..."
+                  className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Descrição Visual para Alt Text (Apenas Sessão)
+                </label>
+                <textarea
+                  rows={2}
+                  value={visualDescription}
+                  onChange={(e) => setVisualDescription(e.target.value)}
+                  placeholder="Descreva a imagem (cores, objetos, pessoas, contexto) para gerar o Alt Text..."
+                  className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Palavra-Chave SEO
                 </label>
                 <input
@@ -514,63 +661,134 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('generate_alt_text') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Alt Text WCAG com IA" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                ♿ Alt Text WCAG com IA
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('generate_seo') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Otimizar Meta Tags SEO" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                🔍 Otimizar Meta Tags SEO
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('check_accessibility') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Auditoria de Linguagem Simples" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                ✨ Auditoria de Linguagem Simples
-              </button>
-              <button
-                type="button"
-                onClick={isPremiumMode ? () => handleAiAction('validate_inclusivity') : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                title={isPremiumMode ? "Validador Inclusivo" : "Recurso Premium"}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isPremiumMode 
-                    ? "bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-              >
-                🤝 Validador Inclusivo
-              </button>
+              {(() => {
+                const getButtonStyles = (state: string, isPremium: boolean) => {
+                  if (!isPremium || state === 'UNAVAILABLE') {
+                    return "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60";
+                  }
+                  if (state === 'RECOMMENDED') {
+                    return "bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100 shadow-sm ring-1 ring-amber-500/50";
+                  }
+                  return "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100";
+                };
+
+                const evalContext = {
+                  status: formData.status,
+                  title: formData.title,
+                  objective: formData.objective,
+                  summary: formData.summary,
+                  content: analysisContent,
+                  keyword: formData.keyword,
+                  visualDescription: visualDescription
+                };
+
+                const gapsCheck = evaluateAiAction('research_gaps', evalContext);
+                const simplifyCheck = evaluateAiAction('plain_language', evalContext);
+                const inclusivityCheck = evaluateAiAction('validate_inclusivity', evalContext);
+                const altTextCheck = evaluateAiAction('generate_alt_text', evalContext);
+                const seoCheck = evaluateAiAction('generate_seo', evalContext);
+                const editorialCheck = evaluateAiAction('editorial_review', evalContext);
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('research_gaps') : undefined}
+                      disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : gapsCheck.state === 'UNAVAILABLE' ? `Requer: ${gapsCheck.missing}` : aiLoading ? "Ação em andamento" : "Pesquisar Lacunas"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(gapsCheck.state, isPremiumMode)} ${(!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 inline mr-1" />
+                      Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${gapsCheck.missing})`} {gapsCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('plain_language') : undefined}
+                      disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : simplifyCheck.state === 'UNAVAILABLE' ? `Requer: ${simplifyCheck.missing}` : aiLoading ? "Ação em andamento" : "Simplificar Linguagem"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(simplifyCheck.state, isPremiumMode)} ${(!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      🗣️ Simplificar Linguagem {(simplifyCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${simplifyCheck.missing})`} {simplifyCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('validate_inclusivity') : undefined}
+                      disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : aiLoading ? "Ação em andamento" : "Validar Inclusividade"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)} ${(!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      🤝 Validar Inclusividade {(inclusivityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_alt_text') : undefined}
+                      disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : altTextCheck.state === 'UNAVAILABLE' ? `Requer: ${altTextCheck.missing}` : aiLoading ? "Ação em andamento" : "Gerar Alt Text WCAG"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(altTextCheck.state, isPremiumMode)} ${(!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      ♿ Alt Text WCAG {(altTextCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${altTextCheck.missing})`} {altTextCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_seo') : undefined}
+                      disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : seoCheck.state === 'UNAVAILABLE' ? `Requer: ${seoCheck.missing}` : aiLoading ? "Ação em andamento" : "Otimizar Meta Tags SEO"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(seoCheck.state, isPremiumMode)} ${(!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      🔍 Otimizar Meta Tags SEO {(seoCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${seoCheck.missing})`} {seoCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('editorial_review') : undefined}
+                      disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : editorialCheck.state === 'UNAVAILABLE' ? `Requer: ${editorialCheck.missing}` : aiLoading ? "Ação em andamento" : "Revisão Editorial"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(editorialCheck.state, isPremiumMode)} ${(!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      📋 Revisão Editorial {(editorialCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${editorialCheck.missing})`} {editorialCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
+
+            {contextNotices.map((notice, i) => (
+              <div 
+                key={`${notice.notice_code}_${i}`}
+                className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                role="alert"
+                aria-live="polite"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400">
+                      Aviso do Assistente
+                    </h4>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
+                      {notice.message}
+                    </p>
+                    {notice.omitted && notice.omitted.length > 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-1">
+                        <span className="font-semibold">Campos omitidos:</span> {notice.omitted.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
 
             {aiResponse && (
               <div 

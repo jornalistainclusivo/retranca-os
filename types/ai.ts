@@ -6,6 +6,8 @@
  * and must match the Rust event payloads in `ai_supervisor.rs`.
  */
 
+import type { ArticleStatus, CategoryTag } from './editorial';
+
 // ─── Model Provisioning State Machine ────────────────────────────────────────
 
 /** Represents the lifecycle of the local AI model on disk. */
@@ -37,7 +39,10 @@ export type AiAction =
   | 'generate_alt_text'
   | 'generate_seo'
   | 'check_accessibility'
-  | 'validate_inclusivity';
+  | 'validate_inclusivity'
+  | 'research_gaps'
+  | 'plain_language'
+  | 'editorial_review';
 
 // ─── Tauri Event Payloads (mirroring Rust structs) ───────────────────────────
 
@@ -56,6 +61,14 @@ export interface AiStreamCanceledEvent {
 
 export interface AiStreamErrorEvent {
   job_id: string;
+  message: string;
+  error_code?: 'MISSING_PREREQUISITES' | 'CONTEXT_EXCEEDED' | 'UNSUPPORTED_CAPABILITY' | 'VALIDATION_ERROR' | string;
+}
+
+export interface AiContextNoticeEvent {
+  job_id: string;
+  notice_code: string;
+  omitted_fields: string[];
   message: string;
 }
 
@@ -97,4 +110,56 @@ export interface InferenceRequest {
   action: AiAction;
   prompt: string;
   context?: string;
+}
+
+// ─── Editorial AI Context DTOs (Phase 6.3) ───────────────────────────────────
+
+export interface EditorialMetadata {
+  title?: string;
+  summary?: string;
+  objective?: string;
+  keyword?: string;
+  persona?: string;
+  cta?: string;
+}
+
+export interface EditorialLinks {
+  internal?: string;
+  external?: string;
+}
+
+export interface EditorialChecklistsState {
+  total: number;
+  completed: number;
+  pendingItems: string[];
+}
+
+export interface EditorialContent {
+  source: 'persisted' | 'pasted' | 'selection';
+  text: string;
+}
+
+export interface MediaAsset {
+  type: 'image_asset' | 'visual_description';
+  data: string;
+}
+
+export interface EditorialContext {
+  articleId: string;
+  editorialStatus: ArticleStatus;
+  categoryTag: CategoryTag;
+  metadata: EditorialMetadata;
+  notes?: string;
+  links: EditorialLinks;
+  checklistsState: EditorialChecklistsState;
+  content?: EditorialContent;
+  media?: MediaAsset[];
+}
+
+export interface AiOrchestrationRequest {
+  job_id: string;
+  action: AiAction;
+  context: EditorialContext;
+  provider: ProviderType;
+  model?: string;
 }
