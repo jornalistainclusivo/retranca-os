@@ -67,20 +67,21 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
             }
         }
         AiAction::GenerateAltText => {
-            let has_media = req
-                .context
-                .media
-                .as_ref()
-                .map_or(false, |m| m.iter().any(|asset| asset.r#type == crate::models::context::MediaAssetType::VisualDescription && !asset.data.trim().is_empty()));
-            if !has_media {
-                return Err("MISSING_PREREQUISITES: GenerateAltText requer media com visual_description não vazia".to_string());
-            }
             if let Some(media_list) = &req.context.media {
                 for m in media_list {
                     if m.r#type == crate::models::context::MediaAssetType::ImageAsset {
                         return Err("UNSUPPORTED_CAPABILITY: Provedor não suporta image_asset (multimodal). Use visual_description.".to_string());
                     }
                 }
+            }
+            let has_media = req.context.media.as_ref().map_or(false, |m| {
+                m.iter().any(|asset| {
+                    asset.r#type == crate::models::context::MediaAssetType::VisualDescription
+                        && !asset.data.trim().is_empty()
+                })
+            });
+            if !has_media {
+                return Err("MISSING_PREREQUISITES: GenerateAltText requer media com visual_description não vazia".to_string());
             }
         }
         AiAction::GenerateSeo => {
@@ -107,7 +108,10 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
     Ok(())
 }
 
-pub fn project_context(action: &AiAction, mut context: EditorialContext) -> ProjectedEditorialContext {
+pub fn project_context(
+    action: &AiAction,
+    mut context: EditorialContext,
+) -> ProjectedEditorialContext {
     let mut projected = ProjectedEditorialContext {
         metadata: crate::models::context::EditorialMetadata {
             title: None,
@@ -126,13 +130,13 @@ pub fn project_context(action: &AiAction, mut context: EditorialContext) -> Proj
 
     let mut evidence_content = None;
     let mut evidence_summary = None;
-    
+
     // Evidence channel selection (Content preferred over Summary)
     match action {
         AiAction::PlainLanguage | AiAction::ValidateInclusivity | AiAction::GenerateSeo => {
-            if context.content.is_some() {
+            if !is_content_blank(&context.content) {
                 evidence_content = context.content.take();
-            } else {
+            } else if !is_blank(&context.metadata.summary) {
                 evidence_summary = context.metadata.summary.take();
             }
         }
@@ -195,23 +199,47 @@ pub fn apply_budget(
 
     let get_len = |ctx: &ProjectedEditorialContext| -> usize {
         let mut len = 0;
-        if let Some(t) = &ctx.metadata.title { len += t.len(); }
-        if let Some(s) = &ctx.metadata.summary { len += s.len(); }
-        if let Some(o) = &ctx.metadata.objective { len += o.len(); }
-        if let Some(k) = &ctx.metadata.keyword { len += k.len(); }
-        if let Some(p) = &ctx.metadata.persona { len += p.len(); }
-        if let Some(c) = &ctx.metadata.cta { len += c.len(); }
-        if let Some(c) = &ctx.content { len += c.text.len(); }
-        if let Some(m) = &ctx.media {
-            for asset in m { len += asset.data.len(); }
+        if let Some(t) = &ctx.metadata.title {
+            len += t.len();
         }
-        if let Some(n) = &ctx.notes { len += n.len(); }
+        if let Some(s) = &ctx.metadata.summary {
+            len += s.len();
+        }
+        if let Some(o) = &ctx.metadata.objective {
+            len += o.len();
+        }
+        if let Some(k) = &ctx.metadata.keyword {
+            len += k.len();
+        }
+        if let Some(p) = &ctx.metadata.persona {
+            len += p.len();
+        }
+        if let Some(c) = &ctx.metadata.cta {
+            len += c.len();
+        }
+        if let Some(c) = &ctx.content {
+            len += c.text.len();
+        }
+        if let Some(m) = &ctx.media {
+            for asset in m {
+                len += asset.data.len();
+            }
+        }
+        if let Some(n) = &ctx.notes {
+            len += n.len();
+        }
         if let Some(l) = &ctx.links {
-            if let Some(i) = &l.internal { len += i.len(); }
-            if let Some(e) = &l.external { len += e.len(); }
+            if let Some(i) = &l.internal {
+                len += i.len();
+            }
+            if let Some(e) = &l.external {
+                len += e.len();
+            }
         }
         if let Some(ch) = &ctx.checklists_state {
-            for item in &ch.pending_items { len += item.len(); }
+            for item in &ch.pending_items {
+                len += item.len();
+            }
             len += 100; // rough xml overhead
         }
         len
@@ -305,7 +333,10 @@ pub fn apply_budget(
     }
 
     if current_len > FALLBACK_CONTEXT_LIMIT {
-        return Err("CONTEXT_EXCEEDED: Campos essenciais excedem o limite de contexto do modelo.".to_string());
+        return Err(
+            "CONTEXT_EXCEEDED: Campos essenciais excedem o limite de contexto do modelo."
+                .to_string(),
+        );
     }
 
     Ok((context, omitted_fields))
@@ -439,7 +470,9 @@ pub fn resolve_dispatch_plan(
     let provider_upper = provider.to_uppercase();
     if provider_upper == "OLLAMA" {
         if model.is_none() || model.as_ref().unwrap().trim().is_empty() {
-            return Err("VALIDATION_ERROR: Model must be explicitly selected for OLLAMA".to_string());
+            return Err(
+                "VALIDATION_ERROR: Model must be explicitly selected for OLLAMA".to_string(),
+            );
         }
         Ok(DispatchPlan::Ollama {
             job_id,
@@ -458,7 +491,10 @@ pub fn resolve_dispatch_plan(
             ],
         })
     } else {
-        Err(format!("UNSUPPORTED_CAPABILITY: Provedor não suportado: {}", provider))
+        Err(format!(
+            "UNSUPPORTED_CAPABILITY: Provedor não suportado: {}",
+            provider
+        ))
     }
 }
 
@@ -510,14 +546,29 @@ pub async fn start_orchestrated_inference(
     let prompt = assemble_prompt(&request.action, &budgeted_context);
 
     // 6. Dispatch
-    let plan = resolve_dispatch_plan(request.job_id, &request.action, &request.provider, request.model, prompt)?;
+    let plan = resolve_dispatch_plan(
+        request.job_id,
+        &request.action,
+        &request.provider,
+        request.model,
+        prompt,
+    )?;
 
     match plan {
-        DispatchPlan::Ollama { job_id, model, prompt } => {
+        DispatchPlan::Ollama {
+            job_id,
+            model,
+            prompt,
+        } => {
             crate::ollama_gateway::start_ollama_inference_internal(app, job_id, model, prompt).await
         }
-        DispatchPlan::Sidecar { job_id, program, args } => {
-            crate::ai_supervisor::start_inference_internal(app, registry, job_id, program, args).await
+        DispatchPlan::Sidecar {
+            job_id,
+            program,
+            args,
+        } => {
+            crate::ai_supervisor::start_inference_internal(app, registry, job_id, program, args)
+                .await
         }
     }
 }
@@ -525,7 +576,10 @@ pub async fn start_orchestrated_inference(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::context::{ArticleStatus, CategoryTag, ContentSource, EditorialChecklistsState, EditorialContent, EditorialContext, EditorialLinks, EditorialMetadata};
+    use crate::models::context::{
+        ArticleStatus, CategoryTag, ContentSource, EditorialChecklistsState, EditorialContent,
+        EditorialContext, EditorialLinks, EditorialMetadata,
+    };
 
     fn dummy_context() -> EditorialContext {
         EditorialContext {
@@ -541,8 +595,15 @@ mod tests {
                 cta: None,
             },
             notes: None,
-            links: EditorialLinks { internal: None, external: None },
-            checklists_state: EditorialChecklistsState { total: 0, completed: 0, pending_items: vec![] },
+            links: EditorialLinks {
+                internal: None,
+                external: None,
+            },
+            checklists_state: EditorialChecklistsState {
+                total: 0,
+                completed: 0,
+                pending_items: vec![],
+            },
             content: None,
             media: None,
         }
@@ -550,7 +611,10 @@ mod tests {
 
     #[test]
     fn test_xml_escaping() {
-        assert_eq!(escape_xml("Hello & <world> \"'"), "Hello &amp; &lt;world&gt; &quot;&apos;");
+        assert_eq!(
+            escape_xml("Hello & <world> \"'"),
+            "Hello &amp; &lt;world&gt; &quot;&apos;"
+        );
     }
 
     #[test]
@@ -564,12 +628,15 @@ mod tests {
         };
         // Should fail because no keyword
         assert!(validate_prerequisites(&req).is_err());
-        
+
         req.context.metadata.keyword = Some("test".to_string());
         // Still fails because no content/summary
         assert!(validate_prerequisites(&req).is_err());
-        
-        req.context.content = Some(EditorialContent { source: ContentSource::Pasted, text: "text".to_string() });
+
+        req.context.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "text".to_string(),
+        });
         // Should pass
         assert!(validate_prerequisites(&req).is_ok());
     }
@@ -579,7 +646,7 @@ mod tests {
         let mut ctx = dummy_context();
         ctx.metadata.title = Some("a".repeat(10));
         ctx.notes = Some("n".repeat(8000)); // Forces it over limit
-        
+
         let projected = project_context(&AiAction::ResearchGaps, ctx);
         let (budgeted, omitted) = apply_budget(&AiAction::ResearchGaps, projected).unwrap();
         // Notes should be dropped
@@ -594,7 +661,7 @@ mod tests {
         // No objective, still valid
         let projected = project_context(&AiAction::ResearchGaps, ctx.clone());
         assert!(projected.metadata.title.is_some());
-        
+
         let mut req = AiOrchestrationRequest {
             job_id: "1".to_string(),
             action: AiAction::ResearchGaps,
@@ -609,8 +676,11 @@ mod tests {
     fn test_content_preferred_over_summary() {
         let mut ctx = dummy_context();
         ctx.metadata.summary = Some("Summary".to_string());
-        ctx.content = Some(EditorialContent { source: ContentSource::Pasted, text: "Content".to_string() });
-        
+        ctx.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "Content".to_string(),
+        });
+
         let projected = project_context(&AiAction::PlainLanguage, ctx);
         assert!(projected.content.is_some());
         assert!(projected.metadata.summary.is_none());
@@ -621,16 +691,55 @@ mod tests {
         let mut ctx = dummy_context();
         ctx.metadata.summary = Some("Summary".to_string());
         ctx.content = None;
-        
+
         let projected = project_context(&AiAction::PlainLanguage, ctx);
         assert!(projected.content.is_none());
         assert!(projected.metadata.summary.is_some());
     }
 
     #[test]
+    fn test_content_blank_fallback_to_summary() {
+        let mut ctx = dummy_context();
+        ctx.metadata.summary = Some("Resumo válido".to_string());
+        ctx.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "   ".to_string(),
+        });
+
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        assert!(projected.content.is_none());
+        assert!(projected.metadata.summary.as_deref() == Some("Resumo válido"));
+
+        // Also verify for ValidateInclusivity and GenerateSeo
+        let mut ctx2 = dummy_context();
+        ctx2.metadata.summary = Some("Resumo válido".to_string());
+        ctx2.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "   ".to_string(),
+        });
+        let projected2 = project_context(&AiAction::ValidateInclusivity, ctx2);
+        assert!(projected2.content.is_none());
+        assert!(projected2.metadata.summary.as_deref() == Some("Resumo válido"));
+
+        let mut ctx3 = dummy_context();
+        ctx3.metadata.summary = Some("Resumo válido".to_string());
+        ctx3.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "   ".to_string(),
+        });
+        ctx3.metadata.keyword = Some("test".to_string());
+        let projected3 = project_context(&AiAction::GenerateSeo, ctx3);
+        assert!(projected3.content.is_none());
+        assert!(projected3.metadata.summary.as_deref() == Some("Resumo válido"));
+    }
+
+    #[test]
     fn test_context_exceeded() {
         let mut ctx = dummy_context();
-        ctx.content = Some(EditorialContent { source: ContentSource::Pasted, text: "a".repeat(9000) });
+        ctx.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "a".repeat(9000),
+        });
         let projected = project_context(&AiAction::PlainLanguage, ctx);
         let res = apply_budget(&AiAction::PlainLanguage, projected);
         assert!(res.is_err());
@@ -639,26 +748,50 @@ mod tests {
 
     #[test]
     fn test_image_asset_fail_closed() {
-        let mut ctx = dummy_context();
-        ctx.media = Some(vec![
+        let mut req = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateAltText,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("model".to_string()),
+        };
+
+        // 1. [image_asset] => UNSUPPORTED_CAPABILITY
+        req.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::ImageAsset,
+            data: "data".to_string(),
+        }]);
+        let err = validate_prerequisites(&req).unwrap_err();
+        assert!(err.contains("UNSUPPORTED_CAPABILITY"));
+
+        // 2. [image_asset, visual_description válido] => UNSUPPORTED_CAPABILITY
+        req.context.media = Some(vec![
+            crate::models::context::MediaAsset {
+                r#type: crate::models::context::MediaAssetType::ImageAsset,
+                data: "data".to_string(),
+            },
             crate::models::context::MediaAsset {
                 r#type: crate::models::context::MediaAssetType::VisualDescription,
                 data: "data".to_string(),
             },
-            crate::models::context::MediaAsset {
-                r#type: crate::models::context::MediaAssetType::ImageAsset,
-                data: "data".to_string(),
-            }
         ]);
-        let req = AiOrchestrationRequest {
-            job_id: "1".to_string(),
-            action: AiAction::GenerateAltText,
-            context: ctx,
-            provider: "OLLAMA".to_string(),
-            model: Some("model".to_string()),
-        };
-        let err = validate_prerequisites(&req).unwrap_err();
-        assert!(err.contains("UNSUPPORTED_CAPABILITY"));
+        let err2 = validate_prerequisites(&req).unwrap_err();
+        assert!(err2.contains("UNSUPPORTED_CAPABILITY"));
+
+        // 3. [visual_description vazio] => MISSING_PREREQUISITES
+        req.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "   ".to_string(),
+        }]);
+        let err3 = validate_prerequisites(&req).unwrap_err();
+        assert!(err3.contains("MISSING_PREREQUISITES"));
+
+        // 4. [visual_description válido] => OK
+        req.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "valid data".to_string(),
+        }]);
+        assert!(validate_prerequisites(&req).is_ok());
     }
 
     #[test]
@@ -666,8 +799,14 @@ mod tests {
         assert_eq!(action_id(&AiAction::GenerateOutline), "generate_outline");
         assert_eq!(action_id(&AiAction::GenerateAltText), "generate_alt_text");
         assert_eq!(action_id(&AiAction::GenerateSeo), "generate_seo");
-        assert_eq!(action_id(&AiAction::CheckAccessibility), "check_accessibility");
-        assert_eq!(action_id(&AiAction::ValidateInclusivity), "validate_inclusivity");
+        assert_eq!(
+            action_id(&AiAction::CheckAccessibility),
+            "check_accessibility"
+        );
+        assert_eq!(
+            action_id(&AiAction::ValidateInclusivity),
+            "validate_inclusivity"
+        );
         assert_eq!(action_id(&AiAction::ResearchGaps), "research_gaps");
         assert_eq!(action_id(&AiAction::PlainLanguage), "plain_language");
         assert_eq!(action_id(&AiAction::EditorialReview), "editorial_review");
@@ -681,9 +820,14 @@ mod tests {
             "OLLAMA",
             Some("llama3".to_string()),
             "prompt".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
         match plan {
-            DispatchPlan::Ollama { job_id, model, prompt } => {
+            DispatchPlan::Ollama {
+                job_id,
+                model,
+                prompt,
+            } => {
                 assert_eq!(job_id, "1");
                 assert_eq!(model, "llama3");
                 assert_eq!(prompt, "prompt");
@@ -700,12 +844,20 @@ mod tests {
             "SIDECAR",
             None, // should not require model
             "prompt".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
         match plan {
-            DispatchPlan::Sidecar { job_id, program, args } => {
+            DispatchPlan::Sidecar {
+                job_id,
+                program,
+                args,
+            } => {
                 assert_eq!(job_id, "1");
                 assert_eq!(program, "llama-sidecar");
-                assert_eq!(args, vec!["--action", "plain_language", "--prompt", "prompt"]);
+                assert_eq!(
+                    args,
+                    vec!["--action", "plain_language", "--prompt", "prompt"]
+                );
             }
             _ => panic!("Expected Sidecar plan"),
         }
@@ -748,12 +900,18 @@ mod tests {
         };
         // Just whitespace
         req.context.metadata.keyword = Some("   ".to_string());
-        req.context.content = Some(EditorialContent { source: ContentSource::Pasted, text: "   ".to_string() });
+        req.context.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "   ".to_string(),
+        });
         assert!(validate_prerequisites(&req).is_err());
 
         // Actual content
         req.context.metadata.keyword = Some("test".to_string());
-        req.context.content = Some(EditorialContent { source: ContentSource::Pasted, text: "text".to_string() });
+        req.context.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "text".to_string(),
+        });
         assert!(validate_prerequisites(&req).is_ok());
     }
 
@@ -786,13 +944,23 @@ mod tests {
         let mut ctx = dummy_context();
         ctx.metadata.keyword = Some("test".to_string());
         ctx.metadata.cta = Some("Click <here> & win".to_string());
-        ctx.links = EditorialLinks { internal: Some("http://internal?a=1&b=2".to_string()), external: None };
+        ctx.links = EditorialLinks {
+            internal: Some("http://internal?a=1&b=2".to_string()),
+            external: None,
+        };
         ctx.checklists_state.pending_items = vec!["Do <this>".to_string()];
 
         let mut projected = project_context(&AiAction::GenerateSeo, ctx);
         // GenerateSeo doesn't normally include checklists_state and links, so let's mock it for the assembler test
-        projected.links = Some(EditorialLinks { internal: Some("http://internal?a=1&b=2".to_string()), external: None });
-        projected.checklists_state = Some(EditorialChecklistsState { total: 1, completed: 0, pending_items: vec!["Do <this>".to_string()] });
+        projected.links = Some(EditorialLinks {
+            internal: Some("http://internal?a=1&b=2".to_string()),
+            external: None,
+        });
+        projected.checklists_state = Some(EditorialChecklistsState {
+            total: 1,
+            completed: 0,
+            pending_items: vec!["Do <this>".to_string()],
+        });
 
         let prompt = assemble_prompt(&AiAction::GenerateSeo, &projected);
         assert!(prompt.contains("Click &lt;here&gt; &amp; win"));
