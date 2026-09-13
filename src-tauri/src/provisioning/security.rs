@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_invalid_manifest_signature() {
-        let (pub_hex, signing_key) = generate_test_keys();
+        let (pub_hex, _signing_key) = generate_test_keys();
         let (_pub2_hex, signing_key2) = generate_test_keys();
 
         let manifest = Manifest {

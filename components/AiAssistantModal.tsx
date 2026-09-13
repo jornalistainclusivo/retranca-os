@@ -37,7 +37,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
   const [visualDescription, setVisualDescription] = useState('');
-  const [contextNotice, setContextNotice] = useState<{ message: string, omitted: string[] } | null>(null);
+  const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
@@ -47,6 +47,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const streamBufferRef = useRef('');
   const [displayResult, setDisplayResult] = useState<string | null>(null);
   const jobIdRef = useRef<string | null>(null);
+  const aiJobActiveRef = useRef(false);
   const unlistenRefs = useRef<Array<() => void>>([]);
   const rafRef = useRef<number | null>(null);
 
@@ -107,6 +108,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (aiJobActiveRef.current) return;
     if (genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING') return; // Prevent concurrent jobs
 
     if (!prompt.trim() && action !== 'generate_alt_text') return; // permit prompt to be empty if it's alt text with visual desc. Wait, prompt is required generally? We'll just enforce below.
@@ -121,11 +123,12 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       return;
     }
 
+    aiJobActiveRef.current = true;
     const jobId = `job_${Date.now()}`;
     jobIdRef.current = jobId;
     streamBufferRef.current = '';
     setDisplayResult(null);
-    setContextNotice(null);
+    setContextNotices([]);
     setGenState('QUEUED');
 
     // Cleanup previous listeners
@@ -142,7 +145,11 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         const unNotice = await onStreamNotice((ev) => {
           if (ev.job_id !== jobIdRef.current) return;
           if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
-            setContextNotice({ message: ev.message, omitted: ev.omitted_fields || [] });
+            setContextNotices(prev => {
+              // do not overwrite, check for distinct notice
+              if (prev.some(n => n.notice_code === ev.notice_code)) return prev;
+              return [...prev, { notice_code: ev.notice_code, message: ev.message, omitted: ev.omitted_fields || [] }];
+            });
           } else {
             console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
           }
@@ -161,6 +168,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           setGenState('COMPLETED');
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
           setDisplayResult(streamBufferRef.current);
+          aiJobActiveRef.current = false;
           cleanupListeners();
         });
         localUnlistens.push(unDone);
@@ -169,6 +177,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           if (ev.job_id !== jobIdRef.current) return;
           setGenState('CANCELLED');
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
+          aiJobActiveRef.current = false;
           cleanupListeners();
         });
         localUnlistens.push(unCanceled);
@@ -179,11 +188,13 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           setDisplayResult(streamBufferRef.current);
           setGenState('ERROR');
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
+          aiJobActiveRef.current = false;
           cleanupListeners();
         });
         localUnlistens.push(unError);
       } catch (err) {
         cleanupLocal();
+        aiJobActiveRef.current = false;
         throw err;
       }
 
@@ -227,6 +238,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
       setGenState('ERROR');
+      aiJobActiveRef.current = false;
       cleanupListeners();
     }
   };
@@ -481,8 +493,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
             </div>
           </form>
 
-          {contextNotice && (
+          {contextNotices.map((notice, i) => (
             <div 
+              key={`${notice.notice_code}_${i}`}
               className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-4"
               role="alert"
               aria-live="polite"
@@ -494,17 +507,17 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                     Aviso do Assistente
                   </h4>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
-                    {contextNotice.message}
+                    {notice.message}
                   </p>
-                  {contextNotice.omitted && contextNotice.omitted.length > 0 && (
+                  {notice.omitted && notice.omitted.length > 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-1">
-                      <span className="font-semibold">Campos omitidos:</span> {contextNotice.omitted.join(', ')}
+                      <span className="font-semibold">Campos omitidos:</span> {notice.omitted.join(', ')}
                     </p>
                   )}
                 </div>
               </div>
             </div>
-          )}
+          ))}
 
           {/* Streaming Result Output (Typewriter) */}
           {displayResult && (
