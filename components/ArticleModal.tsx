@@ -35,6 +35,7 @@ import {
   History,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Maximize,
   Minimize,
   Copy,
@@ -108,6 +109,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [contextNotice, setContextNotice] = useState<{ message: string, omitted: string[] } | null>(null);
   const [analysisContent, setAnalysisContent] = useState('');
   const [visualDescription, setVisualDescription] = useState('');
   const [copied, setCopied] = useState(false);
@@ -214,6 +216,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
   // Quick AI Assistant action call via local Tauri IPC
   const handleAiAction = async (actionType: AiAction) => {
+    if (aiLoading) return; // Prevent concurrent jobs
+
     // Cleanup previous listeners to prevent duplicates and memory leaks
     if (unlistenFnsRef.current.length > 0) {
       unlistenFnsRef.current.forEach(unlisten => unlisten());
@@ -222,12 +226,19 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
     setAiLoading(true);
     setAiResponse(null);
+    setContextNotice(null);
 
     const jobId = `article_ai_${Date.now()}`;
     aiJobIdRef.current = jobId;
     let buffer = '';
 
     try {
+      const localUnlistens: (() => void)[] = [];
+      const cleanupLocal = () => {
+        localUnlistens.forEach(u => u());
+        localUnlistens.length = 0;
+      };
+
       const cleanupListeners = () => {
         if (unlistenFnsRef.current.length > 0) {
           unlistenFnsRef.current.forEach(unlisten => unlisten());
@@ -235,28 +246,44 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         }
       };
 
-      const unNotice = await onStreamNotice((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
-      });
-      const unToken = await onStreamToken((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        buffer += ev.token;
-        setAiResponse(buffer);
-      });
-      const unDone = await onStreamDone((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        setAiLoading(false);
-        cleanupListeners();
-      });
-      const unErr = await onStreamError((ev) => {
-        if (ev.job_id !== aiJobIdRef.current) return;
-        setAiResponse(`Erro: ${ev.message}`);
-        setAiLoading(false);
-        cleanupListeners();
-      });
+      try {
+        const unNotice = await onStreamNotice((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
+            setContextNotice({ message: ev.message, omitted: ev.omitted_fields || [] });
+          } else {
+            console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
+          }
+        });
+        localUnlistens.push(unNotice);
+
+        const unToken = await onStreamToken((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          buffer += ev.token;
+          setAiResponse(buffer);
+        });
+        localUnlistens.push(unToken);
+
+        const unDone = await onStreamDone((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          setAiLoading(false);
+          cleanupListeners();
+        });
+        localUnlistens.push(unDone);
+
+        const unErr = await onStreamError((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          setAiResponse(`Erro: ${ev.message}`);
+          setAiLoading(false);
+          cleanupListeners();
+        });
+        localUnlistens.push(unErr);
+      } catch (err) {
+        cleanupLocal();
+        throw err;
+      }
       
-      unlistenFnsRef.current = [unNotice, unToken, unDone, unErr];
+      unlistenFnsRef.current = localUnlistens;
 
       const request: AiOrchestrationRequest = {
         job_id: jobId,
@@ -721,6 +748,31 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 );
               })()}
             </div>
+
+            {contextNotice && (
+              <div 
+                className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                role="alert"
+                aria-live="polite"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400">
+                      Aviso do Assistente
+                    </h4>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
+                      {contextNotice.message}
+                    </p>
+                    {contextNotice.omitted && contextNotice.omitted.length > 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-1">
+                        <span className="font-semibold">Campos omitidos:</span> {contextNotice.omitted.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {aiResponse && (
               <div 

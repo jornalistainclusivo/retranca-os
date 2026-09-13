@@ -542,6 +542,22 @@ pub async fn start_orchestrated_inference(
         );
     }
 
+    if request.action == AiAction::EditorialReview {
+        if let Some(checklists) = &budgeted_context.checklists_state {
+            if !checklists.pending_items.is_empty() {
+                let _ = app.emit(
+                    "ai-stream-notice",
+                    AiContextNoticeEvent {
+                        job_id: request.job_id.clone(),
+                        notice_code: "EDITORIAL_WARNING".to_string(),
+                        omitted_fields: vec![],
+                        message: "Atenção: Existem itens pendentes no checklist editorial. A revisão pode apontar falhas estruturais que deverão ser corrigidas.".to_string(),
+                    },
+                );
+            }
+        }
+    }
+
     // 5. Prompt Assembly
     let prompt = assemble_prompt(&request.action, &budgeted_context);
 
