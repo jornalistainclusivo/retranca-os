@@ -685,23 +685,20 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 const gapsCheck = evaluateAiAction('research_gaps', evalContext);
                 const simplifyCheck = evaluateAiAction('plain_language', evalContext);
                 const inclusivityCheck = evaluateAiAction('validate_inclusivity', evalContext);
-                const getCheckStatuses = () => ({
-                  accessibilityCheck: evaluateAiAction('check_accessibility', evalContext),
-                  seoCheck: evaluateAiAction('generate_seo', evalContext),
-                  editorialCheck: evaluateAiAction('editorial_review', evalContext),
-                });
-
-                const { accessibilityCheck, seoCheck, editorialCheck } = getCheckStatuses();
+                const altTextCheck = evaluateAiAction('generate_alt_text', evalContext);
+                const seoCheck = evaluateAiAction('generate_seo', evalContext);
+                const editorialCheck = evaluateAiAction('editorial_review', evalContext);
 
                 return (
                   <>
                     <button
                       type="button"
                       onClick={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('research_gaps') : undefined}
+                      disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
                       aria-disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
                       tabIndex={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
                       title={!isPremiumMode ? "Recurso Premium" : gapsCheck.state === 'UNAVAILABLE' ? `Requer: ${gapsCheck.missing}` : aiLoading ? "Ação em andamento" : "Pesquisar Lacunas"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(gapsCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(gapsCheck.state, isPremiumMode)} ${(!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Sparkles className="w-3.5 h-3.5 inline mr-1" />
                       Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${gapsCheck.missing})`} {gapsCheck.state === 'RECOMMENDED' && '⭐'}
@@ -709,51 +706,56 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                     <button
                       type="button"
                       onClick={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('plain_language') : undefined}
+                      disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
                       aria-disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
                       tabIndex={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
                       title={!isPremiumMode ? "Recurso Premium" : simplifyCheck.state === 'UNAVAILABLE' ? `Requer: ${simplifyCheck.missing}` : aiLoading ? "Ação em andamento" : "Simplificar Linguagem"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(simplifyCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(simplifyCheck.state, isPremiumMode)} ${(!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       🗣️ Simplificar Linguagem {(simplifyCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${simplifyCheck.missing})`} {simplifyCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
                     <button
                       type="button"
                       onClick={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('validate_inclusivity') : undefined}
+                      disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
                       aria-disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
                       tabIndex={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
                       title={!isPremiumMode ? "Recurso Premium" : inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : aiLoading ? "Ação em andamento" : "Validar Inclusividade"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)} ${(!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       🤝 Validar Inclusividade {(inclusivityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
 
                     <button
                       type="button"
-                      onClick={isPremiumMode && accessibilityCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('check_accessibility') : undefined}
-                      aria-disabled={!isPremiumMode || accessibilityCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && accessibilityCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : accessibilityCheck.state === 'UNAVAILABLE' ? `Requer: ${accessibilityCheck.missing}` : aiLoading ? "Ação em andamento" : "Verificar Acessibilidade"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(accessibilityCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_alt_text') : undefined}
+                      disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : altTextCheck.state === 'UNAVAILABLE' ? `Requer: ${altTextCheck.missing}` : aiLoading ? "Ação em andamento" : "Gerar Alt Text WCAG"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(altTextCheck.state, isPremiumMode)} ${(!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      ♿ Acessibilidade {(accessibilityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${accessibilityCheck.missing})`} {accessibilityCheck.state === 'RECOMMENDED' && '⭐'}
+                      ♿ Alt Text WCAG {(altTextCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${altTextCheck.missing})`} {altTextCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
                     <button
                       type="button"
                       onClick={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_seo') : undefined}
+                      disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
                       aria-disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
                       tabIndex={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
                       title={!isPremiumMode ? "Recurso Premium" : seoCheck.state === 'UNAVAILABLE' ? `Requer: ${seoCheck.missing}` : aiLoading ? "Ação em andamento" : "Otimizar Meta Tags SEO"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(seoCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(seoCheck.state, isPremiumMode)} ${(!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       🔍 Otimizar Meta Tags SEO {(seoCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${seoCheck.missing})`} {seoCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
                     <button
                       type="button"
                       onClick={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('editorial_review') : undefined}
+                      disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
                       aria-disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
                       tabIndex={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
                       title={!isPremiumMode ? "Recurso Premium" : editorialCheck.state === 'UNAVAILABLE' ? `Requer: ${editorialCheck.missing}` : aiLoading ? "Ação em andamento" : "Revisão Editorial"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(editorialCheck.state, isPremiumMode)} ${aiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(editorialCheck.state, isPremiumMode)} ${(!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       📋 Revisão Editorial {(editorialCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${editorialCheck.missing})`} {editorialCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
