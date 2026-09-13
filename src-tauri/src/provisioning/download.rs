@@ -90,7 +90,7 @@ pub async fn download_model_file(
         req = req.header(RANGE, format!("bytes={}-", downloaded_bytes));
     }
 
-    let response = req.send().await?;
+    let mut response = req.send().await?;
     response.error_for_status_ref()?; // Retorna erro em caso de 4xx/5xx
 
     // 3. Validar Content-Range
@@ -109,7 +109,7 @@ pub async fn download_model_file(
         .unwrap_or(expected_size); // Fallback ao expected do manifest
 
     // 4. Abrir o arquivo para append/write
-    let mut file = OpenOptions::new().create(true).write(true).truncate(false).open(tmp_path)?;
+    let mut file = OpenOptions::new().create(true).write(true).open(tmp_path)?;
 
     // Posicionar no final do arquivo caso seja append de um range
     if downloaded_bytes > 0 {
@@ -139,7 +139,7 @@ pub async fn download_model_file(
 
     while let Some(chunk_result) = stream.next().await {
         // Check for cancellation
-        if cancel_rx.try_recv().is_ok() {
+        if let Ok(_) = cancel_rx.try_recv() {
             return Err(DownloadError::Cancelled);
         }
 

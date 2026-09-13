@@ -47,12 +47,6 @@ pub struct NdJsonStreamParser {
     buffer: String,
 }
 
-impl Default for NdJsonStreamParser {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl NdJsonStreamParser {
     pub fn new() -> Self {
         Self {
