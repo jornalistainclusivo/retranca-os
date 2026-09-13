@@ -49,12 +49,12 @@ pub enum CategoryTag {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum ContentSource {
-    #[serde(rename = "tiptap")]
-    Tiptap,
-    #[serde(rename = "markdown")]
-    Markdown,
-    #[serde(rename = "plaintext")]
-    Plaintext,
+    #[serde(rename = "persisted")]
+    Persisted,
+    #[serde(rename = "pasted")]
+    Pasted,
+    #[serde(rename = "selection")]
+    Selection,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -135,7 +135,7 @@ export interface EditorialChecklistsState {
 }
 
 export interface EditorialContent {
-  source: 'tiptap' | 'markdown' | 'plaintext';
+  source: 'persisted' | 'pasted' | 'selection';
   text: string;
 }
 

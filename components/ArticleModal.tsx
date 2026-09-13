@@ -111,6 +111,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [visualDescription, setVisualDescription] = useState('');
   const [copied, setCopied] = useState(false);
   const aiJobIdRef = React.useRef<string | null>(null);
+  const unlistenFnsRef = React.useRef<(() => void)[]>([]);
   
   const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
 
@@ -203,6 +204,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
   // Quick AI Assistant action call via local Tauri IPC
   const handleAiAction = async (actionType: AiAction) => {
+    // Cleanup previous listeners to prevent duplicates and memory leaks
+    if (unlistenFnsRef.current.length > 0) {
+      unlistenFnsRef.current.forEach(unlisten => unlisten());
+      unlistenFnsRef.current = [];
+    }
+
     setAiLoading(true);
     setAiResponse(null);
 
@@ -211,6 +218,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     let buffer = '';
 
     try {
+      const cleanupListeners = () => {
+        if (unlistenFnsRef.current.length > 0) {
+          unlistenFnsRef.current.forEach(unlisten => unlisten());
+          unlistenFnsRef.current = [];
+        }
+      };
+
       const unNotice = await onStreamNotice((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
@@ -223,14 +237,16 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       const unDone = await onStreamDone((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         setAiLoading(false);
-        unToken(); unDone(); unErr(); unNotice();
+        cleanupListeners();
       });
       const unErr = await onStreamError((ev) => {
         if (ev.job_id !== aiJobIdRef.current) return;
         setAiResponse(`Erro: ${ev.message}`);
         setAiLoading(false);
-        unToken(); unDone(); unErr(); unNotice();
+        cleanupListeners();
       });
+      
+      unlistenFnsRef.current = [unNotice, unToken, unDone, unErr];
 
       const request: AiOrchestrationRequest = {
         job_id: jobId,
@@ -259,12 +275,23 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
              completed: completedChecklists,
              pendingItems: formData.checklists.filter(c => !c.completed).map(c => c.label)
           },
-          content: analysisContent.trim() ? { source: 'plaintext', text: analysisContent.trim() } : undefined,
+          content: analysisContent.trim() ? { source: 'pasted', text: analysisContent.trim() } : undefined,
           media: visualDescription.trim() ? [{ type: 'visual_description', data: visualDescription.trim() }] : undefined,
         }
       };
 
-      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
+      let providerImpl;
+      if (provider === 'OLLAMA') {
+        if (!selectedModel) {
+          throw new Error('Nenhum modelo OLLAMA selecionado.');
+        }
+        providerImpl = OllamaProvider;
+      } else if (provider === 'SIDECAR') {
+        providerImpl = SidecarProvider;
+      } else {
+        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
+      }
+
       await providerImpl.startInference(request);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
@@ -591,6 +618,21 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   let missing = '';
                   
                   switch (action) {
+                    case 'research_gaps':
+                      available = !!formData.title?.trim() || hasObjective;
+                      recommended = formData.status === 'ideia' || formData.status === 'pesquisa';
+                      missing = 'Título/Objetivo';
+                      break;
+                    case 'plain_language':
+                      available = hasContent || hasSummary;
+                      recommended = formData.status === 'escrita' || formData.status === 'revisao';
+                      missing = 'Resumo/Conteúdo';
+                      break;
+                    case 'validate_inclusivity':
+                      available = hasContent || hasSummary;
+                      recommended = formData.status === 'escrita' || formData.status === 'revisao';
+                      missing = 'Resumo/Conteúdo';
+                      break;
                     case 'generate_alt_text':
                       available = !!visualDescription.trim();
                       recommended = formData.status === 'escrita' || formData.status === 'revisao';
@@ -598,20 +640,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                       break;
                     case 'generate_seo':
                       available = hasKeyword && (hasContent || hasSummary);
-                      recommended = formData.status === 'revisao' || formData.status === 'publicado';
+                      recommended = formData.status === 'revisao';
                       missing = !hasKeyword ? 'Keyword SEO' : 'Resumo/Conteúdo';
                       break;
-                    case 'check_accessibility':
-                    case 'validate_inclusivity':
-                    case 'plain_language':
-                      available = hasContent || hasSummary;
-                      recommended = formData.status === 'revisao' || (action === 'plain_language' && formData.status === 'escrita');
-                      missing = 'Resumo/Conteúdo';
-                      break;
-                    case 'research_gaps':
-                      available = !!formData.title?.trim() || hasObjective;
-                      recommended = formData.status === 'pesquisa' || formData.status === 'escrita';
-                      missing = 'Título/Objetivo';
+                    case 'editorial_review':
+                      available = hasContent && hasObjective;
+                      recommended = formData.status === 'revisao';
+                      missing = !hasContent ? 'Conteúdo' : 'Objetivo';
                       break;
                     default:
                       available = true;
@@ -630,13 +665,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   return "bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100";
                 };
 
+                const researchCheck = evaluateAction('research_gaps');
+                const plainCheck = evaluateAction('plain_language');
+                const inclusivityCheck = evaluateAction('validate_inclusivity');
                 const altTextCheck = evaluateAction('generate_alt_text');
                 const seoCheck = evaluateAction('generate_seo');
-                const accessibilityCheck = evaluateAction('check_accessibility');
-                const inclusivityCheck = evaluateAction('validate_inclusivity');
+                const editorialCheck = evaluateAction('editorial_review');
 
                 return (
                   <>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && researchCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('research_gaps') : undefined}
+                      aria-disabled={!isPremiumMode || researchCheck.state === 'UNAVAILABLE'}
+                      tabIndex={isPremiumMode && researchCheck.state !== 'UNAVAILABLE' ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : researchCheck.state === 'UNAVAILABLE' ? `Requer: ${researchCheck.missing}` : "Análise de Lacunas"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(researchCheck.state, isPremiumMode)}`}
+                    >
+                      💡 Análise de Lacunas {(researchCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${researchCheck.missing})`} {researchCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && plainCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('plain_language') : undefined}
+                      aria-disabled={!isPremiumMode || plainCheck.state === 'UNAVAILABLE'}
+                      tabIndex={isPremiumMode && plainCheck.state !== 'UNAVAILABLE' ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : plainCheck.state === 'UNAVAILABLE' ? `Requer: ${plainCheck.missing}` : "Linguagem Simples"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(plainCheck.state, isPremiumMode)}`}
+                    >
+                      ✨ Linguagem Simples {(plainCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${plainCheck.missing})`} {plainCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('validate_inclusivity') : undefined}
+                      aria-disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE'}
+                      tabIndex={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : "Validador Inclusivo"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)}`}
+                    >
+                      🤝 Validador Inclusivo {(inclusivityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && '⭐'}
+                    </button>
                     <button
                       type="button"
                       onClick={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('generate_alt_text') : undefined}
@@ -659,23 +726,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={isPremiumMode && accessibilityCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('check_accessibility') : undefined}
-                      aria-disabled={!isPremiumMode || accessibilityCheck.state === 'UNAVAILABLE'}
-                      tabIndex={isPremiumMode && accessibilityCheck.state !== 'UNAVAILABLE' ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : accessibilityCheck.state === 'UNAVAILABLE' ? `Requer: ${accessibilityCheck.missing}` : "Auditoria de Linguagem Simples"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(accessibilityCheck.state, isPremiumMode)}`}
+                      onClick={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('editorial_review') : undefined}
+                      aria-disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE'}
+                      tabIndex={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' ? 0 : -1}
+                      title={!isPremiumMode ? "Recurso Premium" : editorialCheck.state === 'UNAVAILABLE' ? `Requer: ${editorialCheck.missing}` : "Revisão Editorial"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(editorialCheck.state, isPremiumMode)}`}
                     >
-                      ✨ Auditoria de Linguagem Simples {(accessibilityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${accessibilityCheck.missing})`} {accessibilityCheck.state === 'RECOMMENDED' && '⭐'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' ? () => handleAiAction('validate_inclusivity') : undefined}
-                      aria-disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE'}
-                      tabIndex={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : "Validador Inclusivo"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)}`}
-                    >
-                      🤝 Validador Inclusivo {(inclusivityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && '⭐'}
+                      📋 Revisão Editorial {(editorialCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${editorialCheck.missing})`} {editorialCheck.state === 'RECOMMENDED' && '⭐'}
                     </button>
                   </>
                 );
