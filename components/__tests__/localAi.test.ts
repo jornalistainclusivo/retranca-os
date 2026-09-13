@@ -88,7 +88,9 @@ describe('localAiAdapter', () => {
           articleId: 'test-article-1',
           editorialStatus: 'ideia',
           categoryTag: 'Blog',
-          metadata: { summary: 'test prompt' }
+          metadata: { summary: 'test prompt' },
+          links: {},
+          checklistsState: { total: 0, completed: 0, pendingItems: [] },
         }
       }),
     ).rejects.toThrow('Tauri runtime not available');

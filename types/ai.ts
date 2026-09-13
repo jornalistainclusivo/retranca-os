@@ -150,8 +150,8 @@ export interface EditorialContext {
   categoryTag: CategoryTag;
   metadata: EditorialMetadata;
   notes?: string;
-  links?: EditorialLinks;
-  checklistsState?: EditorialChecklistsState;
+  links: EditorialLinks;
+  checklistsState: EditorialChecklistsState;
   content?: EditorialContent;
   media?: MediaAsset[];
 }

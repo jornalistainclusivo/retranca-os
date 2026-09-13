@@ -141,12 +141,15 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
       // Start the actual inference via Tauri IPC
       setGenState('LOADING_MODEL');
+      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
+        throw new Error('Provedor não suportado ou não configurado.');
+      }
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
       
       const request: AiOrchestrationRequest = {
         job_id: jobId,
         action,
-        provider: provider === 'OLLAMA' ? 'OLLAMA' : 'SIDECAR',
+        provider,
         model: selectedModel || undefined,
         context: {
           articleId: `session-${Date.now()}`,
@@ -156,7 +159,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
             title: fileName || 'Documento',
             summary: prompt,
           },
-          content: prompt.trim() ? { source: 'plaintext', text: prompt.trim() } : undefined,
+          links: {},
+          checklistsState: { total: 0, completed: 0, pendingItems: [] },
+          content: prompt.trim() ? { source: 'pasted', text: prompt.trim() } : undefined,
         }
       };
       
@@ -172,6 +177,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     if (!jobIdRef.current) return;
     setGenState('CANCELLING');
     try {
+      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
+        throw new Error('Provedor não suportado ou não configurado.');
+      }
       const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
       await providerImpl.cancelInference(jobIdRef.current);
     } catch {

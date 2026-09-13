@@ -113,8 +113,8 @@ pub struct EditorialContext {
     pub category_tag: CategoryTag,
     pub metadata: EditorialMetadata,
     pub notes: Option<String>,
-    pub links: Option<EditorialLinks>,
-    pub checklists_state: Option<EditorialChecklistsState>,
+    pub links: EditorialLinks,
+    pub checklists_state: EditorialChecklistsState,
     pub content: Option<EditorialContent>,
     pub media: Option<Vec<MediaAsset>>,
 }

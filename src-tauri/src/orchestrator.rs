@@ -6,6 +6,16 @@ use tauri::{AppHandle, Emitter, State};
 
 pub const FALLBACK_CONTEXT_LIMIT: usize = 8000;
 
+#[derive(Debug)]
+pub struct ProjectedEditorialContext {
+    pub metadata: crate::models::context::EditorialMetadata,
+    pub notes: Option<String>,
+    pub links: Option<crate::models::context::EditorialLinks>,
+    pub checklists_state: Option<crate::models::context::EditorialChecklistsState>,
+    pub content: Option<crate::models::context::EditorialContent>,
+    pub media: Option<Vec<crate::models::context::MediaAsset>>,
+}
+
 fn escape_xml(input: &str) -> String {
     input
         .replace("&", "&amp;")
@@ -77,129 +87,118 @@ pub fn validate_prerequisites(req: &AiOrchestrationRequest) -> Result<(), String
     Ok(())
 }
 
-pub fn project_context(action: &AiAction, mut context: EditorialContext) -> EditorialContext {
-    let mut title = None;
-    let mut summary = None;
-    let mut objective = None;
-    let mut keyword = None;
-    let mut persona = None;
-    let mut content = None;
-    let mut media = None;
-    let mut notes = None;
-    let mut links = None;
-    let mut checklists_state = None;
-    let mut cta = None;
+pub fn project_context(action: &AiAction, mut context: EditorialContext) -> ProjectedEditorialContext {
+    let mut projected = ProjectedEditorialContext {
+        metadata: crate::models::context::EditorialMetadata {
+            title: None,
+            summary: None,
+            objective: None,
+            keyword: None,
+            persona: None,
+            cta: None,
+        },
+        notes: None,
+        links: None,
+        checklists_state: None,
+        content: None,
+        media: None,
+    };
+
+    let mut evidence_content = None;
+    let mut evidence_summary = None;
+    
+    // Evidence channel selection (Content preferred over Summary)
+    match action {
+        AiAction::PlainLanguage | AiAction::ValidateInclusivity | AiAction::GenerateSeo => {
+            if context.content.is_some() {
+                evidence_content = context.content.take();
+            } else {
+                evidence_summary = context.metadata.summary.take();
+            }
+        }
+        _ => {}
+    }
 
     match action {
         AiAction::ResearchGaps => {
-            title = context.metadata.title.take();
-            objective = context.metadata.objective.take();
-            notes = context.notes.take();
-            links = context.links.take();
-            keyword = context.metadata.keyword.take();
+            projected.metadata.title = context.metadata.title.take();
+            projected.metadata.objective = context.metadata.objective.take();
+            projected.notes = context.notes.take();
+            projected.links = Some(context.links);
+            projected.metadata.keyword = context.metadata.keyword.take();
         }
         AiAction::PlainLanguage => {
-            content = context.content.take();
-            summary = context.metadata.summary.take();
-            persona = context.metadata.persona.take();
+            projected.content = evidence_content;
+            projected.metadata.summary = evidence_summary;
+            projected.metadata.persona = context.metadata.persona.take();
         }
         AiAction::ValidateInclusivity => {
-            content = context.content.take();
-            summary = context.metadata.summary.take();
+            projected.content = evidence_content;
+            projected.metadata.summary = evidence_summary;
         }
         AiAction::GenerateAltText => {
-            media = context.media.take();
-            title = context.metadata.title.take();
+            projected.media = context.media.take();
+            projected.metadata.title = context.metadata.title.take();
         }
         AiAction::GenerateSeo => {
-            keyword = context.metadata.keyword.take();
-            content = context.content.take();
-            summary = context.metadata.summary.take();
-            title = context.metadata.title.take();
-            objective = context.metadata.objective.take();
-            persona = context.metadata.persona.take();
-            cta = context.metadata.cta.take();
+            projected.metadata.keyword = context.metadata.keyword.take();
+            projected.content = evidence_content;
+            projected.metadata.summary = evidence_summary;
+            projected.metadata.title = context.metadata.title.take();
+            projected.metadata.objective = context.metadata.objective.take();
+            projected.metadata.persona = context.metadata.persona.take();
+            projected.metadata.cta = context.metadata.cta.take();
         }
         AiAction::EditorialReview => {
-            content = context.content.take();
-            objective = context.metadata.objective.take();
-            notes = context.notes.take();
-            links = context.links.take();
-            checklists_state = context.checklists_state.take();
+            projected.content = context.content.take();
+            projected.metadata.objective = context.metadata.objective.take();
+            projected.notes = context.notes.take();
+            projected.links = Some(context.links);
+            projected.checklists_state = Some(context.checklists_state);
         }
         AiAction::GenerateOutline | AiAction::CheckAccessibility => {
-            title = context.metadata.title.take();
-            summary = context.metadata.summary.take();
-            objective = context.metadata.objective.take();
-            content = context.content.take();
+            projected.metadata.title = context.metadata.title.take();
+            projected.metadata.summary = context.metadata.summary.take();
+            projected.metadata.objective = context.metadata.objective.take();
+            projected.content = context.content.take();
         }
     }
 
-    context.metadata.title = title;
-    context.metadata.summary = summary;
-    context.metadata.objective = objective;
-    context.metadata.keyword = keyword;
-    context.metadata.persona = persona;
-    context.metadata.cta = cta;
-    context.content = content;
-    context.media = media;
-    context.notes = notes;
-    context.links = links;
-    context.checklists_state = checklists_state;
-
-    context
+    projected
 }
 
 pub fn apply_budget(
     action: &AiAction,
-    mut context: EditorialContext,
-) -> Result<(EditorialContext, Vec<String>), String> {
+    mut context: ProjectedEditorialContext,
+) -> Result<(ProjectedEditorialContext, Vec<String>), String> {
     let mut omitted_fields = Vec::new();
 
-    let get_len = |ctx: &EditorialContext| -> usize {
+    let get_len = |ctx: &ProjectedEditorialContext| -> usize {
         let mut len = 0;
-        if let Some(t) = &ctx.metadata.title {
-            len += t.len();
-        }
-        if let Some(s) = &ctx.metadata.summary {
-            len += s.len();
-        }
-        if let Some(o) = &ctx.metadata.objective {
-            len += o.len();
-        }
-        if let Some(k) = &ctx.metadata.keyword {
-            len += k.len();
-        }
-        if let Some(p) = &ctx.metadata.persona {
-            len += p.len();
-        }
-        if let Some(c) = &ctx.metadata.cta {
-            len += c.len();
-        }
-        if let Some(c) = &ctx.content {
-            len += c.text.len();
-        }
+        if let Some(t) = &ctx.metadata.title { len += t.len(); }
+        if let Some(s) = &ctx.metadata.summary { len += s.len(); }
+        if let Some(o) = &ctx.metadata.objective { len += o.len(); }
+        if let Some(k) = &ctx.metadata.keyword { len += k.len(); }
+        if let Some(p) = &ctx.metadata.persona { len += p.len(); }
+        if let Some(c) = &ctx.metadata.cta { len += c.len(); }
+        if let Some(c) = &ctx.content { len += c.text.len(); }
         if let Some(m) = &ctx.media {
-            for asset in m {
-                len += asset.data.len();
-            }
+            for asset in m { len += asset.data.len(); }
         }
-        if let Some(n) = &ctx.notes {
-            len += n.len();
+        if let Some(n) = &ctx.notes { len += n.len(); }
+        if let Some(l) = &ctx.links {
+            if let Some(i) = &l.internal { len += i.len(); }
+            if let Some(e) = &l.external { len += e.len(); }
         }
-        // We roughly estimate links and checklists as 500 bytes each if present, or just use string repr if needed.
-        if ctx.links.is_some() {
-            len += 300;
-        }
-        if ctx.checklists_state.is_some() {
-            len += 500;
+        if let Some(ch) = &ctx.checklists_state {
+            for item in &ch.pending_items { len += item.len(); }
+            len += 100; // rough xml overhead
         }
         len
     };
 
     let mut current_len = get_len(&context);
 
-    // Try dropping optional fields if we exceed budget
     if current_len > FALLBACK_CONTEXT_LIMIT {
         let mut drop_field = |field_name: &str| {
             if current_len > FALLBACK_CONTEXT_LIMIT {
@@ -258,7 +257,6 @@ pub fn apply_budget(
             }
         };
 
-        // Action-specific optional fields to drop
         match action {
             AiAction::ResearchGaps => {
                 drop_field("notes");
@@ -287,16 +285,13 @@ pub fn apply_budget(
     }
 
     if current_len > FALLBACK_CONTEXT_LIMIT {
-        return Err(
-            "CONTEXT_EXCEEDED: Campos essenciais excedem o limite de contexto do modelo."
-                .to_string(),
-        );
+        return Err("CONTEXT_EXCEEDED: Campos essenciais excedem o limite de contexto do modelo.".to_string());
     }
 
     Ok((context, omitted_fields))
 }
 
-pub fn assemble_prompt(action: &AiAction, context: &EditorialContext) -> String {
+pub fn assemble_prompt(action: &AiAction, context: &ProjectedEditorialContext) -> String {
     let mut prompt = String::new();
 
     let task_instruction = match action {
@@ -305,7 +300,7 @@ pub fn assemble_prompt(action: &AiAction, context: &EditorialContext) -> String 
         AiAction::GenerateSeo => "Gere meta title e meta description otimizados para SEO.",
         AiAction::CheckAccessibility => "Avalie a acessibilidade estrutural do artigo.",
         AiAction::ValidateInclusivity => "Revise o artigo buscando linguagem inclusiva.",
-        AiAction::ResearchGaps => "Aponte lacunas de pesquisa e sugira direcionamentos baseando-se no conteúdo e objetivo.",
+        AiAction::ResearchGaps => "Aponte lacunas de pesquisa e sugira direcionamentos com base nos metadados editoriais fornecidos.",
         AiAction::PlainLanguage => "Reescreva o conteúdo utilizando linguagem simples.",
         AiAction::EditorialReview => "Realize uma revisão editorial completa.",
     };
@@ -460,14 +455,17 @@ pub async fn start_orchestrated_inference(
         crate::ollama_gateway::start_ollama_inference_internal(app, request.job_id, model, prompt)
             .await
     } else if provider_upper == "SIDECAR" {
-        let model = request.model.unwrap_or_else(|| "default".to_string());
-        // For Sidecar, we dispatch via ai_supervisor
         crate::ai_supervisor::start_inference_internal(
             app,
             registry,
             request.job_id,
-            "sidecar".to_string(),
-            vec!["--model".to_string(), model, "--prompt".to_string(), prompt],
+            "llama-sidecar".to_string(),
+            vec![
+                "--action".to_string(),
+                format!("{:?}", request.action).to_lowercase(),
+                "--prompt".to_string(),
+                prompt
+            ],
         )
         .await
     } else {
@@ -497,8 +495,8 @@ mod tests {
                 cta: None,
             },
             notes: None,
-            links: None,
-            checklists_state: None,
+            links: EditorialLinks { internal: None, external: None },
+            checklists_state: EditorialChecklistsState { total: 0, completed: 0, pending_items: vec![] },
             content: None,
             media: None,
         }
@@ -536,9 +534,78 @@ mod tests {
         ctx.metadata.title = Some("a".repeat(10));
         ctx.notes = Some("n".repeat(8000)); // Forces it over limit
         
-        let (budgeted, omitted) = apply_budget(&AiAction::ResearchGaps, ctx).unwrap();
+        let projected = project_context(&AiAction::ResearchGaps, ctx);
+        let (budgeted, omitted) = apply_budget(&AiAction::ResearchGaps, projected).unwrap();
         // Notes should be dropped
         assert!(budgeted.notes.is_none());
         assert!(omitted.contains(&"notes".to_string()));
+    }
+
+    #[test]
+    fn test_research_gaps_metadata_only() {
+        let mut ctx = dummy_context();
+        ctx.metadata.title = Some("Title".to_string());
+        // No objective, still valid
+        let projected = project_context(&AiAction::ResearchGaps, ctx.clone());
+        assert!(projected.metadata.title.is_some());
+        
+        let mut req = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::ResearchGaps,
+            context: ctx,
+            provider: "OLLAMA".to_string(),
+            model: Some("model".to_string()),
+        };
+        assert!(validate_prerequisites(&req).is_ok());
+    }
+
+    #[test]
+    fn test_content_preferred_over_summary() {
+        let mut ctx = dummy_context();
+        ctx.metadata.summary = Some("Summary".to_string());
+        ctx.content = Some(EditorialContent { source: ContentSource::Pasted, text: "Content".to_string() });
+        
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        assert!(projected.content.is_some());
+        assert!(projected.metadata.summary.is_none());
+    }
+
+    #[test]
+    fn test_summary_fallback() {
+        let mut ctx = dummy_context();
+        ctx.metadata.summary = Some("Summary".to_string());
+        ctx.content = None;
+        
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        assert!(projected.content.is_none());
+        assert!(projected.metadata.summary.is_some());
+    }
+
+    #[test]
+    fn test_context_exceeded() {
+        let mut ctx = dummy_context();
+        ctx.content = Some(EditorialContent { source: ContentSource::Pasted, text: "a".repeat(9000) });
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        let res = apply_budget(&AiAction::PlainLanguage, projected);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("CONTEXT_EXCEEDED"));
+    }
+
+    #[test]
+    fn test_image_asset_fail_closed() {
+        let mut ctx = dummy_context();
+        ctx.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::ImageAsset,
+            data: "data".to_string(),
+        }]);
+        let req = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateAltText,
+            context: ctx,
+            provider: "OLLAMA".to_string(),
+            model: Some("model".to_string()),
+        };
+        let err = validate_prerequisites(&req).unwrap_err();
+        assert!(err.contains("UNSUPPORTED_CAPABILITY"));
     }
 }
