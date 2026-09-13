@@ -967,4 +967,264 @@ mod tests {
         assert!(prompt.contains("http://internal?a=1&amp;b=2"));
         assert!(prompt.contains("Do &lt;this&gt;"));
     }
+
+    #[test]
+    fn test_summary_only_prefix() {
+        // Case A: summary_only
+        let mut ctx = dummy_context();
+        ctx.metadata.summary = Some("Resumo".to_string());
+        ctx.content = None;
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        let prompt = assemble_prompt(&AiAction::PlainLanguage, &projected);
+        assert!(prompt.contains("Atenção: Análise baseada estritamente no Resumo."));
+
+        // Case B: full_content
+        let mut ctx2 = dummy_context();
+        ctx2.metadata.summary = Some("Resumo".to_string());
+        ctx2.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "Conteúdo completo".to_string(),
+        });
+        let projected2 = project_context(&AiAction::PlainLanguage, ctx2);
+        let prompt2 = assemble_prompt(&AiAction::PlainLanguage, &projected2);
+        assert!(!prompt2.contains("Atenção: Análise baseada estritamente no Resumo."));
+    }
+
+    #[test]
+    fn test_character_budget_fallback() {
+        // Case A: exactly 5000 chars but 10000 bytes -> OK
+        let mut ctx = dummy_context();
+        ctx.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "á".repeat(5000),
+        });
+        let projected = project_context(&AiAction::PlainLanguage, ctx);
+        let (budgeted, omitted) =
+            apply_budget(&AiAction::PlainLanguage, projected).expect("apply_budget succeeds");
+        assert!(omitted.is_empty());
+        assert_eq!(budgeted.content.unwrap().text.chars().count(), 5000);
+
+        // Case B: 8001 chars -> EXCEEDED
+        let mut ctx2 = dummy_context();
+        ctx2.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "á".repeat(8001),
+        });
+        let projected2 = project_context(&AiAction::PlainLanguage, ctx2);
+        let res2 = apply_budget(&AiAction::PlainLanguage, projected2);
+        assert!(res2.is_err());
+        assert!(res2.unwrap_err().contains("CONTEXT_EXCEEDED"));
+
+        // Case C: optional field pushes budget over 8000 -> whole field is omitted
+        let mut ctx3 = dummy_context();
+        ctx3.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "a".repeat(7000),
+        });
+        ctx3.notes = Some("b".repeat(2000)); // Total 9000
+        let projected3 = project_context(&AiAction::EditorialReview, ctx3);
+        let (budgeted3, omitted3) = apply_budget(&AiAction::EditorialReview, projected3)
+            .expect("apply_budget succeeds with omissions");
+        assert!(omitted3.contains(&"notes".to_string()));
+        assert!(budgeted3.notes.is_none());
+        assert_eq!(budgeted3.content.unwrap().text.chars().count(), 7000);
+    }
+
+    #[test]
+    fn test_prerequisite_matrix() {
+        // 1. ResearchGaps
+        let mut req_rg = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::ResearchGaps,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_rg).is_err()); // missing title/objective
+        req_rg.context.metadata.title = Some("  ".to_string());
+        assert!(validate_prerequisites(&req_rg).is_err()); // blank
+        req_rg.context.metadata.title = Some("title".to_string());
+        assert!(validate_prerequisites(&req_rg).is_ok()); // valid
+
+        // 2. PlainLanguage
+        let mut req_pl = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::PlainLanguage,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_pl).is_err());
+        req_pl.context.metadata.summary = Some("  ".to_string());
+        assert!(validate_prerequisites(&req_pl).is_err());
+        req_pl.context.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        assert!(validate_prerequisites(&req_pl).is_ok());
+
+        // 3. ValidateInclusivity
+        let mut req_vi = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::ValidateInclusivity,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_vi).is_err());
+        req_vi.context.metadata.summary = Some("s".to_string());
+        assert!(validate_prerequisites(&req_vi).is_ok());
+
+        // 4. GenerateAltText
+        let mut req_at = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateAltText,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_at).is_err());
+        req_at.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::ImageAsset,
+            data: "a".to_string(),
+        }]);
+        let err_at = validate_prerequisites(&req_at).unwrap_err();
+        assert!(err_at.contains("UNSUPPORTED_CAPABILITY"));
+
+        req_at.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "  ".to_string(),
+        }]);
+        assert!(validate_prerequisites(&req_at)
+            .unwrap_err()
+            .contains("MISSING_PREREQUISITES"));
+
+        req_at.context.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "desc".to_string(),
+        }]);
+        assert!(validate_prerequisites(&req_at).is_ok());
+
+        // 5. GenerateSeo
+        let mut req_seo = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::GenerateSeo,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_seo).is_err());
+        req_seo.context.metadata.keyword = Some("k".to_string());
+        assert!(validate_prerequisites(&req_seo).is_err());
+        req_seo.context.metadata.summary = Some("s".to_string());
+        assert!(validate_prerequisites(&req_seo).is_ok());
+
+        // 6. EditorialReview
+        let mut req_er = AiOrchestrationRequest {
+            job_id: "1".to_string(),
+            action: AiAction::EditorialReview,
+            context: dummy_context(),
+            provider: "OLLAMA".to_string(),
+            model: Some("m".to_string()),
+        };
+        assert!(validate_prerequisites(&req_er).is_err());
+        req_er.context.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        assert!(validate_prerequisites(&req_er).is_err());
+        req_er.context.metadata.objective = Some("o".to_string());
+        assert!(validate_prerequisites(&req_er).is_ok());
+    }
+
+    #[test]
+    fn test_projection_matrix() {
+        // 1. ResearchGaps
+        let mut ctx_rg = dummy_context();
+        ctx_rg.metadata.title = Some("t".to_string());
+        ctx_rg.metadata.objective = Some("o".to_string());
+        ctx_rg.notes = Some("n".to_string());
+        ctx_rg.metadata.keyword = Some("k".to_string());
+        ctx_rg.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        let p_rg = project_context(&AiAction::ResearchGaps, ctx_rg);
+        assert!(p_rg.metadata.title.is_some());
+        assert!(p_rg.metadata.objective.is_some());
+        assert!(p_rg.notes.is_some());
+        assert!(p_rg.metadata.keyword.is_some());
+        assert!(p_rg.content.is_none());
+
+        // 2. PlainLanguage
+        let mut ctx_pl = dummy_context();
+        ctx_pl.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        ctx_pl.metadata.summary = Some("s".to_string());
+        ctx_pl.metadata.persona = Some("p".to_string());
+        let p_pl = project_context(&AiAction::PlainLanguage, ctx_pl);
+        assert!(p_pl.content.is_some());
+        assert!(p_pl.metadata.summary.is_none());
+        assert!(p_pl.metadata.persona.is_some());
+
+        // 3. ValidateInclusivity
+        let mut ctx_vi = dummy_context();
+        ctx_vi.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        ctx_vi.metadata.summary = Some("s".to_string());
+        ctx_vi.metadata.cta = Some("cta".to_string());
+        let p_vi = project_context(&AiAction::ValidateInclusivity, ctx_vi);
+        assert!(p_vi.content.is_some());
+        assert!(p_vi.metadata.summary.is_none());
+        assert!(p_vi.metadata.cta.is_none());
+
+        // 4. GenerateAltText
+        let mut ctx_at = dummy_context();
+        ctx_at.media = Some(vec![crate::models::context::MediaAsset {
+            r#type: crate::models::context::MediaAssetType::VisualDescription,
+            data: "vd".to_string(),
+        }]);
+        ctx_at.metadata.title = Some("t".to_string());
+        let p_at = project_context(&AiAction::GenerateAltText, ctx_at);
+        assert!(p_at.media.is_some());
+        assert!(p_at.metadata.title.is_some());
+
+        // 5. GenerateSeo
+        let mut ctx_seo = dummy_context();
+        ctx_seo.metadata.keyword = Some("k".to_string());
+        ctx_seo.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        ctx_seo.metadata.summary = Some("s".to_string());
+        ctx_seo.metadata.title = Some("t".to_string());
+        let p_seo = project_context(&AiAction::GenerateSeo, ctx_seo);
+        assert!(p_seo.metadata.keyword.is_some());
+        assert!(p_seo.content.is_some());
+        assert!(p_seo.metadata.summary.is_none());
+        assert!(p_seo.metadata.title.is_some());
+
+        // 6. EditorialReview
+        let mut ctx_er = dummy_context();
+        ctx_er.content = Some(EditorialContent {
+            source: ContentSource::Pasted,
+            text: "c".to_string(),
+        });
+        ctx_er.metadata.objective = Some("o".to_string());
+        ctx_er.notes = Some("n".to_string());
+        ctx_er.checklists_state = EditorialChecklistsState {
+            total: 1,
+            completed: 0,
+            pending_items: vec!["a".to_string()],
+        };
+        let p_er = project_context(&AiAction::EditorialReview, ctx_er);
+        assert!(p_er.content.is_some());
+        assert!(p_er.metadata.objective.is_some());
+        assert!(p_er.notes.is_some());
+        assert!(p_er.checklists_state.is_some());
+    }
 }
