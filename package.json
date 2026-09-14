@@ -1,5 +1,5 @@
 {
-  "name": "ai-studio-applet",
+  "name": "retranca-os",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,7 +12,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@tauri-apps/plugin-sql": "^2.4.0",
     "autoprefixer": "^10.4.21",
