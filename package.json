@@ -1,5 +1,5 @@
 {
-  "name": "ai-studio-applet",
+  "name": "retranca-os",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,11 +8,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern src-tauri",
+    "lint:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo check --manifest-path src-tauri/Cargo.toml --locked",
     "clean": "next clean",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:rs:release": "cargo test --manifest-path src-tauri/Cargo.toml --release --locked"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@tauri-apps/plugin-sql": "^2.4.0",
     "autoprefixer": "^10.4.21",
