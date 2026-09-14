@@ -12,7 +12,7 @@ authors: AI Assistant (Orchestrator)
 
 > **CURRENT BASELINE NOTE:**
 > This PRD originated from an earlier platform baseline (Tauri/SQLite migration). It documents historical context and initial product requirements.
-> As of Phase 6.3, the system has evolved to a **100% Provisioned Local AI** orchestration model (Ollama / Rust backend).
+> As of Phase 6.3, the system has evolved to a **local AI architecture supporting Ollama and provisioned sidecar runtime paths** (Rust orchestration boundary).
 > **Approved phase-specific specifications and ADRs (e.g., `docs/specifications/phase-6.3/`, `ADR-008-EDITORIAL-AI-ORCHESTRATION-BOUNDARY.md`) supersede conflicting historical implementation details below.**
 
 # 📄 Product Requirements Document (PRD): Jornalista Inclusivo OS
@@ -36,8 +36,8 @@ O **Jornalista Inclusivo OS** é um sistema completo de gestão editorial operan
 ### Padrão Arquitetural: "UI Freeze" (Histórico)
 - **Regra de Transição:** Durante a migração inicial para Desktop/SQLite, definiu-se um "UI Freeze" onde nenhum componente visual existente poderia ser alterado, forçando o uso de um Adapter Pattern. Hoje, o design system evolui de forma controlada através de fluxos de governança específicos.
 
-### Assistente IA de Redação (100% Provisioned Local AI)
-- A aplicação utiliza inferência local via backend Rust (`ollama-gateway`) garantindo privacidade absoluta (Context-Aware Editorial AI Orchestration).
+### Assistente IA de Redação (Local AI Runtime and Orchestration Capabilities)
+- A aplicação utiliza a arquitetura de IA local via backend Rust (orquestração e context-awareness) que reduz a exposição externa de dados quando executada em caminhos locais.
 - O acesso a recursos e orquestração de identidade é tratado progressivamente (detalhes de login e autenticação distribuída são explicitamente deferidos para a Fase 6.4).
 
 ## 4. Requisitos de Acessibilidade (Mandatório)

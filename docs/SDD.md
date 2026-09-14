@@ -12,7 +12,7 @@ authors: AI Assistant (Orchestrator)
 
 > **CURRENT BASELINE NOTE:**
 > This SDD originated from an earlier platform baseline (Tauri/SQLite migration). It documents historical context and initial architectural decisions.
-> As of Phase 6.3, the system has evolved to a **100% Provisioned Local AI** orchestration model (Ollama / Rust backend).
+> As of Phase 6.3, the system has evolved to a **local AI architecture supporting Ollama and provisioned sidecar runtime paths** (Rust orchestration boundary).
 > **Approved phase-specific specifications and ADRs (e.g., `docs/specifications/phase-6.3/`, `ADR-008-EDITORIAL-AI-ORCHESTRATION-BOUNDARY.md`) supersede conflicting historical implementation details below.**
 
 # 📐 Software Design Document (SDD): Jornalista Inclusivo OS
@@ -24,7 +24,7 @@ O Jornalista Inclusivo OS elimina a fricção técnica da acessibilidade web (WC
 *   **Kanban Editorial:** Sistema de estados offline-first.
 *   **CMS de Pauta e Checklists:** Armazenamento ACID seguro localmente.
 *   **Gestão de Governança:** Módulo CRUD offline para documentação técnica e estratégica (BRD/PRD) utilizando a tabela preexistente `governance_docs`.
-*   **Orquestração de IA Local:** Serviços de IA orquestrados exclusivamente pelo backend nativo em Rust comunicando-se com Ollama.
+*   **Orquestração de IA Local:** Serviços de IA orquestrados exclusivamente pelo backend nativo em Rust, suportando a arquitetura Sidecar e Ollama (capabilities locais) de acordo com a política de provedor existente.
 *   **Adapter Pattern de Isolamento:** Os componentes React UI desconhecem a fonte de dados e os detalhes de orquestração de IA, mantendo fronteiras claras de responsabilidade.
 
 ## 3. Arquitetura C4 (Desktop App)

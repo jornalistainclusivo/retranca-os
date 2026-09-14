@@ -34,7 +34,7 @@ A Inteligência Artificial atua como um supervisor assíncrono durante a produç
 
 ## 6. Local AI architecture
 
-A arquitetura de IA local assegura proteção rigorosa a injeções de prompt e limites de uso:
+A arquitetura de IA local implementa mitigação estrutural contra injeções de prompt e limites de uso: a separação entre contexto e prompt trata os dados editoriais do CMS como não-confiáveis, mantendo a política de ação do sistema isolada do conteúdo. O uso de escapes protege os delimitadores estruturais, porém isso NÃO garante imunidade semântica contra interpretação adversarial pelo LLM:
 - **Rust-authoritative editorial orchestration:** O frontend atua estritamente coletando UX e conteúdo; o backend em Rust (`src-tauri/`) cria a política de contexto, valida a matriz de pré-requisitos, impõe limites (context budgeting) e engloba o payload com as instruções estáticas e o output esperado de maneira segura.
 - **Ollama / local runtime capability & Sidecar architecture:** A arquitetura provê compatibilidade com modelos hospedados via Ollama ou executáveis sidecar locais. O frontend **não** chama o Ollama diretamente (porta 11434 não é acessada via frontend); todo o IPC transita de forma controlada via Tauri.
 

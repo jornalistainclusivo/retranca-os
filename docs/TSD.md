@@ -8,7 +8,7 @@ last-updated: 2026-09-13
 
 > **CURRENT BASELINE NOTE:**
 > This TSD originated from an earlier platform baseline (Tauri/SQLite migration). It documents historical context and initial implementation details.
-> As of Phase 6.3, the system has evolved to a **100% Provisioned Local AI** orchestration model (Ollama / Rust backend).
+> As of Phase 6.3, the system has evolved to a **local AI architecture supporting Ollama and provisioned sidecar runtime paths** (Rust orchestration boundary).
 > **Approved phase-specific specifications and ADRs (e.g., `docs/specifications/phase-6.3/`, `ADR-008-EDITORIAL-AI-ORCHESTRATION-BOUNDARY.md`) supersede conflicting historical implementation details below.**
 
 # Technical Specification Document (TSD)
