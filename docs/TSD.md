@@ -24,7 +24,7 @@ Durante a migração para a arquitetura Desktop, estabeleceu-se uma regra de "UI
 ### 2. Stack Técnica Estrita e Integração Desktop
 A aplicação abandonou componentes Node.js server-side em favor de uma integração Desktop nativa e IA local:
 - **Frontend App:** Next.js (SSG).
-- **Runtime:** Tauri v2 orquestrando uma janela Webview e um sidecar de backend em Rust.
+- **Runtime:** Tauri v2 hospedando o WebView e o core nativo em Rust (sendo o Sidecar um caminho de execução distinto supervisionado pela aplicação, quando aplicável).
 - **Persistência Local:** SQLite integrado via ponte IPC.
 - **ORM e Plugins:** Uso das bibliotecas `drizzle-orm` e `@tauri-apps/plugin-sql` + `drizzle-orm/tauri-sqlite`.
 
@@ -49,4 +49,4 @@ export const initializeDb = async () => {
 ```
 
 ### 5. Rust Core Orchestration (lib.rs)
-Historicamente focada apenas no SQLite, a inicialização em `lib.rs` foi expandida na Fase 6.3 para gerenciar a orquestração de IA de forma autoritativa. O backend Rust atua como supervisor, invocando Ollama, controlando orçamentos de contexto e impondo limites rígidos de segurança, mantendo a política de Zero-Trust no cliente web.
+Historicamente focada apenas no SQLite, a inicialização em `lib.rs` foi expandida na Fase 6.3 para gerenciar a orquestração de IA de forma autoritativa. O backend Rust atua como supervisor executando a orquestração autoritativa e despachando através da abstração de provedor existente (suportando caminhos de execução via Ollama Gateway e Sidecar), controlando orçamentos de contexto e impondo limites rígidos de segurança, mantendo a política de Zero-Trust no cliente web.

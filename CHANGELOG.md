@@ -8,7 +8,7 @@ and this project adheres to Semantic Versioning.
 ## [Unreleased]
 
 ### Added
-- **Phase 6.3 - Context-Aware Editorial AI Orchestration:** Implementação da fronteira de autoridade de orquestração em Rust, removendo a inferência bruta do IPC frontend (release raw inference IPC restriction).
+- **Phase 6.3 - Context-Aware Editorial AI Orchestration:** Implementação da fronteira de autoridade de orquestração em Rust, restringindo a inferência bruta via IPC (raw inference IPC commands remain debug-only and are unavailable in release builds).
 - **Phase 6.3 - Seis Ações Editoriais Formais:** Research Gaps, Plain Language, Inclusive Validator, Alt Text WCAG, SEO, e Editorial Review (implementadas na política estática do orchestrator em Rust separada dos dados do CMS).
 - **Phase 6.3 - Context Projection & Budget:** Projeções estritas do contexto do editor (Title, Content, Notes, etc.) com orçamentos de caracteres (Budget) possuindo um limite fixo (fallback de 8.000 caracteres de input quando a capacidade for desconhecida), protegendo contra excesso de tokens.
 - **Phase 6.3 - Milestone:** Integração do PR #1 e geração da tag de milestone da Fase 6.3.
@@ -18,7 +18,7 @@ and this project adheres to Semantic Versioning.
 - **Phase 5.3 - Frontend State Machine & IPC Adapter:** Criação de `types/ai.ts` (6 estados Model + 8 estados Generation), `lib/adapters/localAiAdapter.ts` (SSR-safe Tauri IPC bridge) e 11 testes Vitest para validação de tipos e isolamento de Jobs.
 
 ### Changed
-- **Ollama Gateway:** Evolução do provisionamento e runtime de IA local.
+- **Ollama Gateway:** Evolução da detecção/inventário e acesso ao runtime local para desenvolvimento.
 - **AiAssistantModal:** Removida a chamada `fetch('/api/gemini/editorial')` e substituída por streaming local via Tauri IPC com typewriter effect (requestAnimationFrame) e botão de cancelamento.
 - **ArticleModal:** Mesma migração de Gemini para IPC local nas Quick AI Actions.
 

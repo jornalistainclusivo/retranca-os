@@ -79,8 +79,8 @@ export const toArticleProps = (
 
 ## 6. Definition of Done (DoD)
 *   ✅ Executável `.exe` (Tauri) final gerado com sucesso, contendo frontend webview e backend SQLite embutido.
-*   ✅ Fluxos core executam perfeitamente sem conectividade de internet (dependendo de modelos locais provicionados).
+*   ✅ Fluxos core executam perfeitamente sem conectividade de internet (dependendo de um runtime local e modelo compatíveis estarem disponíveis e explicitamente selecionados de acordo com a política de provedor existente).
 
 ## 7. Fases de Entrega
 *   **V1 (Migração Tauri MVP):** Desktop wrapper Tauri, SQLite (Drizzle), Adapter Pattern preservando interface.
-*   **V2 (Local AI Orchestration):** Integração via Phase 6.3 de um modelo autoritativo em Rust para fluxos de IA.
+*   **V2 (Local AI Orchestration):** Integração via Phase 6.3 de uma fronteira de orquestração autoritativa em Rust para fluxos de IA.

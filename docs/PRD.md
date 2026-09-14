@@ -25,10 +25,10 @@ Jornalistas e criadores de conteúdo enfrentam dificuldades para produzir materi
 - **Editor(a)/Revisor(a):** Foco em qualidade, fluxo, Linguagem Simples e acompanhamento visual sem latência.
 
 ## 3. Solução Proposta e Requisitos Funcionais
-O **Jornalista Inclusivo OS** é um sistema completo de gestão editorial operando **100% offline** (Local-First). 
+O **Jornalista Inclusivo OS** possui core editorial e persistência local operando de forma offline-first (Local-First).
 
 ### Funcionalidades Core
-- **Soberania de Dados:** Todo o processamento (incluindo IA Generativa via inferência local em Rust) e armazenamento ocorrem na máquina do usuário.
+- **Soberania de Dados:** O armazenamento core ocorre na máquina do usuário. Caminhos de execução de IA local podem operar sem acesso a redes externas quando um runtime/modelo local compatível estiver disponível e explicitamente selecionado (a disponibilidade de IA não é garantida pelo core offline-first; a política de provedor/modelo de produção permanece postergada para a Fase 6.5).
 - **Quadro Kanban Editorial:** Gestão visual de pautas (Ideia, Pesquisa, Escrita, Revisão, Publicado).
 - **CMS Local Integrado:** Mini-CMS completo em cada card de pauta.
 - **Módulo de Governança:** CRUD completo para documentos de governança (BRD, PRD, SDD, TSD). Edição baseada em `<textarea>` Markdown puro (sem WYSIWYG) e salvamento explícito (sem auto-save) para segurança e acessibilidade.
@@ -49,7 +49,7 @@ O **Jornalista Inclusivo OS** é um sistema completo de gestão editorial operan
 
 ## 6. Métricas de Sucesso (SMART)
 - Tempo de inicialização do app desktop nativo Tauri abaixo de 2s.
-- Executar todas as funções editoriais (CRUD e inferência AI) sem conexão à internet.
+- Executar todas as funções editoriais CRUD sem conexão à internet e suportar execução de inferência de IA offline quando o runtime/modelo apropriado for explicitamente configurado pelo usuário.
 
 ## 7. Considerações Técnicas (SDD Handoff)
 - **Frontend/Shell:** Next.js (SSG Export estático) empacotado via Tauri v2.
