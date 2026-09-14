@@ -8,8 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern src-tauri",
+    "lint:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo check --manifest-path src-tauri/Cargo.toml --locked",
     "clean": "next clean",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:rs:release": "cargo test --manifest-path src-tauri/Cargo.toml --release --locked"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
