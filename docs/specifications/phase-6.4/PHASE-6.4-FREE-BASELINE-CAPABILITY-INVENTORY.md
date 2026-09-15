@@ -15,7 +15,7 @@ The current functional Retranca OS baseline constitutes the Free product. Existi
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Kanban Board** | YES | YES | NO | `ActiveView` in `types/editorial.ts`, README | Core UI layout. |
 | **Workflow Stages** | YES | YES | NO | `ArticleStatus` in `types/editorial.ts` | Hardcoded: `ideia`, `pesquisa`, `escrita`, `revisao`, `publicado`. |
-| **Stage Movement** | YES | YES | NO | README ("Full drag-and-drop support") | Articles can move between fixed stages. |
+| **Stage Movement** | YES | YES | NO | components/KanbanBoard.tsx | Articles can move between fixed stages via explicit UI status controls. |
 | **Multiple Workflows**| NO | N/A | NO | `ArticleStatus` type | Only a single hardcoded workflow exists. |
 
 ## 5. CMS & Editorial Data
@@ -66,13 +66,13 @@ The current functional Retranca OS baseline constitutes the Free product. Existi
 | Capability | Implemented | Free Baseline | User Customizable | Evidence | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **SQLite DB** | YES | YES | NO | `db/schema.ts`, README | Handled via Tauri SQL Plugin & Drizzle ORM. |
-| **Offline Capability** | YES | YES | NO | README | Core app functions completely offline. |
+| **Offline Capability** | YES | YES | NO | README | Core editorial CRUD and local persistence are designed to operate local-first/offline-capable. Local AI availability depends on runtime, model selection, and Phase 6.2/6.3 invariants. |
 
 ## 11. Accessibility
 | Capability | Implemented | Free Baseline | User Customizable | Evidence | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Alt Text WCAG AI** | YES | YES | NO | Phase 6.3 PRD V3 | Strictly textual evidence (`visual_description`), no multimodal vision. |
-| **UI Freeze (AI)** | YES | YES | NO | CHANGELOG.md | Maintains WCAG AAA compliance during loading states. |
+| **UI Freeze (AI)** | YES | YES | NO | CHANGELOG.md | WCAG 2.2 / accessibility requirements guide the product and architecture during loading states. |
 
 ## 12. Developer-Only Capabilities
 - **Model/Provider Selection:** Currently a developer runtime capability via local Ollama. No user-facing production UI exists for managing API keys, billing, or provider swapping.

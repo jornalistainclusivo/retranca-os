@@ -17,7 +17,7 @@ The starting point is the current functional Retranca OS (Phase 6.3), defined in
 A PRO tier exists to solve the tension between a highly opinionated standard workflow (ideal for solo journalists or small teams wanting out-of-the-box best practices) and the bespoke realities of professional newsrooms (which have established desks, specific metadata requirements, and unique operational stages). PRO exists to adapt Retranca to the user's specific editorial reality.
 
 ## 5. Target Users
-| Segment | Standard Workflow Fit | Customization Needs | Coordination Complexity | Willingness to Pay | Likely PRO Value |
+| Segment | Standard Workflow Fit | Customization Needs | Coordination Complexity | Willingness-to-Pay Hypothesis (Unvalidated) | Likely PRO Value |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Independent Journalist** | High | Low | Low | Low-Medium | Low (Standard suffices) |
 | **Freelancer** | High | Medium (by client) | Low | Medium | Medium (Checklists/Tags) |
@@ -51,7 +51,7 @@ Based on the Core Hypothesis, the following capabilities have been evaluated:
 | **Custom Categories** | High | Freelancer/Pub | Low | Medium | STRONG | **PRO CANDIDATE** |
 | **Custom Checklist Templates**| Medium | Small Newsroom | Medium | Medium | STRONG | **PRO CANDIDATE** |
 | **Custom Editorial Fields** | High | Digital Pub | High | High | POSSIBLE | **DEFER** |
-| **Saved Workflow Templates** | Low-Med | Freelancer | High | High | WEAK | **REJECT** |
+| **Saved Workflow Templates** | Low-Med | Freelancer | High | High | WEAK | **DEFER** |
 | **Multiple Workflows** | High | Larger Newsroom | High | High | POSSIBLE | **DEFER** |
 | **Import/Export Config** | Medium | Admin/IT | Low | Medium | POSSIBLE | **DEFER** |
 
@@ -65,7 +65,7 @@ Based on the Core Hypothesis, the following capabilities have been evaluated:
 Similar to the workflow, categories (`CategoryTag`) transition from a fixed closed-domain string literal to a dynamic, user-configurable entity in PRO. Custom editorial fields (like adding a specific "Sponsor" field) are highly valuable but deferred due to high architectural and UX complexity for this immediate phase.
 
 ## 11. Templates & Multiple Workflows
-Supporting multiple concurrent workflows (e.g., one for "Podcasts", one for "Articles") introduces significant cognitive and architectural overhead. This is deferred. PRO will focus on customizing a *single* global workflow for the local instance.
+Supporting multiple concurrent workflows (e.g., one for "Podcasts", one for "Articles") introduces significant cognitive and architectural overhead. Multiple workflows remain deferred candidates. A single customizable workflow is the recommended initial PRO scope candidate, pending explicit Human Product Owner approval.
 
 ## 12. Identity / Authentication / Entitlement Analysis
 Does PRO automatically require a cloud identity (login)?
@@ -75,8 +75,7 @@ Does PRO automatically require a cloud identity (login)?
 - **D. Authentication:** Verifying identity.
 - **E. Entitlement enforcement:** Validating if the current installation has PRO rights.
 
-*Conclusion on Identity:* PRO can conceptually exist with a local license key (offline activation). However, account identity might be needed for license retrieval, purchase flows, and future sync features. 
-**Identity is NOT strictly required for the product usage itself, but may be required for the commercial transaction and entitlement verification.** A decision is needed on whether to enforce via offline license keys or via an authenticated cloud session.
+*Conclusion on Identity:* A commercial transaction may involve purchaser information at the merchant/payment layer. That does NOT by itself require a Retranca product account or cloud authentication session.
 
 ## 13. Future Commercial Capabilities
 The following capabilities are explicitly separated from workflow-customization PRO and should be treated as future hypotheses (e.g., Phase 7 or "Team" tier):
@@ -101,17 +100,24 @@ The following capabilities are explicitly separated from workflow-customization 
 
 ## 15. Risks
 - **Architectural Risk:** Transforming hardcoded types (`ArticleStatus`, `CategoryTag`) into dynamic database entities requires careful migration of existing Free user data.
-- **UX Risk:** Custom stages must map correctly to the AI Actions (which currently rely on fixed statuses to determine "Recommended" actions). If a user renames "Revisão" to "Quality Control", the AI context projection must still understand the semantic mapping.
+- **UX Risk:** Phase 6.3 invariants (status recommends; validated evidence determines action availability) must be preserved.
 
 ## 16. Open Product Decisions
 The Human Product Owner must decide on the following:
 1. **Scope confirmation:** Are custom stages, categories, and checklists approved for Phase 6.4 PRO scope?
-2. **AI Action Mapping:** When users create custom stages, do they manually map them to the 6 core AI Actions, or is that deferred?
-3. **Identity vs. License Key:** Will PRO be activated via an online login session (Supabase/Auth0) or via an offline-capable license key (Paddle/LemonSqueezy activation)?
-4. **Data boundaries:** If a user downgrades from PRO to Free, do their custom stages revert to the standard 5 stages (risking data loss), or are they frozen in a read-only custom state?
+2. **AI Action Mapping:** How should custom stages preserve or influence semantic recommendation behavior while keeping evidence-based action availability authoritative? (Potential solutions such as semantic stage roles or classifications are architecture/design questions and MUST NOT be chosen in this Discovery).
+3. **Identity vs. License Key:** Will PRO be activated via an authenticated account/session model or via an offline-capable/local license entitlement model? Provider selection is explicitly deferred.
+4. **Data boundaries (Downgrade Safety):** If a user downgrades from PRO to Free, what is the exact UX? Invariant: Downgrade MUST NOT destroy, silently remap, or corrupt existing user content/configuration.
 
 ## 17. Recommended Next Phase
-Pending Human Product Owner approval of this Discovery document and resolution of the Open Decisions, the next step is Technical Architecture (SDD) to determine how dynamic statuses will be persisted and how entitlement will be structurally enforced.
+Pending Human Product Owner approval of this Discovery document and resolution of the Open Decisions, the recommended sequence is:
+1. Human Product Decision Gate
+2. Phase 6.4 Product Requirements / PRD
+3. Architecture Decision Records as needed
+4. Security / entitlement design as needed
+5. Software Design
+6. Implementation Plan
+7. Separate Human Implementation Gate
 
 ## 18. Non-Goals
 This Discovery document **DOES NOT**:
