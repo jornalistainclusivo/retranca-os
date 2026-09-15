@@ -1,7 +1,7 @@
 # Phase 6.4 PRO Workflow Customization PRD
 
 ## 1. Status
-PHASE 6.4 — PRODUCT REQUIREMENTS — DRAFT FOR HUMAN REVIEW
+PHASE 6.4 — PRODUCT REQUIREMENTS — APPROVED BY HUMAN PRODUCT OWNER
 
 ## 2. Executive Summary
 This Product Requirements Document (PRD) defines the requirements for Phase 6.4 PRO Workflow Customization. The PRO tier allows newsrooms to customize the editorial workflow, categories, and checklist templates of Retranca OS, adapting the local software to their specific business realities. The PRD maintains the existing Free baseline without removing capabilities, preserves Phase 6.3 local AI orchestration, and guarantees local-first operation and downgrade safety.
@@ -79,6 +79,10 @@ The following capabilities are guaranteed Free:
 - **Goal:** Match the sequential flow of the newsroom.
 - **Behavior:** Modifies the left-to-right order of columns in Kanban and sequential flow logic.
 
+**E. Minimum Workflow Size**
+- **Goal:** Maintain operational validity.
+- **Behavior:** A workflow must contain at least one active stage. The product must reject any configuration change that would result in zero active stages.
+
 ## 11. Category Customization Requirements
 PRO users must be able to create, rename, and delete custom categories.
 - **Creation:** Users can add new categories with a name.
@@ -90,7 +94,8 @@ PRO users must be able to create, rename, and delete custom categories.
 
 ## 12. Checklist Template Requirements
 PRO users must be able to manage reusable checklist templates.
-- **Creation & Editing:** Users can create a named template and add/remove/reorder checklist items within it.
+- **Scope:** A custom checklist template consists of a template name and an ordered list of checklist items. Custom checklist taxonomy/category design is explicitly OUT OF SCOPE for initial Phase 6.4. Existing standard checklist behavior remains Free.
+- **Creation & Editing:** Users can create a template, rename a template, add checklist items, edit checklist items, remove checklist items, and reorder checklist items.
 - **Application:** Users can apply a saved template to a new or existing article.
 - **Safeguards:** Deleting a template does NOT delete the completed checklist history or items already applied and saved within individual articles.
 
@@ -102,7 +107,7 @@ Custom workflow stages must preserve the Phase 6.3 AI invariant: *status recomme
 
 ## 14. PRO Configuration UX
 - **Access:** Configuration is accessed via a dedicated "Settings" or "Workflow Configuration" area.
-- **Discoverability:** (Open Product Question) Free users might see the configuration area to understand the PRO capability, but UI controls are locked/disabled, OR discoverability might be handled purely through contextual messaging. (To be resolved by Human/UX approval).
+- **Discoverability:** Free users retain a clean standard experience. PRO customization is surfaced through contextual, discreet messaging when relevant (e.g., when encountering or attempting a customization capability). No dark patterns, no obstruction of Free workflows, no deceptive controls. There is no requirement for a permanently visible locked PRO settings surface.
 - **Editing:** Configuration changes must have explicit Save/Cancel interactions.
 - **Destructive Operations:** Removing stages or categories requires clear, explicit user confirmation and safe resolution of impacted articles.
 - **Accessibility:** All configuration forms, drag-and-drop ordering (if implemented), and modals must support keyboard navigation and screen readers.
@@ -110,30 +115,36 @@ Custom workflow stages must preserve the Phase 6.3 AI invariant: *status recomme
 ## 15. Entitlement Product Boundary
 - The product must distinguish between states: Free capability available, PRO capability available, PRO capability unavailable, and entitlement temporarily unverifiable (offline).
 - **Payment != Product Identity != Authentication != Authorization != Entitlement.**
-- Temporary inability to verify entitlement must not cause data loss or unexpectedly interrupt ordinary editorial work that was already validly available.
+- **Temporary Unverifiability:** If PRO was validly active before temporary verification failure, ordinary editorial work and existing PRO configuration usage/editing must not be blocked solely because verification is temporarily unavailable.
 
 ## 16. Local-First / Offline Requirements
 PRO must preserve meaningful local-first/offline operation after valid entitlement activation.
 - Existing editorial content must remain safe and accessible.
-- Whether PRO configuration itself can continue to be edited while entitlement is unverifiable remains an open product decision.
+- Temporary inability to verify entitlement does not block previously valid PRO work or configuration editing.
 
 ## 17. Downgrade Safety Requirements
-Downgrade from PRO to Free must NEVER:
-- delete user content;
-- silently remap stages;
-- corrupt article references;
-- destroy custom categories;
-- destroy checklist configuration.
+When PRO entitlement is no longer active (downgrade to Free):
+- Existing editorial content remains usable.
+- Existing custom workflow configuration remains preserved.
+- Existing custom categories remain preserved.
+- Existing custom checklist templates/configuration remain preserved.
+- Articles continue to reference their existing custom structures safely.
+- No data may be deleted, no custom stage silently remapped, no article corrupted or orphaned.
+- **Enforcement:** The Free state blocks NEW PRO configuration changes. Preserved PRO configuration must remain recoverable for future reactivation.
 
 ## 18. Functional Requirements
 - **FR-WF-001:** The system shall allow PRO users to rename an existing workflow stage.
 - **FR-WF-002:** The system shall allow PRO users to add a new workflow stage.
 - **FR-WF-003:** The system shall allow PRO users to remove a workflow stage, providing safe resolution for affected articles.
 - **FR-WF-004:** The system shall allow PRO users to reorder workflow stages.
+- **FR-WF-MIN-001:** The system shall reject any workflow configuration change that results in zero active workflow stages.
 - **FR-CAT-001:** The system shall allow PRO users to create, rename, and delete custom categories safely.
-- **FR-CHK-001:** The system shall allow PRO users to create, edit, and apply custom checklist templates.
+- **FR-CHK-001:** The system shall allow PRO users to create, rename, and apply custom checklist templates (consisting of name and ordered items).
+- **FR-CHK-002:** The system shall allow PRO users to add, edit, remove, and reorder items within a checklist template.
 - **FR-AI-001:** The system shall preserve evidence-based AI action availability regardless of custom workflow stage names.
 - **FR-DOWN-001:** The system shall retain all user data, articles, and custom configurations safely if PRO entitlement is revoked.
+- **FR-DOWN-002:** The system shall block the creation of new PRO configuration changes when in the Free state.
+- **FR-ENT-001:** The system shall allow continued usage and editing of existing PRO configuration if entitlement becomes temporarily unverifiable after valid activation.
 
 ## 19. Non-Functional Requirements
 - **NFR-A11Y-001:** All configuration interfaces must be fully accessible via keyboard.
@@ -149,14 +160,19 @@ Downgrade from PRO to Free must NEVER:
 ## 21. Acceptance Criteria
 - **AC-WF-001 (Rename):** Given a PRO user, when they rename a stage, the new name appears on the Kanban board and all existing articles in that stage remain intact without data loss.
 - **AC-WF-002 (Remove Block):** Given a PRO user, when they attempt to delete a stage containing articles, the system blocks the deletion from completing until affected articles are resolved.
+- **AC-WF-003 (Minimum Stage):** Given a PRO user, when they attempt to remove the final remaining active workflow stage, the system rejects the operation.
 - **AC-CAT-001 (Category):** Given a PRO user, when they create a category "Op-Ed", it becomes available in the article editor category dropdown.
-- **AC-CHK-001 (Checklist):** Given a PRO user, when they create a new checklist template and apply it to an article, the items are populated for that article.
+- **AC-CHK-001 (Checklist):** Given a PRO user, when they create a new checklist template consisting of a name and ordered items, and apply it to an article, the items are populated for that article.
 - **AC-AI-001 (AI Invariant):** Given an article in a custom workflow stage, actions whose evidence prerequisites are satisfied remain available independent of the custom stage display name, while recommendation behavior remains coherent.
-- **AC-DOWN-001 (Downgrade):** Given a user whose PRO entitlement is no longer active, existing articles and custom configuration remain intact and recoverable, and no silent data transformation occurs.
+- **AC-DOWN-001 (Downgrade Safety):** Given a user whose PRO entitlement is no longer active, existing articles and custom configuration remain intact and recoverable, and no silent data transformation occurs.
+- **AC-DOWN-002 (Downgrade Restriction):** Given a user whose PRO entitlement is no longer active, attempts to create new custom workflow stages, categories, or checklist templates are blocked.
 - **AC-FREE-001 (Free Baseline):** Given a Free user, the standard 5 stages, fixed categories, and local AI capabilities remain fully functional without restriction.
+- **AC-FREE-002 (Free Discoverability):** Given a Free user, the system presents contextual PRO discoverability messaging when appropriate, without permanently obstructing the standard editorial workflow.
+- **AC-ENT-001 (Temporary Unverifiability):** Given a validly activated PRO user, if entitlement verification temporarily fails, the system does not block previously valid PRO editorial or configuration work.
 
 ## 22. Deferred Capabilities
 The following are explicitly OUT OF SCOPE for this PRD:
+- custom checklist taxonomy/category design;
 - custom editorial metadata fields;
 - multiple concurrent workflows;
 - saved workflow templates;
@@ -167,11 +183,7 @@ The following are explicitly OUT OF SCOPE for this PRD:
 - hosted AI services.
 
 ## 23. Open Product Questions
-- What is the exact UI/UX for a workflow that has been downgraded to Free?
-- How are custom checklist templates classified/taxonomized within the UI if standard templates exist?
-- What is the minimum valid number of workflow stages?
-- Should Free users see discoverable locked PRO configuration controls or only contextual PRO messaging?
-- What is the behavior of PRO configuration editing during temporary entitlement unverifiability?
+No blocking Product Owner questions remain for Phase 6.4 architecture design.
 
 ## 24. Architecture Decisions Explicitly Deferred
 The following technical decisions require subsequent Architecture Decision Records (ADR) or Software Design Documents (SDD):
@@ -187,8 +199,9 @@ The following technical decisions require subsequent Architecture Decision Recor
 - Downgrade enforcement model.
 
 ## 25. Exit Criteria
-- Human Product Owner approval of this PRD.
-- Resolution of critical Open Product Questions affecting immediate design.
+- Human Product Owner PRD approval is COMPLETE.
+- No blocking Product Owner question remains for architecture.
+- Next gated work is architecture/security analysis.
 
 ## 26. Governance / Non-Authorization
 This PRD defines requirements only. It DOES NOT authorize:
