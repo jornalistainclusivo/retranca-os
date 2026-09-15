@@ -6,7 +6,7 @@ Accepted — Human Architecture Decision
 
 ## Context
 
-The current `CategoryTag` is a fixed representation, and checklist items are flat article-level structures. Phase 6.4 requires reusable configuration entities for both categories and checklist templates to allow PRO workflow customization. These entities must support renaming, reordering, and preservation across downgrades.
+The current `CategoryTag` is a closed status domain, and checklist items are flat article-level structures. Phase 6.4 requires reusable configuration entities for both categories and checklist templates to allow PRO workflow customization. These entities must support renaming, reordering, and preservation across downgrades.
 
 ## Evaluated Options
 
@@ -39,7 +39,7 @@ The current `CategoryTag` is a fixed representation, and checklist items are fla
 
 ## Data Integrity Consequences
 
-- **Category rename safety:** Renaming a category is a centralized operation that reflects without altering category identity strings within articles.
+- **Category rename safety:** Renaming a category changes its display value while preserving the stable category identity referenced by existing articles.
 - **Category deletion resolution:** Deleting a referenced category must be handled gracefully to avoid corrupting article classification.
 - **Checklist template edit isolation:** Changes to a template item list do not propagate to past checklist instances, preserving historical accuracy.
 - **Checklist template deletion:** Safe, as active articles maintain their own isolated copies of checklist items.
@@ -48,7 +48,7 @@ The current `CategoryTag` is a fixed representation, and checklist items are fla
 
 ## Rejected Alternatives
 
-- *Fully relational categories + checklist templates/items:* Rejected for checklist templates due to rigid ordering requirements and the necessity of strict copy-semantics for article instantiation.
+- *Fully relational categories + checklist templates/items:* A fully relational representation would also be technically viable. It was not selected; it is not technically incapable. The approved Human Architecture Decision selected a document-style aggregate for checklist-template items because: the approved template content is a small ordered aggregate; items are applied as independent article checklist instances; the aggregate shape is cohesive for template editing; this choice reduces unnecessary relational decomposition for the approved initial template scope.
 - *Fully document-style configuration:* Rejected for categories because it weakens identity stability, complicates renaming (requiring O(N) updates across all articles), and degrades referential integrity.
 
 ## Deferred Decisions

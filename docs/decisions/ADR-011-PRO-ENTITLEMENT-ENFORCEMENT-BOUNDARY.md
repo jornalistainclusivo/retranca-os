@@ -6,7 +6,7 @@ Accepted — Human Architecture Decision
 
 ## Context
 
-The current `DEVELOPER_PREMIUM` mechanism is a debug-only UI toggle used for testing. Production commercial entitlement does not yet exist. Because frontend-only enforcement is easily bypassable by end users, a stronger enforcement boundary is needed for PRO features. At the same time, the product's local-first behavior mandates that a temporary inability to verify commercial status must not destroy data or block previously-valid configuration.
+The current `DEVELOPER_PREMIUM` mechanism is a developer-only debug mechanism implemented in the Rust/Tauri layer under debug configuration; the frontend exposes developer controls/state through IPC. Release behavior does not make `DEVELOPER_PREMIUM` production entitlement; this historical mechanism MUST NOT be extrapolated into production commercial entitlement architecture. Production commercial entitlement does not yet exist. Because frontend-only enforcement is easily bypassable by end users, a stronger enforcement boundary is needed for PRO features. At the same time, the product's local-first behavior mandates that a temporary inability to verify commercial status must not destroy data or block previously-valid configuration.
 
 ## Security / Trust Model
 
@@ -48,14 +48,21 @@ The system must distinguish between two states:
 - Existing PRO configuration editing is not blocked solely because verification is temporarily unavailable.
 
 **DOWNGRADED FREE:**
-- Editorial content remains intact.
-- Existing custom configuration remains preserved/recoverable.
-- No destructive remapping occurs.
-- New PRO configuration changes are denied.
+- Existing custom categories/templates/configuration remain preserved and recoverable.
+- No destructive transformation occurs.
+- NEW PRO configuration changes are denied.
+
+## Free Local AI Scope
+
+ADR-011 governs authorization for PRO EDITORIAL CUSTOMIZATION mutations. It does NOT make existing local AI a PRO capability.
+
+Local AI capability != paid capability.
+
+The six existing Phase 6.3 editorial AI actions remain part of the Free baseline.
 
 ## Security Consequences
 
-- Frontend spoofing does not by itself authorize protected mutations, as the native layer validates authority.
+- Frontend spoofing does not by itself authorize protected mutations, as the native application boundary enforces authorization for protected PRO mutations based on the production entitlement representation selected in later design.
 - Direct IPC calls require application-level authorization.
 - Local-admin bypass remains a residual risk, as the native boundary cannot prevent binary patching or memory manipulation.
 - Fail-safe behavior strictly preserves editorial data.
