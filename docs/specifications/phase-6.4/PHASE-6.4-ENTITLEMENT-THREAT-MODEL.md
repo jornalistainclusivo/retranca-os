@@ -1,59 +1,121 @@
 # Phase 6.4 Entitlement Threat Model
 
 ## 1. Status
-PHASE 6.4 — SECURITY DISCOVERY
+THREAT MODEL — ANALYSIS ONLY — NO ENTITLEMENT ARCHITECTURE APPROVED
 
 ## 2. Objective
-Identify and model the security threats related to the implementation of PRO Entitlement in Retranca OS. This model guides the architectural design of the entitlement and downgrade enforcement boundaries.
+Identify and model the security threats related to the implementation of PRO Entitlement in Retranca OS, factoring in the limitations of a local-first desktop trust model.
 
-## 3. System Boundaries and Assets
+## 3. Threat Model — Attacker Capabilities
+**Ordinary User capabilities:**
+- frontend state modification (DevTools, React Developer Tools);
+- network interruption (going offline);
+- direct IPC invocation (via console).
 
-### 3.1 Trust Boundaries
-- **Untrusted:** React Frontend (UI state, local storage, memory).
-- **Semi-Trusted:** Local SQLite Database (user has physical access to the file and can theoretically manipulate it outside the application).
-- **Trusted (Enforcement):** Rust Tauri Backend (performs IPC validation, queries, and cryptographic checks).
-- **Trusted (External):** Future Licensing/Auth Provider (Out of scope for Phase 6.4, but represents the ultimate source of truth for commercial status).
+**Local privileged/admin attacker capabilities:**
+- local DB/file editing (SQLite modifications);
+- binary patching;
+- memory tampering;
+- entitlement material copying (moving a license file between machines);
+- replay of stale entitlement state;
+- rollback to older local state (restoring a file backup);
+- system clock manipulation;
+- developer/debug override abuse;
+- downgrade-state manipulation;
+- spoofed/replayed verification responses;
+- TOCTOU (Time-of-Check to Time-of-Use) between displayed status and protected mutation.
 
-### 3.2 Assets to Protect
-1. **PRO Capabilities (Commercial Integrity):** Prevent unauthorized access to PRO configuration creation.
-2. **Editorial Content (Data Integrity):** Ensure commercial state transitions (downgrades) never corrupt, orphan, or delete user editorial data.
-3. **Local-First Reliability (Availability):** Ensure network failures do not lock out valid users from their own local data.
+## 4. Threat Model — Required Threats
+This model analyzes the following threats generically (without assuming a specific architecture):
+- **Frontend feature-flag bypass:** Attacker modifies React state to unlock UI.
+- **Forged PRO state:** Attacker injects a fake local entitlement status.
+- **Stale/replayed entitlement:** Attacker prevents the app from receiving a revocation signal by replaying old successful responses.
+- **Copied entitlement between installations:** Attacker copies a valid PRO state from one machine to another.
+- **Rollback attack:** Attacker restores a previous valid database/state file after their PRO expires.
+- **Clock rollback:** Attacker changes OS time to prevent offline expiration.
+- **Downgrade bypass:** Attacker manages to create new PRO configurations despite being in a downgraded state.
+- **Unauthorized creation/mutation of PRO configuration while Free:** Attacker invokes IPC directly to create a custom stage.
+- **Corruption or loss of preserved custom configuration:** System accidentally deletes custom stages during a downgrade or temporary offline state.
+- **Developer premium abuse:** Attacker attempts to trigger the `DEVELOPER_PREMIUM` debug flag in a release build.
+- **IPC authorization bypass:** Attacker finds a missing entitlement check on a protected mutation.
+- **TOCTOU:** Attacker passes an entitlement check, then rapidly changes state before the database write occurs.
+- **Temporary-offline abuse:** Attacker stays offline indefinitely to avoid revocation.
+- **Indefinite stale entitlement risk:** The risk of trusting local state forever without re-validation.
+- **Denial of service against legitimate PRO:** Legitimate user is locked out of PRO features due to network outage or local state corruption.
+- **Accidental destructive downgrade:** The system correctly downgrades the user but improperly remaps or deletes their PRO data.
+- **External-verification spoofing:** (IF an external verifier model were used) Attacker intercepts and modifies the network response from the licensing server.
 
-## 4. Threat Scenarios (STRIDE)
+## 5. Security Invariants — Properties, Not Mechanisms
+- Frontend state alone cannot constitute production entitlement authority.
+- Hidden/disabled UI cannot be the only protection for PRO mutations.
+- `DEVELOPER_PREMIUM` cannot grant production entitlement in release.
+- Protected commercial mutations require authorization at a boundary more trusted than frontend UI state.
+- Entitlement uncertainty must never destroy editorial data.
+- Preserved PRO-created data remains recoverable.
+- Temporary verification failure must respect the approved local-first product behavior.
+- Downgrade enforcement must preserve content/configuration.
+- Any local proof, IF used, must have authenticity/freshness properties appropriate to the selected architecture.
 
-### 4.1 Spoofing
-- **Threat:** User spoofs a valid entitlement response by intercepting network traffic to the licensing provider.
-- **Mitigation Requirement:** The Rust backend must cryptographically verify the entitlement material (e.g., using a public key to verify a signed JWT from the provider), rather than trusting boolean API responses.
+*(Note: JWT, token, keychain, license file, server session are NOT selected mechanisms, merely OPTION EXAMPLES for future ADRs).*
 
-### 4.2 Tampering
-- **Threat 1 (Memory):** User tampers with the React state (e.g., using DevTools) to set `isPremium: true`.
-- **Mitigation Requirement:** React state only controls UI visibility. The Rust backend must re-verify entitlement on every PRO IPC command (e.g., `create_custom_stage`).
-- **Threat 2 (Database):** User modifies the SQLite database directly to insert custom workflow stages without PRO.
-- **Mitigation Requirement:** While physical database access is inherently untrusted in a local app, the Rust backend must block the *application* from writing new PRO configurations if not entitled. (Note: Preventing direct SQLite tampering by advanced users is generally accepted as out-of-scope for standard local apps, but the application itself must not facilitate it).
-- **Threat 3 (Token Tampering):** User modifies the locally cached entitlement token to extend its expiration date.
-- **Mitigation Requirement:** Cached entitlement material must be cryptographically signed.
+## 6. Offline Product × Security Tension
+**The Tension:**
+- **PRODUCT:** Temporary verification failure cannot itself block previously valid PRO work/configuration editing.
+- **SECURITY:** Indefinitely accepting stale/forged local state could defeat commercial entitlement.
 
-### 4.3 Repudiation
-- **Threat:** User claims they did not downgrade, but their app restricts features.
-- **Mitigation Requirement:** Clear UI indicators of entitlement status (Active, Expired, Offline) driven by the Rust backend.
+**Decision Dimensions to evaluate (No decisions made yet):**
+- freshness (how old can the local state be?);
+- revocation expectations (how fast must a cancellation take effect?);
+- offline duration (is there a limit?);
+- local clock trust (how do we handle clock manipulation?);
+- rollback resistance;
+- machine/install association;
+- recovery;
+- entitlement refresh;
+- user support/recovery;
+- false denial versus false grant tradeoff.
 
-### 4.4 Information Disclosure
-- **Threat:** Entitlement tokens or cryptographic secrets are stored in plaintext in insecure locations.
-- **Mitigation Requirement:** Entitlement material must be stored using the OS native secure credential store (e.g., macOS Keychain, Windows Credential Manager) via Tauri plugins, not in plaintext SQLite or localStorage.
+## 7. Risk Register
+| Threat | Likelihood | Impact | Affected Asset | Required Architectural Property | Residual Risk / Unknown |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Frontend bypass | HIGH | LOW | UI Integrity | Native IPC mutation enforcement | LOW (if IPC is secured) |
+| IPC direct invocation | MEDIUM | HIGH | Com. Integrity | IPC boundary entitlement checks | LOW |
+| Clock rollback | HIGH | MEDIUM | Com. Integrity | Clock-independent freshness/offline duration | UNKNOWN (Admin attacker) |
+| Entitlement cloning | LOW | HIGH | Com. Integrity | Machine/install association | UNKNOWN (Depends on auth model) |
+| Destructive downgrade | LOW | HIGH | Data Integrity | Downgrade preserves configuration | LOW (if DB schema is safe) |
+| Spoofed external verify | LOW | HIGH | Com. Integrity | Cryptographic local verification | UNKNOWN |
 
-### 4.5 Denial of Service
-- **Threat:** Network outage prevents the app from contacting the licensing server, locking the user out of their editorial workflow.
-- **Mitigation Requirement:** The system must implement a "Temporarily Unverifiable" state that trusts the last known valid, cryptographically verified local token until it reaches a hard offline expiration limit.
+## 8. Downgrade vs Temporary Unverifiability
+These states must remain strictly distinct in any implementation:
 
-### 4.6 Elevation of Privilege
-- **Threat:** A Free user figures out how to trigger the IPC command to create a custom stage because the command is exposed.
-- **Mitigation Requirement:** All PRO-only IPC commands must internally perform the cryptographic entitlement check before executing the database transaction.
+**TEMPORARILY UNVERIFIABLE:**
+- The user was previously valid PRO.
+- Ordinary editorial work continues.
+- Existing PRO configuration use/editing is **not blocked** solely by temporary verification failure.
 
-## 5. Security Invariants for Phase 6.4 Architecture
-1. **Rust Authority:** Entitlement is strictly evaluated in Rust. The frontend only reflects Rust's evaluation.
-2. **Cryptographic Trust:** Offline entitlement must rely on signed material, not boolean flags in a database.
-3. **Fail-Safe Data:** Any entitlement evaluation failure must fail open for *reading* and *editing existing* data, but fail closed for *creating new* PRO configurations.
+**DOWNGRADED FREE:**
+- PRO entitlement is explicitly no longer active.
+- Editorial content and existing configuration are **preserved**.
+- **New** PRO configuration changes are **denied**.
+- No destructive remapping occurs.
 
-## 6. Next Steps
-- HUMAN DECISION READINESS REQUIRED.
-- Pending Human Authorization: Draft ADR for Entitlement Security and Downgrade Boundaries.
+*(Enforcement granularity for editing existing PRO configuration while downgraded is a decision dependency, not an assumed product behavior).*
+
+## 9. Explicit Non-Decisions
+This document explicitly confirms no decision yet on:
+- workflow persistence representation;
+- semantic role representation;
+- category schema;
+- checklist-template schema;
+- entitlement authority implementation;
+- licensing/activation model;
+- identity/authentication requirement;
+- external commercial provider;
+- payment provider;
+- local entitlement material format;
+- cryptographic format;
+- offline freshness duration;
+- secure-storage technology;
+- machine binding;
+- revocation mechanism;
+- downgrade enforcement implementation.
