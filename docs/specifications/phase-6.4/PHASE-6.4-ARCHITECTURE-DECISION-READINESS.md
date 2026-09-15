@@ -6,7 +6,16 @@ ANALYSIS ONLY — NO ARCHITECTURE DECISION APPROVED
 ## 2. Objective
 This document outlines the decision domains required for Phase 6.4 PRO Workflow Customization, establishing the boundaries and requirements for subsequent formal Architecture Decision Records (ADRs). It explicitly does not select final architectures, but rather models the problem space, options, and constraints.
 
-## 3. Current Technical Baseline (Facts)
+## 3. Product Invariants
+- **Free Baseline:** Free = current functional baseline.
+- **PRO:** PRO = Editorial Workflow Customization (rename, add, remove, reorder stages; custom categories; custom checklist templates).
+- **Recommendation:** *status recommends; validated evidence determines action availability.*
+- **Minimum workflow:** >= 1 active stage.
+- **Stage removal:** A stage MUST NOT be removed while affected articles remain unresolved (this does not mean a stage that once contained articles can never be removed).
+- **Downgrade:** Content/configuration is preserved; no silent remapping; new PRO configuration changes are denied.
+- **Temporary unverifiability:** The user was previously valid PRO; ordinary work continues; existing PRO configuration use/editing is not blocked solely because verification is temporarily unavailable.
+
+## 4. Current Technical Baseline (Facts)
 - **ArticleStatus:** Currently a closed domain in TypeScript (`types/editorial.ts`). It is also represented as a closed enum in the Phase 6.3 Rust editorial context.
 - **CategoryTag:** Likewise closed in TypeScript and Rust Phase 6.3 context.
 - **Kanban Columns:** Current Kanban columns are fixed.
@@ -17,97 +26,108 @@ This document outlines the decision domains required for Phase 6.4 PRO Workflow 
   - In release builds, `get_entitlements` resolves to FREE, and `set_developer_premium` rejects developer premium.
   - In `lib/contexts/EntitlementContext.tsx`, the frontend obtains entitlement status through Tauri IPC. This historical UI/context is NOT the commercial entitlement architecture. Do NOT extrapolate production entitlement architecture from this debug implementation.
 
-## 4. Architecture Decision Domain A — Workflow Model
-### Conceptual Models for Dynamic Workflow Representation
-**Option A: Stable dynamic stage entities with independent identifiers**
-- Stages have unique UUIDs. Articles reference stage UUIDs.
-- **Rename stability:** High (name is just a property).
-- **Reorder:** Easy (order index).
-- **Article references:** Foreign keys remain stable.
-- **Migration:** Existing articles must migrate fixed string statuses to new dynamic UUIDs.
+## 5. Workflow Option Matrix
 
-**Option B: Stable semantic core + customizable presentation/order**
-- System retains core semantic states (e.g., "in-progress", "done"), but allows custom display names and ordering within those semantic buckets.
-- **Rename stability:** Display name can change without altering semantic mapping.
-- **Article references:** Can reference either the semantic core or the presentation layer.
-- **Phase 6.3 impact:** Minimizes impact on existing semantic-based AI logic.
+| Feature / Impact | Option A: Stable Dynamic Entities (Implementation Example: UUIDs) | Option B: Stable Semantic Core + Custom Presentation | Option C: Dynamic Stages with Separate Semantic Tags |
+| --- | --- | --- | --- |
+| **Stable identity** | Independent identifier | Core semantic identifier | Independent identifier |
+| **Rename behavior** | High stability | Presentation-only change | High stability |
+| **Reorder behavior** | Fully arbitrary | Restricted by semantic flow | Fully arbitrary |
+| **Add behavior** | Fully arbitrary | Requires mapping to semantic core | Arbitrary, tag assignment optional |
+| **Removal safety** | Reassignment/blocking | Presentation removal only | Reassignment/blocking |
+| **Article references** | Bound to independent identifier | Bound to semantic core | Bound to independent identifier |
+| **Minimum-one-stage** | Enforceable at DB/IPC | Inherent to semantic core | Enforceable at DB/IPC |
+| **Free default workflow** | Explicit default records | Pre-configured presentation | Pre-configured records with tags |
+| **Migration** | Migrate fixed strings to new entities | Migrate fixed strings to semantic cores | Migrate fixed strings to tagged entities |
+| **Downgrade preservation**| Preserved | Preserved | Preserved |
+| **List impact** | Dynamic column sorting/filtering | Semantic-based grouping | Dynamic column sorting/filtering |
+| **Kanban impact** | Fully dynamic columns | Fixed columns, dynamic sub-headers | Fully dynamic columns |
+| **Calendar impact** | Agnostic | Agnostic | Agnostic |
+| **Stats impact** | Aggregations need dynamic grouping | Aggregations map to core | Aggregations need dynamic grouping |
+| **Phase 6.3 recommendation impact** | High | Low | Low (if tags are used) |
+| **Testing complexity** | High | Low | Medium |
+| **Rollback/recovery** | Foreign key constraints complex | Easy | Foreign key constraints complex |
+| **Major risk** | Decoupling breaks AI context | Too restrictive for users | Tag drift / unmapped stages |
 
-**Option C: Dynamic stages with a separate optional/required recommendation semantic classification**
-- Fully dynamic stages (like Option A) but with an optional tag that links them to known semantic roles.
-- **Backward compatibility:** Good, if default Free stages have semantic tags pre-populated.
+## 6. AI Semantics Matrix
 
-*All options must satisfy:*
-- Minimum one active stage.
-- Downgrade preservation (custom stages remain readable).
-- Free default workflow integrity.
-- Safe add/remove behavior (cannot remove a stage with articles).
+*Invariant: status recommends; validated evidence determines action availability.*
 
-## 5. Architecture Decision Domain B — AI Recommendation Semantics
-**Invariant:** *status recommends; validated evidence determines action availability.*
+| Criteria | Approach 1: Explicit Stable Semantic Stage Role | Approach 2: Optional Semantic Classification | Approach 3: Derived Recommendation Semantics (LLM/Heuristics) | Approach 4: Evidence-Dominant Availability (Independent Hints) |
+| --- | --- | --- | --- | --- |
+| **Recommendation quality** | High (deterministic) | High (when tagged) | Variable | Neutral |
+| **Determinism** | Absolute | Absolute | Probabilistic | Absolute |
+| **Effect on evidence** | None | None | None | Decouples status entirely |
+| **Impact on Rust Context** | Evolves enum to entity + role property | Evolves enum to entity + optional tag | Complex heuristic layer required | Simplifies context |
+| **Migration complexity** | Medium | Medium | High | Low |
+| **User explainability** | High | High | Low | High |
+| **Unknown custom stage failure** | Blocks creation (required) | Graceful (no recommendation) | Graceful (fallback) | Graceful |
+| **Testability** | High | High | Low | High |
+| **Risk of accidental 1:1 coupling** | High | Medium | Low | Low |
 
-### Conceptual Approaches
-**Approach 1: Explicit stable semantic stage role**
-- Custom stages must be assigned a fixed semantic role (e.g., "Drafting", "Review"). Recommendation logic runs off this semantic role.
-- **Impact on Rust Context:** `ArticleStatus` evolves into a dynamic entity carrying a semantic role property.
+*(Approach 3 is deemed NON-VIABLE due to its probabilistic nature conflicting with the predictable orchestration requirements of Phase 6.3).*
 
-**Approach 2: Optional semantic classification**
-- Stages can optionally have semantics. If absent, no specific AI stage-based recommendation is provided, but evidence still determines availability.
-- **Impact on Recommendation UX:** Less prescriptive; relies more on evidence availability.
+## 7. Category Options Matrix
 
-**Approach 3: Derived recommendation semantics**
-- System uses LLM/heuristics to map the custom stage name to a known semantic state dynamically.
-- **Impact:** High uncertainty/latency, heavily impacts Phase 6.3 context.
+| Criteria | Option A: Relational Table Migration | Option B: JSON Document Array inside Article |
+| --- | --- | --- |
+| **Identity** | Stable | Weak (String value) |
+| **Rename** | Centralized | O(N) updates on all articles |
+| **Article references** | Foreign Key | Value matching |
+| **Deletion resolution** | Blocked if referenced | Array element removal |
+| **Migration** | Fixed enum to table records | Fixed enum to JSON |
+| **Downgrade** | Prevent new writes | Prevent new strings |
+| **Free standard categories** | Seeded records | Seeded strings |
+| **Distinction from arbitrary tags** | High | Low |
 
-**Approach 4: Evidence-dominant availability with independent recommendation hints**
-- Stage purely dictates board column. Action availability relies 100% on evidence.
-- **Migration:** Easiest migration, fully decouples workflow status from AI action availability.
+## 8. Checklist Template Options Matrix
 
-## 6. Architecture Decision Domain C — Category Model
-### Viable Representation Approaches
-**Approach 1: Fixed enum migration to dynamic table**
-- Migrate `CategoryTag` to a database table with predefined "Free" entries and user-created "PRO" entries.
-- **Stable identity:** Good (UUIDs).
-- **Downgrade preservation:** Downgrade must prevent new category creation but allow reading/editing existing articles with custom categories.
+*Approved scope: template = name + ordered checklist items.*
 
-**Approach 2: JSON Document Store**
-- Store categories as an array of strings inside the article metadata.
-- **Stable identity:** Weak (renaming requires updating all articles).
-- **Downgrade preservation:** Easy (just stop providing the UI to add new strings).
+| Criteria | Option A: Relational Template & TemplateItems Tables | Option B: JSON Blob Store |
+| --- | --- | --- |
+| **Template identity** | Stable | Stable |
+| **Ordered items** | Explicit order column | Implicit JSON array order |
+| **Apply/copy/reference semantics** | Copy items to article instances | Copy JSON array to article |
+| **Editing after application** | Isolated (copied instances unaffected) | Isolated (copied instances unaffected) |
+| **Deletion** | Hard delete safe (if instances are copied) | Hard delete safe |
+| **Preservation of article history** | High | High |
+| **Downgrade** | Prevent new templates | Prevent new templates |
+| **Migration** | Flat checklist items remain untouched | Flat checklist items remain untouched |
 
-## 7. Architecture Decision Domain D — Checklist Templates
-### Viable Persistence/Lifecycle Approaches
-**Scope:** Template = name + ordered checklist items.
+## 9. Entitlement Authority Trust-Boundary Models
+*Question: Where is production PRO entitlement authority evaluated, where are protected mutations enforced, and how can the approved local-first temporary-unverifiability behavior be represented safely?*
 
-**Approach 1: Relational Template & TemplateItems tables**
-- Strict relational model.
-- **Independence:** When a template is applied, its items are copied to the article (or referenced, but copying ensures article independence if the template is edited).
-- **Template deletion:** Soft delete required if referenced, or hard delete if items are copied.
+**Model A: Frontend-only gating**
+- *Bypass resistance:* Weak.
+- *Offline compatibility:* High.
+- *Local-admin limitations:* Trivial to bypass.
+- *Downgrade behavior:* UI toggle.
+- *Temporary unverifiability:* N/A.
+- *Implementation complexity:* Low.
+- *Provider coupling:* N/A.
+- *Recovery:* N/A.
+- *Residual risk:* High.
+*(NON-VIABLE as it fails the security invariant: "Protected commercial mutations require authorization at a boundary more trusted than frontend UI state.")*
 
-**Approach 2: JSON Document Store**
-- Store templates as JSON blobs.
-- **Ordering:** Implicit in JSON array.
-- **Downgrade preservation:** Easy to read, block new JSON writes.
+**Model B: Local native/Tauri enforcement boundary**
+- *Bypass resistance:* High (application boundary).
+- *Offline compatibility:* High.
+- *Local-admin limitations:* Subject to binary patching/memory tampering.
+- *Downgrade behavior:* IPC rejects unauthorized mutations.
+- *Implementation complexity:* Medium.
 
-## 8. Architecture Decision Domain E — Entitlement Authority
-### Trust-Boundary Models
-**Option A: Frontend-only gating**
-- React state controls PRO UI.
-- **Bypass resistance:** Weak (DevTools). *NON-VIABLE* as it cannot satisfy the security invariant requiring protected-mutation enforcement.
+**Model C: Hybrid UI visibility + native protected-mutation enforcement**
+- *Bypass resistance:* High.
+- *Implementation complexity:* Medium.
 
-**Option B: Local native/Tauri enforcement boundary**
-- Rust strictly controls IPC. Frontend requests PRO mutation, Rust verifies local entitlement state.
-- **Offline compatibility:** High.
-- **Provider coupling:** Low.
+**Model D: External commercial verification + locally usable trusted state/proof**
+- *Bypass resistance:* Very High (proof validation).
+- *Offline compatibility:* Depends on freshness rules.
+- *Implementation complexity:* High.
+- *Provider coupling:* High.
 
-**Option C: Hybrid UI visibility + native protected-mutation enforcement**
-- Frontend hides PRO features; Rust rejects unauthorized mutations.
-- **Bypass resistance:** High (UI bypass is useless without Rust auth).
-
-**Option D: External commercial verification + locally usable trusted state/proof**
-- Rust fetches and validates external proof, caching it locally for offline use.
-- **Temporary unverifiability:** Supports offline grace periods based on cached proof freshness.
-
-## 9. Local Desktop Trust Model Precision
+## 10. Local Desktop Trust Model Precision
 Rust/Tauri may act as a more trusted APPLICATION enforcement boundary relative to untrusted frontend state.
 However, a sufficiently privileged local user may potentially:
 - inspect or patch binaries;
@@ -117,7 +137,7 @@ However, a sufficiently privileged local user may potentially:
 - roll back local state.
 Residual local-admin risk must be explicitly acknowledged. We do not claim protection against a fully privileged local administrator unless evidence supports it.
 
-## 10. Entitlement Source of Truth
+## 11. Entitlement Source of Truth
 Analyze possible authority models generically:
 - **Local entitlement material derived from a commercial activation**
 - **Periodically refreshed external status**
@@ -125,49 +145,98 @@ Analyze possible authority models generically:
 - **Another justified approach**
 Authentication is NOT automatically required. Provider selection remains deferred.
 
-## 11. Required ADR Candidates (Derived)
-1. **ADR: Dynamic Workflow and Category Persistence Strategy**
-   - **Question:** How should custom workflow stages and categories be modeled and persisted to support renaming, reordering, and downgrade preservation?
-   - **Options:** Relational vs. Document-based.
-   - **Dependencies:** None.
-   - **Product Invariants:** Minimum 1 stage, Free baseline unaffected.
-   - **Human Input Required:** No.
-   - **Blocks SDD:** Yes.
+## 12. Required ADR Candidates
 
-2. **ADR: AI Recommendation Decoupling from Workflow Status**
-   - **Question:** How does the Phase 6.3 AI orchestrator map dynamic custom stages to recommendation semantics without breaking the invariant?
-   - **Options:** Semantic mapping vs. Evidence-only.
-   - **Product Invariants:** Status recommends; validated evidence determines action availability.
-   - **Human Input Required:** No.
-   - **Blocks SDD:** Yes.
+### ADR 1: Dynamic Workflow and AI Semantics Strategy
+- **Exact Decision Question:** How should custom workflow stages be modeled and persisted, and how does the Phase 6.3 AI orchestrator provide recommendations for custom stages without breaking invariants?
+- **Alternatives to compare:** Stable semantic core vs. Optional semantic classification vs. Evidence-dominant availability.
+- **Product Invariants Affected:** Minimum 1 stage; Free default workflow; Stage removal safety; "status recommends; validated evidence determines action availability".
+- **Security Relevance:** Low.
+- **Dependencies:** None.
+- **SDD Blocking:** YES.
+- **Additional Product Owner Requirement Input Needed:** NO.
+- **Human Architecture Approval Required:** YES.
+- **Architect Recommendation — NON-BINDING:** Option C (Dynamic Stages with Optional Semantic Tags) combined with Approach 2 (Optional Semantic Classification). Provides high rename/reorder stability while decoupling orchestration gracefully. Residual risk: semantic tag drift. Evidence that could change recommendation: extreme query complexity.
 
-3. **ADR: Entitlement Enforcement Boundary and Trust Model**
-   - **Question:** Where and how is PRO entitlement evaluated, enforced, and cached for offline use?
-   - **Options:** Native enforcement, Hybrid enforcement.
-   - **Security Relevance:** High. Prevents unauthorized commercial mutations.
-   - **Human Input Required:** No.
-   - **Blocks SDD:** Yes.
+### ADR 2: Category and Checklist Persistence Model
+- **Exact Decision Question:** How should custom categories and reusable checklist templates be modeled and persisted to support renaming, reordering, and downgrade preservation?
+- **Alternatives to compare:** Relational Tables vs. JSON Document Store.
+- **Product Invariants Affected:** Downgrade preservation.
+- **Security Relevance:** Low.
+- **Dependencies:** None.
+- **SDD Blocking:** YES.
+- **Additional Product Owner Requirement Input Needed:** NO.
+- **Human Architecture Approval Required:** YES.
+- **Architect Recommendation — NON-BINDING:** Option A (Relational) for Categories to preserve stable identity and rename capability; Option B (JSON Document) for Checklist Templates due to strict ordered-list copy-semantics. Residual risk: migration friction. Evidence that could change recommendation: SQLite JSON1 performance limitations.
 
-## 12. SDD Readiness
-- **Decisions required before SDD:** The three ADR candidates listed above must be resolved.
-- **Details remaining for SDD:** Database schema names, specific IPC command payloads, React context structure.
-- **Details remaining outside ADRs:** Final payment/auth provider selection, pricing tiers.
+### ADR 3: Entitlement Enforcement Boundary and Trust Model
+- **Exact Decision Question:** Where is production PRO entitlement authority evaluated, where are protected mutations enforced, and how can the approved local-first temporary-unverifiability behavior be represented safely?
+- **Alternatives to compare:** Local native/Tauri enforcement vs. External commercial verification + locally usable trusted state/proof.
+- **Product Invariants Affected:** Downgrade; Temporary unverifiability.
+- **Security Relevance:** High.
+- **Dependencies:** None.
+- **SDD Blocking:** YES.
+- **Additional Product Owner Requirement Input Needed:** NO.
+- **Human Architecture Approval Required:** YES.
+- **Architect Recommendation — NON-BINDING:** Model C (Hybrid UI visibility + native protected-mutation enforcement) using Model D's (locally usable trusted state/proof). This prevents frontend spoofing while respecting local-first offline product rules. Residual risk: local-admin manipulation of the state. Evidence that could change recommendation: discovery of a completely offline-incompatible payment provider.
 
-## 13. Explicit Non-Decisions
-This document explicitly confirms no decision yet on:
+## 13. Human Architecture Decision Package
+
+**Decision 1: Dynamic Workflow and AI Semantics Strategy**
+- Option A: Stable Dynamic Entities
+- Option B: Stable Semantic Core + Custom Presentation
+- Option C: Dynamic Stages with Separate Semantic Tags
+- *Architect recommendation:* Option C + Optional Semantic Classification.
+- *Security reviewer position:* No objection.
+- *Product invariant at risk:* Recommendation accuracy.
+- *Residual risk:* Semantic tag drift.
+- *Human decision required:* YES.
+
+**Decision 2: Category and Checklist Persistence Model**
+- Option A: Relational Migration for both.
+- Option B: JSON Document Store for both.
+- Option C: Hybrid (Relational Categories, JSON Templates).
+- *Architect recommendation:* Option C (Hybrid).
+- *Security reviewer position:* No objection.
+- *Product invariant at risk:* Data preservation on downgrade.
+- *Residual risk:* Migration friction.
+- *Human decision required:* YES.
+
+**Decision 3: Entitlement Enforcement Boundary and Trust Model**
+- Option A: Frontend-only gating (NON-VIABLE).
+- Option B: Local native/Tauri enforcement boundary.
+- Option C: Hybrid UI visibility + native protected-mutation enforcement.
+- Option D: External commercial verification + locally usable trusted state/proof.
+- *Architect recommendation:* Option C + Option D.
+- *Security reviewer position:* Supports native IPC enforcement. Local-admin residual risk acknowledged.
+- *Product invariant at risk:* Offline productivity.
+- *Residual risk:* Local admin bypass, clock manipulation.
+- *Human decision required:* YES.
+
+## 14. SDD Readiness
+**A. MUST BE DECIDED BEFORE SDD:** The three ADR candidates (Workflow/AI, Categories/Checklists, Entitlement Boundary).
+**B. MAY BE DECIDED INSIDE SDD:** Database schema names, IPC command payloads, React context structure, offline refresh logic implementation details.
+**C. IMPLEMENTATION DETAIL — NOT ADR MATERIAL:** Final payment/auth provider selection, pricing tiers, specific cryptographic signature libraries.
+
+## 15. Explicit Non-Decisions
+This document explicitly confirms NO decision yet on:
 - workflow persistence representation;
-- semantic role representation;
+- identifier format;
+- semantic-role representation;
 - category schema;
 - checklist-template schema;
 - entitlement authority implementation;
 - licensing/activation model;
-- identity/authentication requirement;
-- external commercial provider;
+- authentication requirement;
+- external provider;
 - payment provider;
-- local entitlement material format;
+- proof/token/license format;
 - cryptographic format;
 - offline freshness duration;
-- secure-storage technology;
+- secure-storage mechanism;
 - machine binding;
 - revocation mechanism;
 - downgrade enforcement implementation.
+
+## 16. Document Status
+Human architecture decisions are required before ADRs can be accepted and before SDD may begin.
