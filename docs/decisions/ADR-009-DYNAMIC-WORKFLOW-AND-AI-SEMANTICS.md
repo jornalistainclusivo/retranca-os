@@ -6,9 +6,9 @@ Accepted — Human Architecture Decision
 
 ## Context
 
-The current `ArticleStatus` is a closed status type/enum representation, but Phase 6.4 requires user-customizable workflow stages (renaming, reordering, adding, removing). At the same time, Phase 6.3 currently uses status for its AI orchestrator recommendation logic.
+The current `ArticleStatus` is a closed status type/enum representation, but Phase 6.4 requires user-customizable workflow stages (renaming, reordering, adding, removing). At the same time, Phase 6.3 currently uses editorial status in the TypeScript UI recommendation logic to distinguish RECOMMENDED from AVAILABLE.
 
-Specifically, current Phase 6.3 UI recommendation behavior uses editorial status in TypeScript to distinguish RECOMMENDED from AVAILABLE. This frontend evaluation is UX/presentation behavior and is NOT authoritative security or orchestration authorization. Rust/Tauri revalidates evidence prerequisites authoritatively before AI execution. Phase 6.4 dynamic stages therefore require recommendation semantics to evolve without weakening evidence-based action availability. Display customization cannot be allowed to silently change AI availability semantics, nor can it break the predictable orchestration required for Phase 6.3 functionality.
+This frontend evaluation is UX/presentation behavior and is NOT authoritative security or orchestration authorization. Rust/Tauri revalidates evidence prerequisites authoritatively before AI execution. Phase 6.4 dynamic stages therefore require recommendation semantics to evolve without weakening evidence-based action availability. Display customization cannot be allowed to silently change AI availability semantics, nor can it break the predictable orchestration required for Phase 6.3 functionality.
 
 ## Evaluated Options
 

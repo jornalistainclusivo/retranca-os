@@ -48,8 +48,9 @@ The system must distinguish between two states:
 - Existing PRO configuration editing is not blocked solely because verification is temporarily unavailable.
 
 **DOWNGRADED FREE:**
-- Existing custom categories/templates/configuration remain preserved and recoverable.
-- No destructive transformation occurs.
+- Editorial content remains intact and usable.
+- Existing custom configuration remains preserved/recoverable.
+- No destructive transformation/remapping occurs.
 - NEW PRO configuration changes are denied.
 
 ## Free Local AI Scope

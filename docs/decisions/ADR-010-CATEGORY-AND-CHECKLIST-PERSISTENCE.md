@@ -6,7 +6,7 @@ Accepted — Human Architecture Decision
 
 ## Context
 
-The current `CategoryTag` is a closed status domain, and checklist items are flat article-level structures. Phase 6.4 requires reusable configuration entities for both categories and checklist templates to allow PRO workflow customization. These entities must support renaming, reordering, and preservation across downgrades.
+The current `CategoryTag` is a closed category domain/type, and checklist items are flat article-level structures. Phase 6.4 requires reusable configuration entities for both categories and checklist templates to allow PRO workflow customization. These entities must support renaming, reordering, and preservation across downgrades.
 
 ## Evaluated Options
 
@@ -44,7 +44,7 @@ The current `CategoryTag` is a closed status domain, and checklist items are fla
 - **Checklist template edit isolation:** Changes to a template item list do not propagate to past checklist instances, preserving historical accuracy.
 - **Checklist template deletion:** Safe, as active articles maintain their own isolated copies of checklist items.
 - **Article checklist preservation:** Historical data remains intact regardless of template mutation.
-- **Downgrade preservation:** Custom categories and templates are locked against new mutations but remain functionally preserved upon downgrade to Free.
+- **Downgrade preservation:** Existing custom categories and checklist-template configuration remain preserved and recoverable; no destructive transformation occurs; NEW PRO configuration changes are denied while Free.
 
 ## Rejected Alternatives
 
