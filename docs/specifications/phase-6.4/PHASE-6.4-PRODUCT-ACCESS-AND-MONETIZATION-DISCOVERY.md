@@ -70,7 +70,7 @@ Supporting multiple concurrent workflows (e.g., one for "Podcasts", one for "Art
 ## 12. Identity / Authentication / Entitlement Analysis
 Does PRO automatically require a cloud identity (login)?
 - **A. Product tier definition:** Defines capabilities, doesn't require identity.
-- **B. Purchase/Licensing:** Requires an email/identity to record the transaction securely.
+- **B. Purchase/Licensing:** A commercial transaction may involve purchaser information at the merchant/payment layer, but this does not inherently require a Retranca product identity or authenticated session.
 - **C. Identity:** Knowing *who* the user is locally.
 - **D. Authentication:** Verifying identity.
 - **E. Entitlement enforcement:** Validating if the current installation has PRO rights.
