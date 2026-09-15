@@ -2,7 +2,7 @@
 jinc-sdd-version: 1.0.0
 project-name: Retranca OS
 project-context: fullstack
-status: draft
+status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: SQLite, React, TypeScript, Tauri, Rust
 created-at: 2026-09-15
@@ -13,10 +13,10 @@ authors: Retranca OS Core Team
 # Software Design Document: Phase 6.4 - PRO Workflow Customization
 
 ## 1. Status
-PHASE 6.4 — SOFTWARE DESIGN — DRAFT FOR HUMAN REVIEW
+PHASE 6.4 — SOFTWARE DESIGN — APPROVED ARCHITECTURE BASELINE
 
 ## 2. Introduction and Context
-This SDD details the software architecture for Phase 6.4 PRO Workflow Customization. Based on the Phase 6.4 PRD and the architectural decisions defined in ADR-008, ADR-009, ADR-010, and ADR-011, this document specifies the implementation of customizable workflow stages, custom categories, and reusable checklist templates while adhering to local-first principles.
+This SDD details the software architecture for Phase 6.4 PRO Workflow Customization. Based on the Phase 6.4 PRD and the architectural decisions defined in ADR-008, ADR-009, ADR-010, ADR-011, and ADR-012, this document specifies the implementation of customizable workflow stages, custom categories, and reusable checklist templates while adhering to local-first principles.
 
 It explicitly maintains the existing Retranca OS stack: React/TypeScript (Frontend), Tauri/Rust (Backend IPC Gateway), and local SQLite persistence. No cloud dependencies, generic authentication providers, or external databases are introduced.
 
@@ -122,7 +122,7 @@ CREATE TABLE checklist_templates (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
-Checklist templates have stable template identity, a name, and contain ordered document-style item definitions (`items_json`).
+Checklist templates have stable template identity, a name, and contain ordered document-style item definitions (`items_json` attribute).
 Existing article checklist instances remain independently relational in `checklist_items`.
 Applying a template creates INDEPENDENT article-owned `checklist_items` rows. Template JSON is NOT copied into articles. Editing or deleting a template does not alter existing `checklist_items` rows.
 
@@ -145,7 +145,7 @@ Applying a template creates INDEPENDENT article-owned `checklist_items` rows. Te
 ## 10. Migration Safety / Rollback Precision
 - **Transaction:** The migration must occur within a single SQLite transaction boundary.
 - **Pre-Migration Backup:** A pre-migration backup of the SQLite DB is required to ensure recovery if migration fails before the first successful startup.
-- **Unknown Values:** If an unknown legacy status/category value exists, the migration must safely map it to a designated fallback standard stage/category, preserving data.
+- **Unknown Values:** If an unknown legacy status or category value is encountered, migration validation **fails closed** and NO silent remapping occurs. The original DB remains recoverable, the pre-migration backup remains available, and startup/migration reports a recoverable migration error (`Err_MigrationUnknownLegacyValue`) requiring explicit recovery/reconciliation. We do NOT guess the user's intended workflow/category.
 - **Rollback Limitation:** Lossless binary rollback to a pre-6.4 application binary is NOT supported after new dynamic data (custom stages/categories) is created. Forward-recovery is expected.
 
 ## 11. Current Module / File Path Precision
@@ -180,21 +180,23 @@ Applying a template creates INDEPENDENT article-owned `checklist_items` rows. Te
 - Checklist-template rename/edit/reorder
 - Checklist-template deletion
 
-## 13. PRO Authorization Boundary & Entitlement Model (ADR-011)
+## 13. PRO Authorization Boundary & Entitlement Model (ADR-011, ADR-012)
 
 **Entitlement Application State Machine:**
-1. `Unknown` / Uninitialized (Fails safely for protected mutations without destroying/hiding data)
-2. `FreeConfirmed` (Confirmed no PRO)
-3. `ProActive` (PRO active and verified)
-4. `ProTemporarilyUnverifiable` (Reachable ONLY when the application has credible previously-valid PRO state according to the future production entitlement design. A first launch with no evidence/connectivity is NOT previously-valid PRO).
+1. `Unknown`: No sufficient entitlement decision has been established. Fails safely for protected mutations without destroying/hiding data.
+2. `FreeConfirmed`: Sufficient authoritative information establishes that PRO is not currently active.
+3. `ProActive`: A valid production PRO entitlement is established.
+4. `ProTemporarilyUnverifiable`: Previously-valid PRO has been credibly established, but current verification/refresh is temporarily unavailable. Reachable ONLY when the application has credible previously-valid PRO state according to the future production entitlement design. A first launch with no evidence/connectivity is NOT previously-valid PRO.
+5. `ProUnavailable`: The application cannot currently authorize PRO mutations, but cannot truthfully classify the state as confirmed Free/downgrade. (e.g., continuity/freshness exhaustion without confirmed downgrade). Data MUST remain intact, readable, and recoverable.
 
 **Entitlement Abstraction (Adapter Boundary):**
 ```rust
+// CONCEPTUAL APPLICATION INTERFACE
 trait EntitlementDecisionProvider {
-    fn check_entitlement(&self) -> EntitlementState; // Returns Unknown, FreeConfirmed, ProActive, ProTemporarilyUnverifiable
+    fn check_entitlement(&self) -> EntitlementState;
 }
 ```
-This interface is mechanism-neutral and allows for future asynchronous I/O if needed.
+This is a CONCEPTUAL application interface. The concrete Rust contract MAY require asynchronous execution depending on the selected production source. Exact Rust async trait/signature mechanics are left to Spec, but they MUST NOT pre-select `async_trait`, boxed futures, Tokio-specific interfaces, HTTP clients, or provider SDKs.
 
 ## 14. Downgrade vs Temporary Unverifiability
 **TEMPORARILY UNVERIFIABLE PRO:**
@@ -229,8 +231,9 @@ Stable conceptual error codes:
 - `Err_InvalidSemanticClassification`: Invalid semantic classification provided.
 - `Err_MalformedChecklistTemplate`: Template JSON validation failed.
 - `Err_ConfirmedFreeProtectedMutationDenial`: Tauri rejected a PRO mutation (Confirmed Free).
-- `Err_EntitlementStateUnavailable`: Entitlement state is unknown/uninitialized.
-- `Err_MigrationUnknownLegacyValue`: Encountered unmappable legacy status/category.
+- `Err_EntitlementStateUnknown`: Entitlement state is unknown/uninitialized.
+- `Err_EntitlementUnavailable`: Entitlement unavailable/unverifiable beyond allowed continuity.
+- `Err_MigrationUnknownLegacyValue`: Encountered unmappable legacy status/category (Fails closed).
 - `Err_MigrationFailed`: SQLite migration transaction aborted.
 
 ## 18. Diagrams
@@ -238,33 +241,47 @@ Stable conceptual error codes:
 ### 18.1 Component / Responsibility Diagram
 ```mermaid
 flowchart TD
-    UI[React / TypeScript UX] -->|IPC| Tauri[Tauri IPC Gateway]
-    Tauri -->|Enforces PRO| Authz[Native Authorization Boundary]
+    UI[React / TypeScript UX] -->|IPC| TauriIPC[Tauri IPC Gateway]
+
+    TauriIPC -->|Operations| Domain[Editorial Domain / Persistence Operations]
+
+    TauriIPC -->|Evaluates| Authz[Native PRO Authorization]
     Authz -->|Uses| Entitlement[EntitlementDecisionProvider]
-    Authz -->|Uses| AI[AI Orchestration Boundary]
-    Authz --> DB[(SQLite Persistence)]
+
+    TauriIPC -->|Invokes| AI[Phase 6.3 AI Orchestration Boundary]
+
+    Domain --> DB[(SQLite Persistence)]
+    Authz --> DB
     AI -.-> DB
 ```
 
 ### 18.2 ER / Persistence Diagram
 ```mermaid
 erDiagram
-    articles ||--o{ checklist_items : has
-    workflow_stages ||--o{ articles : assigned_to
-    categories ||--o{ articles : categorized_as
-    checklist_templates }|--|| items_json : contains
+    Article ||--o{ ChecklistItem : has
+    WorkflowStage ||--o{ Article : assigned_to
+    Category ||--o{ Article : categorized_as
+    ChecklistTemplate
 ```
+*Note: `items_json` is an attribute aggregate inside `ChecklistTemplate`. Applying a template creates independent `ChecklistItem` rows for an `Article`. There is no relational FK from existing article `ChecklistItem`s back to the template.*
 
 ### 18.3 Entitlement State Diagram
 ```mermaid
 stateDiagram-v2
     [*] --> Unknown
-    Unknown --> FreeConfirmed
+
     Unknown --> ProActive
-    ProActive --> ProTemporarilyUnverifiable : Validation Failed / Offline
-    ProTemporarilyUnverifiable --> ProActive : Connectivity Restored
-    ProTemporarilyUnverifiable --> FreeConfirmed : Revoked / Expired
-    ProActive --> FreeConfirmed : Downgrade
+    Unknown --> FreeConfirmed
+
+    ProActive --> ProTemporarilyUnverifiable
+    ProActive --> FreeConfirmed
+
+    ProTemporarilyUnverifiable --> ProActive
+    ProTemporarilyUnverifiable --> ProUnavailable
+    ProTemporarilyUnverifiable --> FreeConfirmed : ONLY on confirmed no-PRO/downgrade
+
+    ProUnavailable --> ProActive
+    ProUnavailable --> FreeConfirmed : ONLY on confirmed no-PRO/downgrade
 ```
 
 ### 18.4 Protected Mutation Sequence Diagram
@@ -280,12 +297,15 @@ sequenceDiagram
     IPC->>Native: Invoke mutation
     Native->>Ent: check_entitlement()
     Ent-->>Native: EntitlementState
+
     alt is ProActive or ProTemporarilyUnverifiable
         Native->>DB: Apply mutation
         DB-->>Native: Success
         Native-->>UI: Result
-    else is FreeConfirmed or Unknown
+    else is FreeConfirmed
         Native-->>UI: Err_ConfirmedFreeProtectedMutationDenial
+    else is Unknown or ProUnavailable
+        Native-->>UI: Err_EntitlementUnavailable / Unknown Denial
     end
 ```
 
@@ -301,45 +321,66 @@ sequenceDiagram
 | FR-AI-001 | 5. Workflow Semantic Classification | ADR-008, ADR-009 | Business Rules, TS/Rust Types |
 | FR-DOWN-001 | 14. Downgrade vs Temporary Unverifiability | ADR-011 | Entitlement State Machine |
 | FR-DOWN-002 | 14. Downgrade vs Temporary Unverifiability | ADR-011 | IPC Payload Specs |
-| FR-ENT-001 | 13. PRO Authorization Boundary | ADR-011 | EntitlementVerifier Spec |
+| FR-ENT-001 | 13. PRO Authorization Boundary | ADR-011, ADR-012 | EntitlementDecisionProvider Spec |
 
-## 20. SDD-to-Spec Handoff
-The SDD decides architecture and design. The subsequent `spec-creator` phase will formalize:
-- Precise TypeScript/Rust types.
-- Runtime schemas.
-- Exact IPC payloads.
+## 20. Testing Strategy
+Ensure final implementation explicitly includes:
+- Workflow-domain unit tests.
+- Category safety tests.
+- Checklist-template copy/isolation tests.
+- AI recommendation regression tests.
+- Rust authoritative evidence-validation regression tests.
+- IPC protected-mutation authorization tests.
+- Direct IPC bypass tests.
+- Entitlement state transition tests.
+- Unknown behavior tests.
+- ProUnavailable behavior tests.
+- Temporary-unverifiability behavior tests.
+- Downgrade preservation tests.
+- Migration exact legacy-value tests.
+- Unknown legacy-value migration failure test (fails closed).
+- Migration recovery/backup tests.
+- Release-build `DEVELOPER_PREMIUM` exclusion test.
+
+## 21. Production Entitlement Architecture (ADR-012)
+ADR-012 selected the **Hybrid Local-First Entitlement Grant with optional online refresh / revocation capability** architectural family.
+
+*Historical context: We evaluated purely local (Option A) and predominantly external (Option B) families, but selected Option C to provide the most resilient local-first experience while preserving necessary commercial controls.*
+
+**Implementation Readiness:**
+- **ARCHITECTURAL DESIGN:** COMPLETE.
+- **CORE PHASE 6.4 DOMAIN / ENFORCEMENT SPECIFICATION:** READY FOR SPEC.
+- **CONCRETE COMMERCIAL ENTITLEMENT ADAPTER:** DEFERRED PENDING MECHANISM / PROVIDER DECISIONS.
+
+## 22. SDD-to-Spec Handoff
+The SDD decides architecture and design. The subsequent `spec-creator` phase may now formalize:
+- UUID-backed domain IDs.
+- TypeScript/Rust domain contracts.
+- Semantic classification vocabulary.
+- SQLite/Drizzle schema.
+- Migration contract.
+- IPC request/response contracts.
+- Authorization matrix.
+- Five-state entitlement application state machine.
 - Business rules.
-- Error payloads.
+- Conceptual EntitlementDecisionProvider boundary.
+- Errors.
 - Test scaffolding.
-- Exact migration test vectors.
-No architecture-critical choices are deferred to Spec. Spec must not invent architecture.
 
-## 21. Human Entitlement Design Decision Package
-The workflow/category/checklist architecture is design-complete. However, production PRO entitlement cannot be implementation-locked until the project decides how a previously-valid PRO fact is established, authenticity/freshness expectations, and local-state recovery.
-
-### OPTION A — Local activation-derived entitlement authority
-A valid commercial activation produces locally usable entitlement material/state. Runtime operation remains offline.
-- **Pros:** Maximum local-first strength, offline robustness.
-- **Cons:** High copying/replay risk, difficult revocation.
-- **Complexity:** Relies on robust local cryptographic verification.
-
-### OPTION B — Periodically refreshed external authority + local continuity
-External commercial authority is consulted periodically, while a previously-valid local representation supports temporary offline use.
-- **Pros:** Strong revocation, balanced offline support (temporary unverifiability).
-- **Cons:** Connectivity dependency for initial/refresh verification, potential privacy/identity implications.
-- **Complexity:** Needs reliable synchronization and token management.
-
-### OPTION C — Hybrid activation + refresh model
-Initial activation establishes local entitlement state/proof. External refresh/revocation capability may exist when connectivity is available, but normal editorial operation remains local-first.
-- **Pros:** Resilient offline behavior, balanced false-denial/false-grant tradeoff.
-- **Cons:** Complex implementation of hybrid states, edge case handling.
-- **Complexity:** Does not strictly assume account/auth requirements but requires a secure local store.
-
-**Architect Recommendation — NON-BINDING:** Option C provides the most resilient local-first experience while preserving the necessary commercial controls.
-**Security Reviewer Position — NON-BINDING:** Option B is preferred for stronger revocation and narrower offline attack windows. Option C is acceptable if local state tamper-resistance is heavily prioritized.
-
-**Human decision required: YES**
+**The Spec MUST NOT select:**
+- Commercial provider
+- Payment provider
+- Auth provider
+- Concrete entitlement proof format
+- Cryptographic algorithm
+- Secure-storage product
+- Exact freshness duration
+- Machine binding
+- Revocation protocol
+If those become necessary for the concrete production adapter, that adapter remains blocked until separately authorized.
 
 ---
-🔴 **SDD BLOCKER:** Production entitlement design is BLOCKED PENDING HUMAN ENTITLEMENT ARCHITECTURE DECISION.
-Workflow/customization design: READY FOR HUMAN DESIGN REVIEW.
+🔴 **PHASE 6.4 SOFTWARE DESIGN BASELINE APPROVED BY HUMAN ARCHITECTURE DECISIONS.**
+READY FOR TECHNICAL SPECIFICATION OF THE APPROVED DESIGN.
+NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
+CONCRETE COMMERCIAL ENTITLEMENT ADAPTER REMAINS DEFERRED PENDING SEPARATE MECHANISM/PROVIDER DECISIONS.
