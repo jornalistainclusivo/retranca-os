@@ -1,5 +1,6 @@
 import Database from '@tauri-apps/plugin-sql';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
+import { runPhase64Migration } from './migrations/phase64Migrate';
 
 let dbInstance: any = null;
 
@@ -37,6 +38,9 @@ export const getDb = async () => {
       icon TEXT NOT NULL, unlocked INTEGER NOT NULL, unlockedAt TEXT
     );
   `);
+
+  // Run Phase 6.4 Migration (Backup, Expand, Backfill, Verify, Cutover)
+  await runPhase64Migration(sqlite);
 
   // Interceptador Drizzle -> Tauri
   dbInstance = drizzle(async (sql, params, method) => {

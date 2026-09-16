@@ -23,7 +23,9 @@ describe('Article Adapter', () => {
     notes: '',
     createdAt: '2026-08-15T12:00:00Z',
     updatedAt: '2026-08-15T12:00:00Z',
-    completedAt: null
+    completedAt: null,
+    workflowStageId: 'stage-ideia',
+    categoryId: 'cat-123'
   };
 
   const dbChecklists: DbChecklistItem[] = [
