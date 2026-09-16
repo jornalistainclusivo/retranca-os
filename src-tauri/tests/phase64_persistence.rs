@@ -262,11 +262,17 @@ fn test_mig_009_checklist_items_preserved() {
         pool.execute("INSERT INTO checklist_items (id, articleId, label, completed, category) VALUES ('c1', '1', 'L', 0, 'C')").await.unwrap();
         pool.execute(get_migration_script().as_str()).await.unwrap();
 
-        let row = sqlx::query("SELECT count(*) as cnt FROM checklist_items")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(row.get::<i64, _>("cnt"), 1);
+        let row = sqlx::query(
+            "SELECT id, articleId, label, completed, category FROM checklist_items WHERE id = 'c1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row.get::<String, _>("id"), "c1");
+        assert_eq!(row.get::<String, _>("articleId"), "1");
+        assert_eq!(row.get::<String, _>("label"), "L");
+        assert_eq!(row.get::<i64, _>("completed"), 0);
+        assert_eq!(row.get::<String, _>("category"), "C");
     });
 }
 
@@ -344,5 +350,174 @@ fn test_mig_012_deliberate_mid_migration_failure_rolls_back_retry_succeeds() {
                 .await
                 .unwrap();
         assert_eq!(row.get::<i64, _>("cnt"), 1); // DB migrated!
+    });
+}
+
+#[test]
+fn test_mig_013_workflow_tuple_mutation_rolls_back() {
+    run_async(async {
+        let pool = setup_db().await;
+        pool.execute(insert_dummy_article("ideia", "IA").as_str())
+            .await
+            .unwrap();
+
+        let mut script = get_migration_script();
+        script = script.replace(
+            "('a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d', 'Ideia'",
+            "('a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d', 'Wrong'",
+        );
+        let res = pool.execute(script.as_str()).await;
+
+        assert!(res.is_err());
+        let row =
+            sqlx::query("SELECT count(*) as cnt FROM sqlite_master WHERE name = 'workflow_stages'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.get::<i64, _>("cnt"), 0);
+    });
+}
+
+#[test]
+fn test_mig_014_category_tuple_mutation_rolls_back() {
+    run_async(async {
+        let pool = setup_db().await;
+        pool.execute(insert_dummy_article("ideia", "IA").as_str())
+            .await
+            .unwrap();
+
+        let mut script = get_migration_script();
+        script = script.replace(
+            "('2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e', 'Acessibilidade'",
+            "('2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e', 'WrongCat'",
+        );
+        let res = pool.execute(script.as_str()).await;
+
+        assert!(res.is_err());
+        let row =
+            sqlx::query("SELECT count(*) as cnt FROM sqlite_master WHERE name = 'workflow_stages'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.get::<i64, _>("cnt"), 0);
+    });
+}
+
+#[test]
+fn test_mig_015_article_preservation_mutation_rolls_back() {
+    run_async(async {
+        let pool = setup_db().await;
+        pool.execute(insert_dummy_article("ideia", "IA").as_str())
+            .await
+            .unwrap();
+
+        let mut script = get_migration_script();
+        script = script.replace(
+            "category_id = CASE categoryTag",
+            "categoryTag = 'Mutated', category_id = CASE categoryTag",
+        );
+        let res = pool.execute(script.as_str()).await;
+
+        assert!(res.is_err());
+        let row =
+            sqlx::query("SELECT count(*) as cnt FROM sqlite_master WHERE name = 'workflow_stages'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.get::<i64, _>("cnt"), 0);
+    });
+}
+
+#[test]
+fn test_mig_016_checklist_preservation_mutation_rolls_back() {
+    run_async(async {
+        let pool = setup_db().await;
+        pool.execute(insert_dummy_article("ideia", "IA").as_str())
+            .await
+            .unwrap();
+        pool.execute("INSERT INTO checklist_items (id, articleId, label, completed, category) VALUES ('c1', '1', 'L', 0, 'C')").await.unwrap();
+
+        let mut script = get_migration_script();
+        script = script.replace(
+            "-- MAP ARTICLES",
+            "UPDATE checklist_items SET label = 'Mutated';\n-- MAP ARTICLES",
+        );
+        let res = pool.execute(script.as_str()).await;
+
+        assert!(res.is_err());
+        let row =
+            sqlx::query("SELECT count(*) as cnt FROM sqlite_master WHERE name = 'workflow_stages'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(row.get::<i64, _>("cnt"), 0);
+    });
+}
+
+#[test]
+fn test_mig_017_vacuum_into_creates_backup() {
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::env::temp_dir;
+    use std::fs;
+
+    run_async(async {
+        let db_path = temp_dir().join(format!(
+            "test_db_{}.sqlite",
+            std::time::UNIX_EPOCH.elapsed().unwrap().as_millis()
+        ));
+        let db_url = format!("sqlite://{}", db_path.display());
+
+        fs::File::create(&db_path).unwrap();
+
+        let options = SqliteConnectOptions::from_str(&db_url)
+            .unwrap()
+            .create_if_missing(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .unwrap();
+
+        let legacy_schema = r#"
+            CREATE TABLE articles (id TEXT PRIMARY KEY, title TEXT, status TEXT);
+            INSERT INTO articles VALUES ('1', 'Test', 'ideia');
+        "#;
+        pool.execute(legacy_schema).await.unwrap();
+
+        let backup_path = temp_dir().join(format!(
+            "test_backup_{}.sqlite",
+            std::time::UNIX_EPOCH.elapsed().unwrap().as_millis()
+        ));
+        // Note: the Windows paths might have single quotes or not, but typically safe
+        let backup_sql = format!(
+            "VACUUM INTO '{}';",
+            backup_path.display().to_string().replace("'", "''")
+        );
+        pool.execute(backup_sql.as_str()).await.unwrap();
+
+        assert!(backup_path.exists());
+
+        let backup_url = format!("sqlite://{}", backup_path.display());
+        let backup_options = SqliteConnectOptions::from_str(&backup_url).unwrap();
+        let backup_pool = SqlitePoolOptions::new()
+            .connect_with(backup_options)
+            .await
+            .unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM articles")
+            .fetch_one(&backup_pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let count_src: i64 = sqlx::query_scalar("SELECT count(*) FROM articles")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count_src, 1);
+
+        let _ = pool.close().await;
+        let _ = backup_pool.close().await;
+        let _ = fs::remove_file(db_path);
+        let _ = fs::remove_file(backup_path);
     });
 }
