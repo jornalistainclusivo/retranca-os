@@ -1,7 +1,7 @@
 ---
 jinc-spec-version: 1.0.1
 project-name: Retranca OS
-status: draft
+status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
@@ -11,8 +11,10 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
-**PHASE 6.4 — TECHNICAL SPECIFICATION — RECONCILIATION DRAFT FOR HUMAN RE-APPROVAL**
-NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
+**PHASE 6.4 — TECHNICAL SPECIFICATION — RE-APPROVED BY HUMAN SPEC GATE**
+
+SPEC APPROVAL DOES NOT BY ITSELF AUTHORIZE IMPLEMENTATION.
+IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This specification outlines the NON-EXECUTABLE test scenarios required to validate Phase 6.4.
 
