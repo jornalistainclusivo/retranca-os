@@ -40,6 +40,8 @@ export const toArticleProps = (
     createdAt: dbArticle.createdAt,
     updatedAt: dbArticle.updatedAt,
     completedAt: dbArticle.completedAt || undefined,
+    workflowStageId: dbArticle.workflowStageId || undefined,
+    categoryId: dbArticle.categoryId || undefined,
   };
 };
 
@@ -65,6 +67,8 @@ export const fromArticleProps = (article: Article): { article: DbArticle; checkl
       createdAt: article.createdAt,
       updatedAt: article.updatedAt,
       completedAt: article.completedAt || null,
+      workflowStageId: article.workflowStageId || null,
+      categoryId: article.categoryId || null,
     },
     checklists: article.checklists.map(c => ({
       id: c.id,
