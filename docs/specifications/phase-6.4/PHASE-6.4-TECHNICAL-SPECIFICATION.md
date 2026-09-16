@@ -24,7 +24,7 @@ No implementation authorization is implied.
 | **FR-WF-004** | reorder workflow stages | BR-WF-004, IPC: reorder_workflow_stages, Test: TEST-WF-003 |
 | **FR-WF-MIN-001** | reject zero active stages | BR-WF-007, IPC: remove_workflow_stage, Test: TEST-WF-005 |
 | **FR-CAT-001** | create / rename / safely delete custom categories | BR-CAT-001, BR-CAT-002, IPC: create_category, rename_category, remove_category, Test: TEST-CAT-001, TEST-CAT-002 |
-| **FR-CHK-001** | create / rename / apply custom checklist templates | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, rename_checklist_template, apply_checklist_template, Test: TEST-CHK-001, TEST-CHK-002 |
+| **FR-CHK-001** | create / rename / apply custom checklist templates | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, update_checklist_template, apply_checklist_template, Test: TEST-CHK-001, TEST-CHK-002 |
 | **FR-CHK-002** | add / edit / remove / reorder items within a checklist template | BR-CHK-001, IPC: update_checklist_template, Test: TEST-CHK-003 |
 | **FR-AI-001** | preserve evidence-based AI action availability independent of custom stage display name | BR-AI-001, BR-AI-003, BR-AI-004, Test: TEST-AI-001, TEST-AI-002 |
 | **FR-DOWN-001** | retain user data, articles and custom configuration safely after entitlement is no longer active | BR-DOWN-001, BR-DOWN-002, Test: TEST-DOWN-001 |
@@ -42,7 +42,7 @@ No implementation authorization is implied.
 | **AC-WF-002** | BR-WF-006, IPC: remove_workflow_stage, TEST-WF-004 |
 | **AC-WF-003** | BR-WF-007, IPC: remove_workflow_stage, TEST-WF-005 |
 | **AC-CAT-001** | BR-CAT-001, BR-CAT-002, IPC: create_category, get_categories, TEST-CAT-001, TEST-CAT-002 |
-| **AC-CHK-001** | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, apply_checklist_template, TEST-CHK-001, TEST-CHK-002 |
+| **AC-CHK-001** | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, update_checklist_template, apply_checklist_template, TEST-CHK-001, TEST-CHK-002 |
 | **AC-AI-001** | BR-AI-003, BR-AI-004, TEST-AI-001, TEST-AI-002 |
 | **AC-DOWN-001** | BR-DOWN-001, BR-DOWN-002, TEST-DOWN-001 |
 | **AC-DOWN-002** | BR-DOWN-003, IPC Auth matrix, TEST-DOWN-002 |

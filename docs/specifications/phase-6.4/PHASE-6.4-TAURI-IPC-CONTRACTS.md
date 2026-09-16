@@ -280,7 +280,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Command:** `update_checklist_template`
 - **Auth Class:** Protected
 - **Idempotency:** Yes
-- **Transaction:** Atomic update of template contents.
+- **Transaction:** Atomic update of template contents (supports rename and item mutations).
 - **Request:**
 ```json
 {

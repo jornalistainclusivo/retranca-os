@@ -19,17 +19,17 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 ## 1. Domain Tests (UNIT / INTEGRATION)
 
 ### Workflow Stage Domain
-- **TEST-WF-001 (Create Stage):** [AC-WF-001, BR-WF-001]
+- **TEST-WF-001 (Create Stage):** [FR-WF-002, BR-WF-001]
   - Precondition: `ProActive`. Action: Create valid stage. Result: Created with new UUID. Error: None.
-- **TEST-WF-002 (Rename Stage):** [AC-WF-001, BR-WF-001]
+- **TEST-WF-002 (Rename Stage):** [AC-WF-001, BR-WF-001, BR-WF-002]
   - Precondition: `ProActive`. Action: Rename existing stage. Result: Name updated.
-- **TEST-WF-003 (Reorder Stages):** [AC-WF-002, BR-WF-004]
+- **TEST-WF-003 (Reorder Stages):** [FR-WF-004, BR-WF-004]
   - Precondition: `ProActive`. Action: Submit valid reorder array. Result: `order_index` updated atomically.
-- **TEST-WF-004 (Blocked Remove - References):** [AC-WF-003, BR-WF-006]
+- **TEST-WF-004 (Blocked Remove - References):** [AC-WF-002, BR-WF-006]
   - Precondition: `ProActive`. Stage X has 2 articles. Action: Delete X without `reassign_to_stage_id`. Result: Rejected. Error: `ERR_UNRESOLVED_STAGE_REFERENCE`.
 - **TEST-WF-005 (Last Stage Rejection):** [AC-WF-003, BR-WF-007]
   - Precondition: 1 active stage. Action: Delete. Result: Rejected. Error: `ERR_LAST_STAGE_REMOVAL`.
-- **TEST-WF-006 (Explicit Atomic Reassignment):** [AC-WF-003, BR-WF-006]
+- **TEST-WF-006 (Explicit Atomic Reassignment):** [FR-WF-003, BR-WF-006]
   - Precondition: Stage X has 2 articles. Action: Delete X with `reassign_to_stage_id` = Y. Result: Articles move to Y, X is soft-deleted.
 - **TEST-WF-007 (Duplicate Normalized Name):** [BR-NORM-001]
   - Precondition: Stage "Idea " exists. Action: Create " IDEA ". Result: Rejected. Error: `ERR_INVALID_WORKFLOW`.
@@ -48,21 +48,21 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 - **TEST-CHK-001 (Create & Apply Template):** [AC-CHK-001, BR-CHK-001, BR-CHK-002]
   - Action: Create template, then apply to an article. Result: Created successfully; article gets copies of items with new `checklist_items` IDs, `completed = false`.
 - **TEST-CHK-002 (Rename Template):** [AC-CHK-001, BR-CHK-001]
-  - Action: Rename existing template. Result: Saved successfully.
-- **TEST-CHK-003 (Item Mutations):** [AC-CHK-001, BR-CHK-001]
-  - Action: Edit an existing template to add a new item, remove an item, and reorder items. Result: Saved successfully. Template structure matches mutation exactly.
+  - Action: Rename existing template via `update_checklist_template`. Result: Saved successfully.
+- **TEST-CHK-003 (Item Mutations):** [FR-CHK-002, BR-CHK-001]
+  - Action: Edit an existing template to add a new item, remove an item, and reorder items via `update_checklist_template`. Result: Saved successfully. Template structure matches mutation exactly.
 - **TEST-CHK-004 (Applied Copy Isolation):** [AC-CHK-001, BR-CHK-002]
   - Action: Edit and delete template after applying to an article. Result: The article's checklist items remain completely unaffected.
 
 ## 2. Entitlement & Security Tests (SECURITY)
 
-- **TEST-SEC-001 (Release DEVELOPER_PREMIUM Exclusion):** [AC-ENT-001, Threat Model]
+- **TEST-SEC-001 (Release DEVELOPER_PREMIUM Exclusion):** [Threat Model, ADR-011, ADR-012, authorization business rules]
   - Level: SECURITY (Must run on Release build).
   - Precondition: App compiled in `release` configuration.
   - Action 1: User invokes exposed direct call to `set_developer_premium(true)`. Result: Call is rejected in release.
   - Action 2: User calls `get_entitlements()`. Result: Does NOT report `DEVELOPER_PREMIUM` active. Developer override cannot establish production PRO.
   - Action 3: User invokes Class P mutation `create_workflow_stage` via direct IPC. Result: Command still requires production entitlement decision and is DENIED absent valid PRO. Error: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED` or `ERR_ENTITLEMENT_STATE_UNKNOWN`.
-- **TEST-SEC-002 (Direct IPC Bypass Attempt):** [AC-ENT-001, Threat Model]
+- **TEST-SEC-002 (Direct IPC Bypass Attempt):** [Threat Model, ADR-011, ADR-012, authorization business rules]
   - Action: Invoke `create_category` directly while `FreeConfirmed`. Result: Rejected. Error: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
 
 ## 3. Entitlement State Tests (INTEGRATION)
@@ -75,13 +75,11 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
   - Action: First launch, no previous PRO evidence, offline. Result: State `Unknown`. Mutation denied. Does NOT become `ProTemporarilyUnverifiable`.
 - **TEST-ENT-004 (FreeConfirmed Denial):** [BR-DOWN-003]
   - Action: Class P mutation while `FreeConfirmed`. Result: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
-- **TEST-ENT-005 (ProTemporarilyUnverifiable Allow):** [AC-ENT-001, BR-TEMP-001]
-  - Precondition: Explicit previously-valid PRO evidence exists but current check fails due to offline. State becomes `ProTemporarilyUnverifiable`.
+- **TEST-ENT-005 (ProTemporarilyUnverifiable Allow):** [AC-ENT-001, FR-ENT-001, BR-TEMP-001]
+  - Precondition: current entitlement verification/refresh becomes temporarily unavailable after credible previously-valid PRO was established. State becomes `ProTemporarilyUnverifiable`.
   - Action: Class P mutation while `ProTemporarilyUnverifiable`. Result: Success.
 - **TEST-ENT-006 (ProUnavailable Denial):** [BR-UNAV-001]
   - Action: Class P mutation while `ProUnavailable`. Result: `ERR_ENTITLEMENT_UNAVAILABLE`.
-- **TEST-OFFLINE-001 (Temporary Unverifiability Offline Logic):** [NFR-OFFLINE-001]
-  - Action: Simulate offline after PRO. Ensure state is `ProTemporarilyUnverifiable` and local configuration data is neither lost nor blocked from usage.
 
 ## 4. Phase 6.3 AI Regression Tests (INTEGRATION)
 
@@ -94,10 +92,10 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 
 ## 5. Free Baseline Tests (INTEGRATION)
 
-- **TEST-FREE-001 (Free AI Actions):** [AC-FREE-001, BR-AI-004]
-  - Precondition: `FreeConfirmed`.
-  - Action: Query availability of the 6 Phase 6.3 actions (`research_gaps`, `plain_language`, `validate_inclusivity`, `generate_alt_text`, `generate_seo`, `editorial_review`).
-  - Result: Free state introduces NO PRO entitlement denial for those six actions, while existing Phase 6.3 evidence/runtime rules still apply.
+- **TEST-FREE-001 (Standard Functionality):** [AC-FREE-001]
+  - Precondition: Fresh/default Free installation/configuration with `FreeConfirmed`.
+  - Action: Verify standard five workflow stages are available/functioning; eight standard categories are available/functioning; ordinary editorial use remains available.
+  - AI Verification: Verify the 6 Phase 6.3 AI actions (`research_gaps`, `plain_language`, `validate_inclusivity`, `generate_alt_text`, `generate_seo`, `editorial_review`) receive NO PRO entitlement denial. Existing Phase 6.3 evidence/provider/runtime requirements still apply. The test proves entitlement does not artificially restrict existing Free capabilities.
 - **TEST-FREE-002 (Contextual Discoverability):** [AC-FREE-002, UI/UX Contract]
   - Action: Verify PRO features are visibly identified contextually (e.g., locks) without obstructing the ordinary Free editorial flow.
 
@@ -148,8 +146,20 @@ Feature: Entitlement Downgrade Preservation
     And I should be blocked from creating any new stages
 ```
 
-## 8. UX / Data Integrity Validation
+## 8. Downgrade tests (INTEGRATION)
+
+- **TEST-DOWN-001 (Confirmed downgrade preservation):** [AC-DOWN-001, FR-DOWN-001, BR-DOWN-001, BR-DOWN-002]
+  - Precondition: previously PRO; custom workflow/category/template/article data exists. Transition: `ProActive` -> `FreeConfirmed` with confirmed no-PRO/downgrade evidence.
+  - Expected: articles preserved; custom workflow preserved; custom categories preserved; checklist templates preserved; article checklist history preserved; ordinary editorial use of preserved structures continues; no silent reset/remap/deletion.
+- **TEST-DOWN-002 (Confirmed Free blocks new PRO configuration mutations):** [AC-DOWN-002, FR-DOWN-002, BR-DOWN-003]
+  - Precondition: `FreeConfirmed`.
+  - Attempt: create a new stage/category/template or another protected new PRO configuration change.
+  - Expected: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`. Existing data/configuration remains intact.
+
+## 9. UX / Data Integrity Validation
 - **TEST-UI-001 (A11y Contract):** [NFR-A11Y-001]
-  - Action: Use keyboard navigation to order items and focus buttons. Result: Fully accessible and compliant.
+  - Action: Use keyboard navigation to order items and focus buttons. Result: passes the Phase 6.4 specified keyboard, focus-management, ordering and screen-reader interaction contract.
 - **TEST-DATA-001 (Referential Integrity Check):** [NFR-DATA-001]
   - Action: Attempt to bypass application validation to directly delete a referenced stage via raw IPC parameters (without atomic reassignment). Result: Application transaction blocks it and `ON DELETE RESTRICT` physically enforces it.
+- **TEST-OFFLINE-001 (Temporary Unverifiability Offline Logic):** [NFR-OFFLINE-001]
+  - Action: current entitlement verification/refresh becomes temporarily unavailable after credible previously-valid PRO was established. Ensure state is `ProTemporarilyUnverifiable` and local configuration data is neither lost nor blocked from usage.
