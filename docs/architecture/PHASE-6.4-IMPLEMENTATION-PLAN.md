@@ -11,16 +11,19 @@ updated-at: 2026-09-16
 # Phase 6.4 Implementation Plan
 
 **PHASE 6.4 — IMPLEMENTATION PLAN — DRAFT FOR HUMAN IMPLEMENTATION REVIEW**
+NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
 
 ## Executive implementation objective
-Implement dynamic workflow stages and commercial entitlement states (Free vs Pro) following the Phase 6.4 architecture, cleanly separating semantic recommendation from the structural publication lifecycle role.
+Implement dynamic workflow stages and commercial entitlement states following the Phase 6.4 architecture's five-state application entitlement model, cleanly separating semantic recommendation from the structural publication lifecycle role, without selecting a concrete commercial adapter.
 
 ## Approved baseline / source of truth
 - ADR-009, ADR-010, ADR-011, ADR-012
 - Phase 6.4 Software Design Document (SDD)
-- Phase 6.4 Technical Specification
-- Phase 6.4 Tauri IPC Contracts
-- Phase 6.4 Test Specification
+- Phase 6.4 Technical Specification (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
+- Phase 6.4 Tauri IPC Contracts (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
+- Phase 6.4 Test Specification (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
+
+After Human Spec Re-Approval, their approved revisions become the implementation baseline.
 
 ## Scope
 - Domain and persistence schema migration to relational dynamic workflow and categories.
@@ -47,15 +50,19 @@ Implement dynamic workflow stages and commercial entitlement states (Free vs Pro
 5. **Statistics**: `StatsView.tsx` computes delayed logic based on publication status.
 6. **Filters**: Time filtering logic relies on `publishDate` and publication status (located primarily in `app/page.tsx`).
 7. **Browser/localStorage Fallback**: A local-storage fallback exists in `lib/storage.ts` storing current Free article data. It is an existing compatibility path, not merely a dev convenience. Plan parity is required for: default stages/categories, stable identities, publication lifecycle role, article transitions, migration/shim from legacy browser data, and Free baseline.
-8. **DEVELOPER_PREMIUM**: Already exists in `src-tauri/src/entitlements.rs` behind `#[cfg(debug_assertions)]`. It correctly fails in release builds (`#[cfg(not(debug_assertions))]`). It does not need to be "added", only integrated with the new `ProActive` logic as an accepted mock authorization for local development tests without becoming the production authority.
+8. **DEVELOPER_PREMIUM**: Already exists in `src-tauri/src/entitlements.rs` behind `#[cfg(debug_assertions)]`. The existing debug-only developer override may serve as a development / test decision fixture for exercising permitted PRO application paths. It MUST NOT be production entitlement evidence. Release builds MUST NOT establish ProActive from DEVELOPER_PREMIUM.
 
 ## Dependency decisions
 - **Existing Dependencies**: The repository currently uses `drizzle-orm`, `tauri-plugin-sql`, `serde`, and native Rust capabilities.
-- **Stable-ID / UUID**: PROPOSE, but DO NOT install: Rust crate `uuid`. (Minimal capability: UUID v4 generation only). Exact compatible version is to be resolved/locked during Slice 1 after Human Implementation Gate. It must remain compatible with rust-version 1.77.2, with no extra serde/features unless actually required. No dependency is installed during this documentation task. Stable-ID generation occurs at the native/domain creation boundary. Browser fallback may use native browser UUID generation, keeping the same text format.
+- **Stable-ID / UUID**: PROPOSE, but DO NOT install: Rust crate `uuid`. Slice 1 may update Cargo.toml only AFTER Human Implementation Gate and only if the dependency decision is accepted as part of the approved Implementation Plan. No Cargo change now.
 - **Deferred Provider**: Concrete commercial entitlement provider SDKs (concrete commercial entitlement provider — DEFERRED). No provider has been selected.
 
 ## Implementation branch strategy
-Create `feat/phase-6.4-implementation` branching from `main`. Slices will be committed atomically.
+Canonical future implementation branch: `feat/phase-6.4-pro-workflow-customization`.
+It MUST be created only AFTER:
+1. Human Spec Re-Approval
+2. Human Implementation Plan Approval
+It MUST branch from the FINAL APPROVED Phase 6.4 documentation HEAD on `docs/phase-6.4-product-access-monetization`. origin/main remains an independently verified baseline/reference.
 
 ## Ordered slices 0-8
 
@@ -250,7 +257,7 @@ Create `feat/phase-6.4-implementation` branching from `main`. Slices will be com
 - **Implementation steps**:
   - Verify release profile (`npm run test:rs:release`) rigorously blocks `DEVELOPER_PREMIUM`.
   - Validate all data migrations, unknown legacy migrations failing closed only, and checklist history preservation.
-- **Tests to add/update**: E2E or full system verification tests.
+- **Tests to add/update**: E2E (meaning tool-neutral acceptance / integration coverage using the approved repository test stack unless a future Human Gate authorizes another framework). No Jest. No Playwright.
 - **Actual validation commands**: Full CI pipeline run (`npm run lint`, `npm run test`, `npm run lint:rs`, `npm run test:rs`, `npm run test:rs:release`). No Jest or Playwright invented.
 - **Migration considerations**: Final check.
 - **Security considerations**: Release build hardening.
@@ -284,14 +291,22 @@ Full suite verification includes `npm run test:rs:release` ensuring mock `DEVELO
 All native database mutations use transactions. Failure during migration, stage removal, or publication-role transfer results in atomic rollback.
 
 ## Global stop conditions
-- Missing migration targets or unknown values.
-- Direct IPC bypass succeeds.
-- Six Free AI actions incorrectly blocked.
-- Production release accepts DEVELOPER_PREMIUM.
-- Multiple or zero ACTIVE publication roles exist.
+- approved Spec contradicts current source materially;
+- baseline frontend/Rust checks fail before Phase 6.4 changes;
+- migration would destroy or silently remap user data;
+- unknown legacy status/category encountered;
+- browser fallback cannot preserve required semantic parity;
+- exactly-one publication-role invariant cannot be maintained;
+- protected mutation can bypass native authorization;
+- DEVELOPER_PREMIUM leaks into production authority;
+- implementation requires selecting commercial entitlement provider;
+- implementation requires payment/auth/proof/crypto/storage/freshness/binding/revocation decisions;
+- an undocumented new dependency becomes necessary;
+- implementation requires modifying another repository.
 
 ## Human gates
-- **GATE A**: Human Implementation Plan Approval. (Required BEFORE creating implementation branch or changing source).
+- **PRE-GATE**: Human Spec Re-Approval.
+- **GATE A**: Human Implementation Plan Approval. (Only after Spec Re-Approval. Required BEFORE creating implementation branch or changing source).
 - **GATE B**: Post-implementation technical/security review. (Required before PR readiness).
 - **GATE C**: Human Merge Authorization. (Required before merge).
 - **GATE D**: Release/tag authorization if later requested.
