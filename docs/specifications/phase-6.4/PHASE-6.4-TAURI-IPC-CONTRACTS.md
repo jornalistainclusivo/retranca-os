@@ -18,7 +18,7 @@ This document specifies the Tauri IPC boundaries for Phase 6.4.
 
 ## 1. IPC Security and Authorization Classes
 
-- **Auth Class: Free** (Ordinary Editorial): Read configuration or perform standard editorial operations on articles. ALWAYS permitted.
+- **Auth Class: Free** (Ordinary Editorial): Read configuration or perform standard editorial operations on articles. Free commands do not require PRO entitlement, but remain subject to normal domain validation and persistence success.
 - **Auth Class: Protected** (Configuration Mutation): Modifies structural configuration (Stages, Categories, Templates). MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations undergo identical native authorization checks.
 
 ## 2. Canonical IPC Error Envelope
@@ -105,7 +105,11 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Command:** `assign_article_stage`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Repeated calls for the same article/stage are a no-op).
-- **Transaction:** Atomic update. If target owns PUBLICATION role, `completedAt` is set and `updatedAt` is updated. If moving out of PUBLICATION role, `completedAt` is preserved. Same-stage assignment is idempotent.
+- **Transaction:** Atomic update.
+  - **Case A (source is NOT publication role, target IS publication role):** set `workflow_stage_id`; set `completedAt` = now; set `updatedAt` = now; append transition history; preserve `publishDate`.
+  - **Case B (source IS publication role, target is NOT):** set `workflow_stage_id`; preserve `completedAt`; set `updatedAt` = now; append transition history; preserve `publishDate`.
+  - **Case C (source == target):** No-op (no completedAt rewrite, no updatedAt rewrite caused by assignment, no duplicate history, no publication-entry effect).
+  - `semantic_classification` MUST NOT participate in this lifecycle decision.
 - **Request:**
 ```json
 {
@@ -160,11 +164,14 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Request:**
 ```json
 {
-  "display_name": "Fact Checking",
-  "order_index": 2,
-  "semantic_classification": "REVIEW"
+  "command": "create_workflow_stage",
+  "payload": {
+    "display_name": "Idea",
+    "semantic_classification": "IDEA"
+  }
 }
 ```
+*Note: `create_workflow_stage` DOES NOT accept `lifecycle_role`. Every normally-created stage receives `lifecycle_role = null`. No client payload can assign `PUBLICATION` during ordinary stage create.*
 - **Success Response:** Returns created `WorkflowStage` object.
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
@@ -176,11 +183,16 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Request:**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "display_name": "New Name",
-  "semantic_classification": null
+  "command": "update_workflow_stage",
+  "payload": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "display_name": "New Idea",
+    "semantic_classification": "IDEA",
+    "order_index": 1
+  }
 }
 ```
+*Note: `update_workflow_stage` DOES NOT accept or mutate `lifecycle_role`. It may update only its approved editable fields. Renaming or changing semantic classification never changes lifecycle role. Publication role movement occurs only through the approved safe-removal transfer contract in Phase 6.4.*
 - **Success Response:** `{ "success": true }`
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
@@ -205,7 +217,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Command:** `remove_workflow_stage`
 - **Auth Class:** Protected
 - **Idempotency:** Yes (If already inactive/missing, returns success without DB mutation).
-- **Transaction:** Re-checks references in same transaction. Explicit target required if references exist OR if source owns `PUBLICATION` role. Moves affected articles atomically to `reassign_to_stage_id`, transfers `PUBLICATION` role if applicable, then deactivates source. Rollback on failure. There is NO automatic fallback.
+- **Transaction:** When source owns PUBLICATION, `reassign_to_stage_id` is mandatory even if source has zero articles. Validate in the SAME transaction: target exists; target is active; target != source. Then atomically: 1. authorize protected mutation; 2. re-check source references; 3. reassign source articles to target if any; 4. preserve `completedAt` for those articles; 5. clear `PUBLICATION` from source; 6. assign `PUBLICATION` to target; 7. deactivate source; 8. normalize ordering; 9. verify exactly one ACTIVE PUBLICATION role; 10. commit. Any failure: ROLLBACK ALL. There is NO automatic fallback.
 - **Request:**
 ```json
 {

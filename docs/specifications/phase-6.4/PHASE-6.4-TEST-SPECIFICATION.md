@@ -39,21 +39,28 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
   - Precondition: `ProActive`. Action: Attempt stage create/update with `semantic_classification = "INVALID"`. Result: Mutation rejected with `ERR_INVALID_SEMANTIC_CLASSIFICATION` and no partial persistence.
 
 ### Publication Lifecycle Domain
-- **TEST-PUB-001 (Fresh/default workflow):** Exactly one active PUBLICATION role exists upon initialization.
-- **TEST-PUB-002 (Migration):** Legacy `publicado` seeded/mapped stage has `semantic_classification = PUBLISHED` AND `lifecycle_role = PUBLICATION`.
-- **TEST-PUB-003 (Independence):** A stage with `semantic_classification = PUBLISHED` and `lifecycle_role = null` does NOT cause publication lifecycle effects.
-- **TEST-PUB-004 (Reverse independence):** A stage with `lifecycle_role = PUBLICATION` and `semantic_classification = null` DOES cause publication lifecycle effects.
-- **TEST-PUB-005 (Entry):** Moving from non-publication to publication role sets `completedAt`, changes `updatedAt`, and records history.
-- **TEST-PUB-006 (Exit):** Moving from publication to non-publication leaves article not currently published; `completedAt` is preserved.
-- **TEST-PUB-007 (Re-entry):** Re-entering a publication-role stage sets a new `completedAt` entry timestamp.
-- **TEST-PUB-008 (Idempotent same-stage assignment):** Re-assigning to the same stage performs no timestamp/history duplication.
-- **TEST-PUB-009 (Publication-role removal without target):** Attempting to remove the publication-role stage without an explicit target is rejected with `ERR_PUBLICATION_ROLE_INVARIANT`.
-- **TEST-PUB-010 (Role transfer):** Role transfer provides target active/distinct; article reassignment + role transfer + source deactivation are atomic; exactly one active PUBLICATION remains.
-- **TEST-PUB-011 (Failed role transfer):** If any part of role transfer fails, the whole transaction rolls back.
-- **TEST-PUB-012 (Stats):** Published counts and overdue exclusion follow lifecycle role, not semantic PUBLISHED.
-- **TEST-PUB-013 (Calendar):** `publishDate` still controls date placement; publication visual state follows lifecycle role.
-- **TEST-PUB-014 (AI):** Semantic classification controls recommendation only; lifecycle role does NOT change evidence availability.
-- **TEST-PUB-015 (Browser fallback):** Browser/localStorage fallback mirrors native lifecycle semantics.
+- **TEST-PUB-001 (Fresh/default workflow):** [BR-WF-PUB-001] Exactly one active PUBLICATION role exists upon initialization.
+- **TEST-PUB-002 (Migration):** [BR-WF-PUB-001, BR-WF-PUB-002, BR-MIG-001] Legacy `publicado` seeded/mapped stage has `semantic_classification = PUBLISHED` AND `lifecycle_role = PUBLICATION`.
+- **TEST-PUB-003 (Independence):** [BR-WF-PUB-002] A stage with `semantic_classification = PUBLISHED` and `lifecycle_role = null` does NOT cause publication lifecycle effects.
+- **TEST-PUB-004 (Reverse independence):** [BR-WF-PUB-002, BR-WF-PUB-004] A stage with `lifecycle_role = PUBLICATION` and `semantic_classification = null` DOES cause publication lifecycle effects.
+- **TEST-PUB-005 (Entry):** [BR-WF-PUB-004] Moving from non-publication to publication role sets `completedAt`, changes `updatedAt`, and records history.
+- **TEST-PUB-006 (Exit):** [BR-WF-PUB-005] Moving from publication to non-publication leaves article not currently published; `completedAt` is preserved.
+- **TEST-PUB-007 (Re-entry):** [BR-WF-PUB-004] Re-entering a publication-role stage sets a new `completedAt` entry timestamp.
+- **TEST-PUB-008 (Idempotent same-stage assignment):** [BR-WF-PUB-006] Re-assigning to the same stage performs no timestamp/history duplication.
+- **TEST-PUB-009 (Publication-role removal without target):** [BR-WF-PUB-003] Attempting to remove the publication-role stage without an explicit target is rejected with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-010 (Role transfer):** [BR-WF-PUB-001, BR-WF-PUB-003] Role transfer provides target active/distinct; article reassignment + role transfer + source deactivation are atomic; exactly one active PUBLICATION remains.
+- **TEST-PUB-011 (Failed role transfer):** [BR-WF-PUB-001, BR-WF-PUB-003] If any part of role transfer fails, the whole transaction rolls back.
+- **TEST-PUB-012 (Stats):** [Publication lifecycle compatibility rules] Published counts and overdue exclusion follow lifecycle role, not semantic PUBLISHED.
+- **TEST-PUB-013 (Calendar):** [Publication lifecycle compatibility rules] `publishDate` still controls date placement; publication visual state follows lifecycle role.
+- **TEST-PUB-014 (AI):** [BR-WF-PUB-002, BR-AI-003, BR-AI-004] Semantic classification controls recommendation only; lifecycle role does NOT change evidence availability.
+- **TEST-PUB-015 (Browser fallback):** [Publication lifecycle parity contract] Browser/localStorage fallback mirrors native lifecycle semantics.
+- **TEST-PUB-016 (Create assignment blocked):** Arbitrary stage create cannot assign `lifecycle_role`.
+- **TEST-PUB-017 (Update mutation blocked):** Ordinary `update_workflow_stage` cannot mutate `lifecycle_role`.
+- **TEST-PUB-018 (Multiple role invariant):** Attempt to produce two active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-019 (Zero role invariant):** Operation that would leave zero active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-020 (Inactive target invariant):** Publication-role transfer to inactive target fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
+- **TEST-PUB-021 (Self target invariant):** Publication-role transfer to source itself fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
+- **TEST-PUB-022 (Transfer continuity):** Structural publication-role transfer preserves `completedAt` for affected articles.
 
 ### Category Domain
 - **TEST-CAT-001 (Create & Rename Custom):** [AC-CAT-001, BR-CAT-001, BR-CAT-002]

@@ -61,6 +61,7 @@ Identities for custom entities use canonical textual UUID representation (e.g., 
 - `WorkflowStageId`: `String` (UUID format)
 - `CategoryId`: `String` (UUID format)
 - `ChecklistTemplateId`: `String` (UUID format)
+- `WorkflowLifecycleRole`: `'PUBLICATION'`
 
 Identities must remain stable across renames, reorders, entitlement downgrade, and application restart.
 
@@ -119,13 +120,28 @@ semantic_classification = PUBLISHED does not grant publication lifecycle behavio
 Removing the PUBLICATION-role stage requires an explicit active reassignment target and atomic role transfer.
 
 **BR-WF-PUB-004 (Publication Entry)**
-Moving an article into the PUBLICATION-role stage applies publication entry effects (sets completedAt, writes history).
+Moving an article into the `PUBLICATION`-role stage applies publication entry effects:
+- set `completedAt` = transition timestamp;
+- update `updatedAt`;
+- record stage-transition history.
 
 **BR-WF-PUB-005 (Publication Exit)**
-Moving an article out of the PUBLICATION-role stage makes it no longer currently published but does NOT clear completedAt.
+Moving an article out of the `PUBLICATION`-role stage applies publication exit effects:
+- make article no longer CURRENTLY published;
+- update `updatedAt`;
+- record stage-transition history;
+- preserve `completedAt`;
+- preserve `publishDate`.
 
 **BR-WF-PUB-006 (Same-Stage Assignment)**
-Same-stage assignment is idempotent and does not rewrite lifecycle timestamps or duplicate history.
+Same-stage assignment is idempotent:
+- no stage mutation;
+- no `completedAt` rewrite;
+- no `updatedAt` rewrite solely from the no-op;
+- no duplicate history;
+- no publication celebration retrigger.
+
+`semantic_classification` is irrelevant to these lifecycle mutations.
 
 ## 7. Semantic Classification Contract
 
@@ -203,13 +219,14 @@ CREATE TABLE workflow_stages (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL COLLATE NOCASE,
     order_index INTEGER NOT NULL CHECK (order_index >= 0),
-    semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN (\'IDEA\', \'RESEARCH\', \'DRAFTING\', \'REVIEW\', \'PUBLISHED\')),
-    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = \'PUBLICATION\'),
-    is_active BOOLEAN NOT NULL DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED')),
+    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = 'PUBLICATION'),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
-CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = \'PUBLICATION\' AND is_active = 1;
+CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1;
 
 CREATE TABLE categories (
     id TEXT PRIMARY KEY,
@@ -242,10 +259,20 @@ During the `EXPAND` phase of migration, `workflow_stage_id` and `category_id` MU
 **BR-MIG-001 (Phases & Exact Legacy Mapping)** [ADR-009, SDD 9]
 1. **PRECONDITIONS:** DB accessible, recognized schema version, pre-migration backup successful.
 2. **EXPAND:** Create `workflow_stages`, `categories`, `checklist_templates`. Add nullable `workflow_stage_id`, `category_id` to `articles`.
-3. **BACKFILL:** Seed exact legacy statuses (`ideia`, `pesquisa`, `escrita`, `revisao`, `publicado`) and 8 standard categories. Map `status` to `workflow_stage_id` and `categoryTag` to `category_id`.
-4. **VERIFY:** Every article has a recognized legacy status and categoryTag; every article has non-null valid new references; counts match; `checklist_items` unchanged.
-5. **CUTOVER:** `workflow_stage_id` and `category_id` become logically NOT NULL. (Physical PRAGMA table rebuild deferred/implementation detail).
-6. **POSTCONDITIONS:** Domain logic uses new references exclusively.
+3. **BACKFILL:** Seed the standard five workflow stages (Idea, Pesquisa, Produção, Revisão, Publicado) and 8 standard categories.
+   - The legacy `publicado` status MUST map to the seeded standard stage with BOTH `semantic_classification = PUBLISHED` AND `lifecycle_role = PUBLICATION`.
+4. **MAPPING:** Update existing articles to replace string Enums with UUID Foreign Keys.
+5. **VERIFY:**
+   - exactly one ACTIVE PUBLICATION-role stage exists;
+   - every legacy `publicado` article points to that stage;
+   - every other seeded stage has `lifecycle_role = null`;
+   - every legacy status/category is recognized;
+   - every article has valid non-null new references;
+   - counts match;
+   - `checklist_items` unchanged.
+6. **CUTOVER:** `workflow_stage_id` and `category_id` become logically NOT NULL. (Physical PRAGMA table rebuild deferred/implementation detail).
+   - Migration FAILS CLOSED ONLY. SQLite transaction aborts.
+7. **POSTCONDITIONS:** Domain logic uses new references exclusively.
 
 **BR-MIG-002 (Unknown Legacy Value / Fail Closed)** [SDD 10]
 If an unknown status or category is encountered:
@@ -324,6 +351,7 @@ All IPC commands MUST return semantic failures through ONE canonical IPC error e
 
 Stable canonical semantic error codes:
 - `ERR_DATABASE_FAILURE`: General persistence failure.
+- `ERR_PUBLICATION_ROLE_INVARIANT`: Violation of publication lifecycle-role invariant (e.g. zero active publication-role result, multiple active publication-role result, missing transfer target when source owns PUBLICATION, target equals source, target missing, target inactive, invalid publication-role transfer).
 - `ERR_INVALID_WORKFLOW`: Validation failed (e.g., duplicate name). User fixable.
 - `ERR_LAST_STAGE_REMOVAL`: Cannot remove last stage. User fixable.
 - `ERR_UNRESOLVED_STAGE_REFERENCE`: Stage referenced, needs explicit reassignment target. User fixable.

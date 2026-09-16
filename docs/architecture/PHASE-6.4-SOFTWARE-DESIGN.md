@@ -43,9 +43,15 @@ Following ADR-009, workflow stages are modeled as dynamic entities. This SDD exp
 **Model:**
 - `id` (UUID): Stable stage identity.
 - `display_name` (String): The user-facing name.
-- `order_index` (Integer): Determines left-to-right Kanban ordering and sequential flow.
+- `order_index` (Integer)
 - `semantic_classification` (Enum, Optional): Semantic mapping used for UI AI recommendation.
-- `is_active` (Boolean): Supports safe removal.
+- `lifecycle_role` (Optional): `PUBLICATION | null`
+  - Independent from `semantic_classification`.
+  - Exactly one ACTIVE stage owns `PUBLICATION`.
+  - All other active stages have `null`.
+  - It is not inferred from `display_name`.
+  - It is not inferred from `semantic_classification`.
+- `is_active` (Boolean)
 
 **Business Rules:**
 - **Minimum one stage:** The system rejects any operation resulting in zero active stages.
@@ -97,13 +103,14 @@ Following ADR-010, the persistence strategy employs a hybrid approach: relationa
 CREATE TABLE workflow_stages (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL UNIQUE,
-    order_index INTEGER NOT NULL,
-    semantic_classification TEXT, -- Optional
-    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = \'PUBLICATION\'),
+    semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED')),
+    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = 'PUBLICATION'),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = \'PUBLICATION\' AND is_active = 1;
+CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
+CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1;
 ```
 
 ### 8.2 Relational Custom Categories
