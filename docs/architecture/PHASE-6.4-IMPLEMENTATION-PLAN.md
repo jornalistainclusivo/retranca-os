@@ -19,15 +19,15 @@ Implement dynamic workflow stages and commercial entitlement states following th
 ## Approved baseline / source of truth
 - ADR-009, ADR-010, ADR-011, ADR-012
 - Phase 6.4 Software Design Document (SDD)
-- Phase 6.4 Technical Specification (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
-- Phase 6.4 Tauri IPC Contracts (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
-- Phase 6.4 Test Specification (RECONCILIATION DRAFTS PENDING HUMAN SPEC RE-APPROVAL)
+- Phase 6.4 Technical Specification (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
+- Phase 6.4 Tauri IPC Contracts (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
+- Phase 6.4 Test Specification (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
 
-After Human Spec Re-Approval, their approved revisions become the implementation baseline.
+The re-approved Spec revisions are the normative implementation baseline.
 
 ## Scope
 - Domain and persistence schema migration to relational dynamic workflow and categories.
-- Entitlement lifecycle (FreeConfirmed, ProActive) in Rust.
+- Entitlement lifecycle model in Rust (Unknown, FreeConfirmed, ProActive, ProTemporarilyUnverifiable, ProUnavailable).
 - Secure Tauri IPC boundaries.
 - Frontend dynamic integration preserving calendar, stats, and AI.
 - Customization UX for Pro users.
@@ -59,7 +59,7 @@ After Human Spec Re-Approval, their approved revisions become the implementation
 
 ## Implementation branch strategy
 Canonical future implementation branch: `feat/phase-6.4-pro-workflow-customization`.
-It MUST be created only AFTER:
+It MUST be created only AFTER Gate A passes (DO NOT create it now, DO NOT branch from main, DO NOT delete the documentation branch):
 1. Human Spec Re-Approval
 2. Human Implementation Plan Approval
 It MUST branch from the FINAL APPROVED Phase 6.4 documentation HEAD on `docs/phase-6.4-product-access-monetization`. origin/main remains an independently verified baseline/reference.
@@ -134,14 +134,16 @@ It MUST branch from the FINAL APPROVED Phase 6.4 documentation HEAD on `docs/pha
 - **Atomic commit boundary**: `feat(db): backfill and migrate legacy articles`
 
 ### SLICE 3 — Entitlement Application Core
-- **Purpose**: Implement the hybrid local-first entitlement states (`FreeConfirmed`, `ProActive`, etc.) in Rust.
+- **Purpose**: Implement the hybrid local-first entitlement states (`Unknown`, `FreeConfirmed`, `ProActive`, `ProTemporarilyUnverifiable`, `ProUnavailable`) in Rust.
 - **Upstream requirements**: ADR-011, ADR-012, SDD.
 - **Dependencies on prior slices**: None.
 - **Existing files expected to change**: `src-tauri/src/entitlements.rs`.
 - **PROPOSED NEW FILES**: None.
 - **Responsibility of each affected/new file**: Define and validate entitlement domains.
 - **Implementation steps**:
-  - Update `EntitlementStatus` enum to support the 5 lifecycle states.
+  - Update `EntitlementStatus` enum to support all 5 lifecycle states.
+  - Enforce protected-mutation authorization semantics: PERMIT `ProActive`, `ProTemporarilyUnverifiable`. DENY `FreeConfirmed`, `Unknown`, `ProUnavailable` (subject to normal domain/business validation).
+  - FreeConfirmed -> ProActive transition only when valid production PRO entitlement is established.
   - Update `DEVELOPER_PREMIUM` logic to map to `ProActive` when enabled in debug mode, ensuring it never becomes production authority.
 - **Tests to add/update**: State transitions `FreeConfirmed -> ProActive`, Downgrade safe tests, Temporary unverifiability safe tests.
 - **Actual validation commands**: `cargo test --manifest-path src-tauri/Cargo.toml --locked`.
@@ -211,14 +213,15 @@ It MUST branch from the FINAL APPROVED Phase 6.4 documentation HEAD on `docs/pha
 - **Implementation steps**:
   - Create forms for adding/editing workflow stages, custom categories, and checklist templates.
   - UX must preserve exactly-one publication role invariant. Removal workflow explicitly requires target, which receives role atomically.
-  - Hide/disable these forms if entitlement is `FreeConfirmed`.
-- **Tests to add/update**: UI rendering based on entitlement context (Free vs Pro).
+  - Enforce complete UI decision model for NEW protected structural configuration mutations: ENABLED for `ProActive` and `ProTemporarilyUnverifiable`; DENIED / mutation controls unavailable for `FreeConfirmed`, `Unknown`, and `ProUnavailable`.
+  - Preserve all downgrade/continuity guarantees: existing custom workflow configuration remains visible and usable for ordinary editorial work; downgrade never deletes/resets/remaps configuration; `FreeConfirmed` blocks NEW PRO configuration changes only; `Unknown` and `ProUnavailable` preserve data/config; `ProTemporarilyUnverifiable` continues existing configuration use/edit. Do not hide existing user content/configuration merely because protected mutation is denied.
+- **Tests to add/update**: UI rendering covering all authorization states: `ProActive` (protected controls enabled), `ProTemporarilyUnverifiable` (protected controls enabled under approved continuity semantics), `FreeConfirmed` (new protected configuration mutation denied; existing configuration remains visible/usable), `Unknown` (protected mutation denied; data/config preserved), and `ProUnavailable` (protected mutation denied; data/config preserved). Direct native IPC remains authoritative regardless of frontend state.
 - **Actual validation commands**: `npm run test`.
 - **Migration considerations**: None.
 - **Security considerations**: UI checks reflect but do not replace native IPC checks.
 - **Accessibility considerations**: Keyboard-operable target selection, clear confirmation copy, focus management, error announcement, reorder controls keyboard accessible.
 - **Browser/localStorage considerations**: Customization mock works correctly in browser fallback.
-- **Expected user-visible effect**: PRO users can edit workflows; Free users see an upgrade prompt.
+- **Expected user-visible effect**: `ProActive` and `ProTemporarilyUnverifiable` may perform protected configuration mutations. `FreeConfirmed` may continue ordinary editorial work and use preserved configuration but cannot create NEW protected configuration changes. `Unknown` and `ProUnavailable` preserve existing data/configuration while denying protected mutations. Free discoverability is contextual/discreet. No mandatory login, no dark pattern, no destructive downgrade behavior.
 - **Explicit non-goals**: Actual checkout or billing UI.
 - **Exit criteria**: Customization UX is accessible, functional, and entitlement-aware.
 - **Stop conditions**: Accessibility violations detected.
@@ -305,8 +308,8 @@ All native database mutations use transactions. Failure during migration, stage 
 - implementation requires modifying another repository.
 
 ## Human gates
-- **PRE-GATE**: Human Spec Re-Approval.
-- **GATE A**: Human Implementation Plan Approval. (Only after Spec Re-Approval. Required BEFORE creating implementation branch or changing source).
+- **PRE-GATE**: Human Spec Re-Approval (PASSED).
+- **GATE A**: Human Implementation Plan Approval (PENDING). (Required BEFORE creating `feat/phase-6.4-pro-workflow-customization`, modifying source, adding `uuid` crate, changing `Cargo.toml`, or creating executable migrations/tests).
 - **GATE B**: Post-implementation technical/security review. (Required before PR readiness).
 - **GATE C**: Human Merge Authorization. (Required before merge).
 - **GATE D**: Release/tag authorization if later requested.
