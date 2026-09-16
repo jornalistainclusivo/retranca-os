@@ -35,6 +35,8 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
   - Precondition: Stage "Idea " exists. Action: Create " IDEA ". Result: Rejected. Error: `ERR_INVALID_WORKFLOW`.
 - **TEST-WF-008 (Unclassified Stage):** [BR-WF-001]
   - Precondition: None. Action: Create stage with `null` semantic classification. Result: Success.
+- **TEST-WF-009 (Invalid Semantic Classification):** [BR-AI-001]
+  - Precondition: `ProActive`. Action: Attempt stage create/update with `semantic_classification = "INVALID"`. Result: Mutation rejected with `ERR_INVALID_SEMANTIC_CLASSIFICATION` and no partial persistence.
 
 ### Category Domain
 - **TEST-CAT-001 (Create & Rename Custom):** [AC-CAT-001, BR-CAT-001, BR-CAT-002]
@@ -50,7 +52,7 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 - **TEST-CHK-002 (Rename Template):** [AC-CHK-001, BR-CHK-001]
   - Action: Rename existing template via `update_checklist_template`. Result: Saved successfully.
 - **TEST-CHK-003 (Item Mutations):** [FR-CHK-002, BR-CHK-001]
-  - Action: Edit an existing template to add a new item, remove an item, and reorder items via `update_checklist_template`. Result: Saved successfully. Template structure matches mutation exactly.
+  - Action: Edit an existing template via `update_checklist_template` to perform exactly four operations: add a new item, edit an existing item's label, remove an item, and reorder items. Result: Saved successfully. The expected final ordered list must exactly match the submitted mutation. No arbitrary checklist taxonomy/category is introduced.
 - **TEST-CHK-004 (Applied Copy Isolation):** [AC-CHK-001, BR-CHK-002]
   - Action: Edit and delete template after applying to an article. Result: The article's checklist items remain completely unaffected.
 
@@ -67,19 +69,28 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 
 ## 3. Entitlement State Tests (INTEGRATION)
 
-- **TEST-ENT-001 (Valid Upgrade Transition):** [BR-ENT-SM-002]
+- **TEST-ENT-001 (Valid Unknown Transitions):** [BR-ENT-SM-002]
   - Action: Transition `Unknown` -> `ProActive`. Result: Allowed.
-- **TEST-ENT-002 (Valid Downgrade Transition):** [BR-ENT-SM-002]
+  - Action: Transition `Unknown` -> `FreeConfirmed`. Result: Allowed.
+- **TEST-ENT-002 (Valid ProActive Transitions):** [BR-ENT-SM-002]
+  - Action: Transition `ProActive` -> `ProTemporarilyUnverifiable`. Result: Allowed.
   - Action: Transition `ProActive` -> `FreeConfirmed` (with explicit confirmed no-PRO evidence). Result: Allowed.
-- **TEST-ENT-003 (First-launch offline remains Unknown):** [BR-ENT-SM-002]
-  - Action: First launch, no previous PRO evidence, offline. Result: State `Unknown`. Mutation denied. Does NOT become `ProTemporarilyUnverifiable`.
-- **TEST-ENT-004 (FreeConfirmed Denial):** [BR-DOWN-003]
-  - Action: Class P mutation while `FreeConfirmed`. Result: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
-- **TEST-ENT-005 (ProTemporarilyUnverifiable Allow):** [AC-ENT-001, FR-ENT-001, BR-TEMP-001]
+- **TEST-ENT-003 (Prohibited Transitions to FreeConfirmed):** [BR-ENT-SM-002]
+  - Action: Transition `ProTemporarilyUnverifiable` -> `FreeConfirmed` without confirmed no-PRO/downgrade evidence. Result: Prohibited/Denied.
+  - Action: Transition `ProUnavailable` -> `FreeConfirmed` without confirmed no-PRO/downgrade evidence. Result: Prohibited/Denied.
+- **TEST-ENT-004 (Valid ProTemporarilyUnverifiable & ProUnavailable Transitions):** [BR-ENT-SM-002]
+  - Action: Transition `ProTemporarilyUnverifiable` -> `ProActive`. Result: Allowed.
+  - Action: Transition `ProTemporarilyUnverifiable` -> `ProUnavailable`. Result: Allowed.
+  - Action: Transition `ProTemporarilyUnverifiable` -> `FreeConfirmed` with confirmed downgrade. Result: Allowed.
+  - Action: Transition `ProUnavailable` -> `ProActive`. Result: Allowed.
+  - Action: Transition `ProUnavailable` -> `FreeConfirmed` with confirmed downgrade. Result: Allowed.
+- **TEST-ENT-005 (ProTemporarilyUnverifiable Allow & First-Launch Logic):** [AC-ENT-001, FR-ENT-001, BR-TEMP-001, BR-ENT-SM-002]
+  - Action 1 (Prohibited Transition): First launch, no previous PRO evidence, offline. State `Unknown`. Attempt transition `Unknown` -> `ProTemporarilyUnverifiable` merely because verification is unavailable. Result: Denied (must have credible previous PRO).
   - Precondition: current entitlement verification/refresh becomes temporarily unavailable after credible previously-valid PRO was established. State becomes `ProTemporarilyUnverifiable`.
-  - Action: Class P mutation while `ProTemporarilyUnverifiable`. Result: Success.
-- **TEST-ENT-006 (ProUnavailable Denial):** [BR-UNAV-001]
-  - Action: Class P mutation while `ProUnavailable`. Result: `ERR_ENTITLEMENT_UNAVAILABLE`.
+  - Action 2: Class P mutation while `ProTemporarilyUnverifiable`. Result: Success.
+- **TEST-ENT-006 (Mutation Authorization Denials):** [BR-DOWN-003, BR-UNAV-001]
+  - Action 1: Class P mutation while `FreeConfirmed`. Result: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
+  - Action 2: Class P mutation while `ProUnavailable`. Result: `ERR_ENTITLEMENT_UNAVAILABLE`.
 
 ## 4. Phase 6.3 AI Regression Tests (INTEGRATION)
 
@@ -126,7 +137,7 @@ Feature: Safe Stage Removal
     Given I am a PRO user
     And the stage "Fact Checking" contains 3 articles
     When I attempt to delete "Fact Checking"
-    And I select "Drafting" as the fallback stage
+    And I select "Drafting" as the explicit reassignment target
     Then "Fact Checking" should be marked inactive (soft-deleted)
     And the 3 articles should be moved to "Drafting" atomically
 ```
