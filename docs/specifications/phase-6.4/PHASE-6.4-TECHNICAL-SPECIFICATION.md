@@ -18,18 +18,18 @@ No implementation authorization is implied.
 
 | Requirement | Description (PRD Exact) | Specified In |
 | --- | --- | --- |
-| **FR-WF-001** | rename an existing workflow stage | BR-WF-001, IPC: update_workflow_stage, Test: TEST-WF-002 |
+| **FR-WF-001** | rename an existing workflow stage | BR-WF-001, BR-WF-002, IPC: update_workflow_stage, Test: TEST-WF-002 |
 | **FR-WF-002** | add a new workflow stage | BR-WF-001, IPC: create_workflow_stage, Test: TEST-WF-001 |
-| **FR-WF-003** | remove a workflow stage with safe resolution | BR-WF-006, IPC: remove_workflow_stage, Test: TEST-WF-004 |
-| **FR-WF-004** | reorder workflow stages | BR-WF-004, BR-WF-008, IPC: reorder_workflow_stages, Test: TEST-WF-003 |
+| **FR-WF-003** | remove a workflow stage with safe resolution | BR-WF-005, BR-WF-006, IPC: remove_workflow_stage, Test: TEST-WF-004, TEST-WF-006 |
+| **FR-WF-004** | reorder workflow stages | BR-WF-004, IPC: reorder_workflow_stages, Test: TEST-WF-003 |
 | **FR-WF-MIN-001** | reject zero active stages | BR-WF-007, IPC: remove_workflow_stage, Test: TEST-WF-005 |
-| **FR-CAT-001** | create / rename / safely delete custom categories | BR-CAT-001, BR-CAT-002, IPC: create/rename/remove_category, Test: TEST-CAT-001 |
-| **FR-CHK-001** | create / rename / apply custom checklist templates | BR-CHK-001, IPC: create/update/apply_checklist_template, Test: TEST-CHK-001 |
-| **FR-CHK-002** | add / edit / remove / reorder items within a checklist template | BR-CHK-001, IPC: update_checklist_template, Test: TEST-CHK-002 |
-| **FR-AI-001** | preserve evidence-based AI action availability independent of custom stage display name | BR-AI-001, BR-AI-003, Test: TEST-AI-001, TEST-AI-002 |
+| **FR-CAT-001** | create / rename / safely delete custom categories | BR-CAT-001, BR-CAT-002, IPC: create_category, rename_category, remove_category, Test: TEST-CAT-001, TEST-CAT-002 |
+| **FR-CHK-001** | create / rename / apply custom checklist templates | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, rename_checklist_template, apply_checklist_template, Test: TEST-CHK-001, TEST-CHK-002 |
+| **FR-CHK-002** | add / edit / remove / reorder items within a checklist template | BR-CHK-001, IPC: update_checklist_template, Test: TEST-CHK-003 |
+| **FR-AI-001** | preserve evidence-based AI action availability independent of custom stage display name | BR-AI-001, BR-AI-003, BR-AI-004, Test: TEST-AI-001, TEST-AI-002 |
 | **FR-DOWN-001** | retain user data, articles and custom configuration safely after entitlement is no longer active | BR-DOWN-001, BR-DOWN-002, Test: TEST-DOWN-001 |
-| **FR-DOWN-002** | block NEW PRO configuration changes while Free | BR-DOWN-003, IPC Auth, Test: TEST-DOWN-001 |
-| **FR-ENT-001** | allow continued usage/editing of existing PRO configuration during temporary unverifiability after valid PRO | BR-TEMP-001, Entitlement State Machine, Test: TEST-OFFLINE-001 |
+| **FR-DOWN-002** | block NEW PRO configuration changes while Free | BR-DOWN-003, IPC Auth, Test: TEST-DOWN-002 |
+| **FR-ENT-001** | allow continued usage/editing of existing PRO configuration during temporary unverifiability after valid PRO | BR-TEMP-001, Entitlement State Machine, Test: TEST-ENT-005 |
 | **NFR-A11Y-001** | configuration interfaces fully keyboard accessible | UI/UX Contract, Test: TEST-UI-001 |
 | **NFR-DATA-001** | configuration changes preserve referential AND semantic integrity of editorial content/configuration | BR-ART-003, BR-MIG-001, IPC Transactional Semantics, Test: TEST-DATA-001 |
 | **NFR-OFFLINE-001** | temporary connectivity / verification unavailability causes neither local data loss nor unsafe state transitions | BR-TEMP-001, BR-UNAV-001, Test: TEST-OFFLINE-001 |
@@ -38,17 +38,17 @@ No implementation authorization is implied.
 
 | Acceptance Criteria | Mapped To |
 | --- | --- |
-| **AC-WF-001** | BR-WF-001, BR-WF-004, TEST-WF-001 |
-| **AC-WF-002** | BR-WF-004, BR-WF-008, IPC: reorder_workflow_stages, TEST-WF-003 |
-| **AC-WF-003** | BR-WF-006, IPC: remove_workflow_stage, TEST-WF-004 |
-| **AC-CAT-001** | BR-CAT-002, IPC: create/rename/remove_category, TEST-CAT-002 |
-| **AC-CHK-001** | BR-CHK-001, BR-CHK-002, IPC: apply_checklist_template, TEST-CHK-001, TEST-CHK-003 |
-| **AC-AI-001** | BR-AI-003, TEST-AI-001, TEST-AI-002 |
-| **AC-DOWN-001** | BR-DOWN-001, BR-DOWN-002, BR-DOWN-003, TEST-DOWN-001 |
-| **AC-DOWN-002** | BR-DOWN-001, BR-DOWN-002, TEST-DOWN-001 |
-| **AC-FREE-001** | BR-DOWN-002, Migration Contract, TEST-FREE-001 |
+| **AC-WF-001** | BR-WF-001, BR-WF-002, IPC: update_workflow_stage, TEST-WF-002 |
+| **AC-WF-002** | BR-WF-006, IPC: remove_workflow_stage, TEST-WF-004 |
+| **AC-WF-003** | BR-WF-007, IPC: remove_workflow_stage, TEST-WF-005 |
+| **AC-CAT-001** | BR-CAT-001, BR-CAT-002, IPC: create_category, get_categories, TEST-CAT-001, TEST-CAT-002 |
+| **AC-CHK-001** | BR-CHK-001, BR-CHK-002, IPC: create_checklist_template, apply_checklist_template, TEST-CHK-001, TEST-CHK-002 |
+| **AC-AI-001** | BR-AI-003, BR-AI-004, TEST-AI-001, TEST-AI-002 |
+| **AC-DOWN-001** | BR-DOWN-001, BR-DOWN-002, TEST-DOWN-001 |
+| **AC-DOWN-002** | BR-DOWN-003, IPC Auth matrix, TEST-DOWN-002 |
+| **AC-FREE-001** | TEST-FREE-001 |
 | **AC-FREE-002** | UI/UX Contract, TEST-FREE-002 |
-| **AC-ENT-001** | BR-ENT-SM-001, BR-ENT-SM-002, IPC Authorization, TEST-SEC-001, TEST-SEC-002 |
+| **AC-ENT-001** | BR-TEMP-001, IPC Auth matrix, TEST-ENT-005 |
 
 ## 3. Traceability Format
 
@@ -178,9 +178,8 @@ Orphaned references are strictly prohibited. The database schema enforces this v
 
 ## 11. SQLite Target Schema & Constraint Contract
 
+**TARGET FINAL SCHEMA**
 ```sql
--- Specification Only
-
 CREATE TABLE workflow_stages (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL COLLATE NOCASE,
@@ -214,9 +213,12 @@ ALTER TABLE articles ADD COLUMN category_id TEXT NOT NULL REFERENCES categories(
 ```
 *Application validation enforces atomic reference reassignment before soft-deleting targets.*
 
+**MIGRATION PHASE SQL CONCEPT**
+During the `EXPAND` phase of migration, `workflow_stage_id` and `category_id` MUST be added as nullable columns to accommodate the pre-migration data prior to backfill. They are logically enforced as NOT NULL in the `CUTOVER` phase.
+
 ## 12. Migration Contract
 
-**BR-MIG-001 (Phases & Strict Mapping)** [ADR-009, SDD 9]
+**BR-MIG-001 (Phases & Exact Legacy Mapping)** [ADR-009, SDD 9]
 1. **PRECONDITIONS:** DB accessible, recognized schema version, pre-migration backup successful.
 2. **EXPAND:** Create `workflow_stages`, `categories`, `checklist_templates`. Add nullable `workflow_stage_id`, `category_id` to `articles`.
 3. **BACKFILL:** Seed exact legacy statuses (`ideia`, `pesquisa`, `escrita`, `revisao`, `publicado`) and 8 standard categories. Map `status` to `workflow_stage_id` and `categoryTag` to `category_id`.
@@ -224,15 +226,15 @@ ALTER TABLE articles ADD COLUMN category_id TEXT NOT NULL REFERENCES categories(
 5. **CUTOVER:** `workflow_stage_id` and `category_id` become logically NOT NULL. (Physical PRAGMA table rebuild deferred/implementation detail).
 6. **POSTCONDITIONS:** Domain logic uses new references exclusively.
 
-**BR-MIG-002 (Unknown Value / Fail Closed)** [SDD 10]
+**BR-MIG-002 (Unknown Legacy Value / Fail Closed)** [SDD 10]
 If an unknown status or category is encountered:
 - Migration FAILS CLOSED. SQLite transaction aborts.
 - No fallback mapping or guessed reassignment.
 - Application reports `ERR_MIGRATION_UNKNOWN_LEGACY_VALUE`.
 - Original DB remains untouched.
 
-**BR-MIG-003 (Failure & Retry Contract)**
-If migration fails or is interrupted:
+**BR-MIG-003 (Failure / Interruption / Retry)**
+If migration fails or is interrupted (e.g. power loss):
 - Partial SQLite transaction rolls back.
 - Application restart triggers retry.
 - Lossless pre-6.4 binary rollback is NOT supported after custom dynamic data exists.
@@ -248,9 +250,9 @@ If migration fails or is interrupted:
 
 **BR-ENT-SM-002 (Transitions)** [ADR-012]
 - `Unknown` -> `ProActive` | `FreeConfirmed`
-- `ProActive` -> `ProTemporarilyUnverifiable` | `FreeConfirmed`
-- `ProTemporarilyUnverifiable` -> `ProActive` | `ProUnavailable` | `FreeConfirmed` (on confirmed downgrade ONLY)
-- `ProUnavailable` -> `ProActive` | `FreeConfirmed` (on confirmed downgrade ONLY)
+- `ProActive` -> `ProTemporarilyUnverifiable` | `FreeConfirmed` (requires explicit confirmed downgrade)
+- `ProTemporarilyUnverifiable` -> `ProActive` | `ProUnavailable` | `FreeConfirmed` (requires explicit confirmed downgrade)
+- `ProUnavailable` -> `ProActive` | `FreeConfirmed` (requires explicit confirmed downgrade)
 
 First-launch offline with no credible previous PRO evidence remains `Unknown` (or goes to `FreeConfirmed` if verified), it MUST NOT become `ProTemporarilyUnverifiable`.
 `ProUnavailable` != `FreeConfirmed`.
@@ -289,14 +291,25 @@ For EVERY protected configuration mutation (Class P):
 
 ## 16. Error Contract (Canonical Vocabulary)
 
+All IPC commands MUST return semantic failures through ONE canonical IPC error envelope:
+```json
+{
+  "code": "ERR_...",
+  "retryable": false,
+  "details": {}
+}
+```
+
 Stable canonical semantic error codes:
+- `ERR_DATABASE_FAILURE`: General persistence failure.
 - `ERR_INVALID_WORKFLOW`: Validation failed (e.g., duplicate name). User fixable.
 - `ERR_LAST_STAGE_REMOVAL`: Cannot remove last stage. User fixable.
-- `ERR_UNRESOLVED_STAGE_REFERENCE`: Stage referenced, needs reassignment. User fixable.
-- `ERR_UNRESOLVED_CATEGORY_REFERENCE`: Category referenced, needs reassignment. User fixable.
+- `ERR_UNRESOLVED_STAGE_REFERENCE`: Stage referenced, needs explicit reassignment target. User fixable.
+- `ERR_UNRESOLVED_CATEGORY_REFERENCE`: Category referenced, needs explicit reassignment target. User fixable.
 - `ERR_INVALID_SEMANTIC_CLASSIFICATION`: Invalid semantic mapping. System error.
-- `ERR_INVALID_CATEGORY`: Invalid operation (e.g., delete standard). System error.
-- `ERR_MALFORMED_CHECKLIST_TEMPLATE`: Bad template structure. System error.
+- `ERR_INVALID_CATEGORY`: Invalid operation (e.g., duplicate custom name, delete standard).
+- `ERR_INVALID_CHECKLIST_TEMPLATE`: Validation failed (e.g., duplicate name). User fixable.
+- `ERR_MALFORMED_CHECKLIST_TEMPLATE`: Bad persisted/serialized template structure. System error.
 - `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`: Downgrade rejection. User fixable (upgrade).
 - `ERR_ENTITLEMENT_STATE_UNKNOWN`: Uninitialized state. Retryable.
 - `ERR_ENTITLEMENT_UNAVAILABLE`: ProUnavailable. Retryable.

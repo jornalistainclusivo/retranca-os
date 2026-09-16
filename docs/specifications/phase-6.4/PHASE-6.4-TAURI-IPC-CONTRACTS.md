@@ -18,17 +18,27 @@ This document specifies the Tauri IPC boundaries for Phase 6.4.
 
 ## 1. IPC Security and Authorization Classes
 
-- **Free / Ordinary Editorial (Class F):** Read configuration or perform standard editorial operations on articles. ALWAYS permitted.
-- **Protected Configuration Mutation (Class P):** Modifies structural configuration (Stages, Categories, Templates). MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations undergo identical native authorization checks.
+- **Auth Class: Free** (Ordinary Editorial): Read configuration or perform standard editorial operations on articles. ALWAYS permitted.
+- **Auth Class: Protected** (Configuration Mutation): Modifies structural configuration (Stages, Categories, Templates). MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations undergo identical native authorization checks.
 
-All mutation commands execute within a single SQLite transaction (Transactional Expectation: Atomic).
+## 2. Canonical IPC Error Envelope
 
-## 2. READ / ORDINARY EDITORIAL (Class F)
+All IPC commands MUST return semantic failures through this exact canonical error envelope:
+```json
+{
+  "code": "ERR_...",
+  "retryable": false,
+  "details": {}
+}
+```
 
-### 2.1 Read Workflow
+## 3. READ / ORDINARY EDITORIAL (Auth Class: Free)
+
+### 3.1 Read Workflow
 - **Command:** `get_workflow_stages`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Read-only)
+- **Transaction:** Read
 - **Request:** `{}`
 - **Success Response:**
 ```json
@@ -44,12 +54,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
   ]
 }
 ```
-- **Error Response:** General failure (SQLite execution).
+- **Error Response:** `{ "code": "ERR_DATABASE_FAILURE", "retryable": true, "details": {} }`
 
-### 2.2 Read Categories
+### 3.2 Read Categories
 - **Command:** `get_categories`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Read-only)
+- **Transaction:** Read
 - **Request:** `{}`
 - **Success Response:**
 ```json
@@ -64,12 +75,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
   ]
 }
 ```
-- **Error Response:** General failure.
+- **Error Response:** `{ "code": "ERR_DATABASE_FAILURE", "retryable": true, "details": {} }`
 
-### 2.3 Read Templates
+### 3.3 Read Templates
 - **Command:** `get_checklist_templates`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Read-only)
+- **Transaction:** Read
 - **Request:** `{}`
 - **Success Response:**
 ```json
@@ -86,11 +98,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 *Note: The `items` array is structured JSON over IPC, not a raw string.*
+- **Error Response:** `{ "code": "ERR_DATABASE_FAILURE", "retryable": true, "details": {} }`
 
-### 2.4 Move Article to Stage
+### 3.4 Move Article to Stage
 - **Command:** `assign_article_stage`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Repeated calls for the same article/stage are a no-op).
+- **Transaction:** Atomic update.
 - **Request:**
 ```json
 {
@@ -99,12 +113,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_UNRESOLVED_STAGE_REFERENCE`
+- **Error Response:** `{ "code": "ERR_UNRESOLVED_STAGE_REFERENCE", "retryable": false, "details": {} }`
 
-### 2.5 Assign Existing Category
+### 3.5 Assign Existing Category
 - **Command:** `assign_article_category`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Repeated calls are a no-op).
+- **Transaction:** Atomic update.
 - **Request:**
 ```json
 {
@@ -113,12 +128,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_UNRESOLVED_CATEGORY_REFERENCE`
+- **Error Response:** `{ "code": "ERR_UNRESOLVED_CATEGORY_REFERENCE", "retryable": false, "details": {} }`
 
-### 2.6 Apply Existing Checklist Template
+### 3.6 Apply Existing Checklist Template
 - **Command:** `apply_checklist_template`
 - **Auth Class:** Free
 - **Idempotency:** No (Appends items. Repeated calls create duplicate copies).
+- **Transaction:** Atomic insertion of multiple item records.
 - **Request:**
 ```json
 {
@@ -127,17 +143,19 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
+- **Error Response:** `{ "code": "ERR_INVALID_CHECKLIST_TEMPLATE", "retryable": false, "details": {} }`
 
 ---
 
-## 3. PROTECTED CONFIGURATION MUTATIONS (Class P)
+## 4. PROTECTED CONFIGURATION MUTATIONS (Auth Class: Protected)
 
-*All commands below return `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`, `ERR_ENTITLEMENT_STATE_UNKNOWN`, or `ERR_ENTITLEMENT_UNAVAILABLE` if authorization fails.*
+*All commands below execute within a single SQLite transaction and MUST return `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`, `ERR_ENTITLEMENT_STATE_UNKNOWN`, or `ERR_ENTITLEMENT_UNAVAILABLE` if authorization fails.*
 
-### 3.1 Create Stage
+### 4.1 Create Stage
 - **Command:** `create_workflow_stage`
+- **Auth Class:** Protected
 - **Idempotency:** No (Duplicate request returns `ERR_INVALID_WORKFLOW` due to normalized name collision).
+- **Transaction:** Atomic insert.
 - **Request:**
 ```json
 {
@@ -147,11 +165,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** Returns created `WorkflowStage` object.
-- **Error Response:** `ERR_INVALID_WORKFLOW`
+- **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
-### 3.2 Rename/Update Stage
+### 4.2 Rename/Update Stage
 - **Command:** `update_workflow_stage`
+- **Auth Class:** Protected
 - **Idempotency:** Yes (Subsequent updates with identical data are no-ops).
+- **Transaction:** Atomic update.
 - **Request:**
 ```json
 {
@@ -161,12 +181,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_INVALID_WORKFLOW`
+- **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
-### 3.3 Reorder Stages
+### 4.3 Reorder Stages
 - **Command:** `reorder_workflow_stages`
+- **Auth Class:** Protected
 - **Idempotency:** Yes
-- **Transaction:** Atomic normalization.
+- **Transaction:** Atomic normalization (multiple updates within one transaction).
 - **Request:**
 ```json
 {
@@ -177,12 +198,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_INVALID_WORKFLOW`
+- **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
-### 3.4 Safely Remove Stage
+### 4.4 Safely Remove Stage
 - **Command:** `remove_workflow_stage`
+- **Auth Class:** Protected
 - **Idempotency:** Yes (If already inactive/missing, returns success without DB mutation).
-- **Transaction:** Re-checks references in same transaction. Moves affected articles atomically to `reassign_to_stage_id`, then deactivates source. Rollback on failure.
+- **Transaction:** Re-checks references in same transaction. Moves affected articles atomically to `reassign_to_stage_id`, then deactivates source. Rollback on failure. There is NO automatic fallback; explicit target is required if references exist.
 - **Request:**
 ```json
 {
@@ -191,11 +213,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_LAST_STAGE_REMOVAL`, `ERR_UNRESOLVED_STAGE_REFERENCE`
+- **Error Response:** `{ "code": "ERR_UNRESOLVED_STAGE_REFERENCE", "retryable": false, "details": {} }` (or `ERR_LAST_STAGE_REMOVAL`)
 
-### 3.5 Create Custom Category
+### 4.5 Create Custom Category
 - **Command:** `create_category`
+- **Auth Class:** Protected
 - **Idempotency:** No (Duplicate returns `ERR_INVALID_CATEGORY`).
+- **Transaction:** Atomic insert.
 - **Request:**
 ```json
 {
@@ -203,11 +227,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** Returns created `Category`.
-- **Error Response:** `ERR_INVALID_CATEGORY`
+- **Error Response:** `{ "code": "ERR_INVALID_CATEGORY", "retryable": false, "details": {} }`
 
-### 3.6 Rename Custom Category
+### 4.6 Rename Custom Category
 - **Command:** `rename_category`
+- **Auth Class:** Protected
 - **Idempotency:** Yes
+- **Transaction:** Atomic update.
 - **Request:**
 ```json
 {
@@ -216,12 +242,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_INVALID_CATEGORY`
+- **Error Response:** `{ "code": "ERR_INVALID_CATEGORY", "retryable": false, "details": {} }`
 
-### 3.7 Safely Remove Custom Category
+### 4.7 Safely Remove Custom Category
 - **Command:** `remove_category`
+- **Auth Class:** Protected
 - **Idempotency:** Yes (If already inactive/missing, returns success).
-- **Transaction:** Atomic reassignment exactly as stage removal.
+- **Transaction:** Atomic reassignment exactly as stage removal. Explicit target required.
 - **Request:**
 ```json
 {
@@ -230,11 +257,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_INVALID_CATEGORY`, `ERR_UNRESOLVED_CATEGORY_REFERENCE`
+- **Error Response:** `{ "code": "ERR_UNRESOLVED_CATEGORY_REFERENCE", "retryable": false, "details": {} }` (or `ERR_INVALID_CATEGORY` for standards)
 
-### 3.8 Create Checklist Template
+### 4.8 Create Checklist Template
 - **Command:** `create_checklist_template`
-- **Idempotency:** No (Duplicate returns `ERR_MALFORMED_CHECKLIST_TEMPLATE` or similar uniqueness error).
+- **Auth Class:** Protected
+- **Idempotency:** No (Duplicate returns `ERR_INVALID_CHECKLIST_TEMPLATE` for uniqueness failure).
+- **Transaction:** Atomic insert.
 - **Request:**
 ```json
 {
@@ -245,11 +274,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** Returns created `ChecklistTemplate`.
-- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
+- **Error Response:** `{ "code": "ERR_INVALID_CHECKLIST_TEMPLATE", "retryable": false, "details": {} }`
 
-### 3.9 Update/Reorder Template
+### 4.9 Update/Reorder Template
 - **Command:** `update_checklist_template`
+- **Auth Class:** Protected
 - **Idempotency:** Yes
+- **Transaction:** Atomic update of template contents.
 - **Request:**
 ```json
 {
@@ -261,11 +292,13 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
+- **Error Response:** `{ "code": "ERR_INVALID_CHECKLIST_TEMPLATE", "retryable": false, "details": {} }`
 
-### 3.10 Delete Template
+### 4.10 Delete Template
 - **Command:** `delete_checklist_template`
+- **Auth Class:** Protected
 - **Idempotency:** Yes (If missing, returns success).
+- **Transaction:** Atomic delete.
 - **Request:**
 ```json
 {
@@ -273,4 +306,4 @@ All mutation commands execute within a single SQLite transaction (Transactional 
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
+- **Error Response:** `{ "code": "ERR_INVALID_CHECKLIST_TEMPLATE", "retryable": false, "details": {} }`
