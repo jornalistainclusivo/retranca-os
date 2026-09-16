@@ -49,11 +49,13 @@ Following ADR-009, workflow stages are modeled as dynamic entities. This SDD exp
 
 **Business Rules:**
 - **Minimum one stage:** The system rejects any operation resulting in zero active stages.
-- **Safe stage removal:** A stage cannot be destructively removed while unresolved article references would be orphaned or silently remapped. Resolution may include deliberate reassignment chosen by the user.
+- **Safe stage removal:** A stage cannot be destructively removed while unresolved article references would be orphaned or silently remapped. Removal of the active stage that owns lifecycle_role = PUBLICATION requires explicit atomic transfer of the role to another active stage through the selected reassignment target.
 
-## 5. Workflow Semantic Classification
+## 5. Workflow Semantic Classification & Lifecycle Role
 Semantic classifications preserve compatibility with the current five statuses and influence TypeScript RECOMMENDED UX only.
 Custom stages may have one optional semantic classification, or no classification.
+
+Separately, exactly ONE active stage MUST have lifecycle_role = PUBLICATION. The PUBLICATION lifecycle role governs publication behavior (e.g., setting completedAt, stats, excluded from overdue). Semantic PUBLISHED remains recommendation-only.
 
 **Mapping:**
 - `ideia` -> `IDEA`
@@ -97,9 +99,11 @@ CREATE TABLE workflow_stages (
     display_name TEXT NOT NULL UNIQUE,
     order_index INTEGER NOT NULL,
     semantic_classification TEXT, -- Optional
+    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = \'PUBLICATION\'),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = \'PUBLICATION\' AND is_active = 1;
 ```
 
 ### 8.2 Relational Custom Categories
@@ -134,11 +138,11 @@ Applying a template creates INDEPENDENT article-owned `checklist_items` rows. Te
 - Category Column: `categoryTag`
 
 **Expand -> Backfill -> Verify -> Cutover Process:**
-1. **Bootstrap Workflow Stages:** Seed the standard five workflow stages.
+1. **Bootstrap Workflow Stages:** Seed the standard five workflow stages. The legacy publicado maps to a standard stage with semantic_classification = PUBLISHED and lifecycle_role = PUBLICATION.
 2. **Bootstrap Categories:** Seed the exact eight standard categories with `origin = 'standard'`.
 3. **Article Stage Backfill:** Add `workflow_stage_id` to `articles`. Map existing `status` strings to seeded workflow stage UUIDs.
 4. **Article Category Backfill:** Add `category_id` to `articles`. Map existing `categoryTag` strings to seeded category UUIDs.
-5. **Validation:** Verify that EVERY article resolved successfully.
+5. **Validation:** Verify exactly one active publication-role stage, every legacy publicado article points to it, no unknown legacy status/category, and EVERY article resolved successfully.
 6. **Preservation:** Verify that existing `checklist_items` remain unchanged.
 7. **Cutover:** Drop legacy `status` and `categoryTag` columns only after design justifies the contract phase.
 

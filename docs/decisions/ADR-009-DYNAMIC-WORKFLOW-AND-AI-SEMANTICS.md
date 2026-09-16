@@ -4,6 +4,15 @@
 
 Accepted — Human Architecture Decision
 
+**Human Architecture Amendment / Clarification:**
+- Optional lifecycle role is separate from semantic classification.
+- `PUBLICATION` is the only lifecycle role introduced in Phase 6.4.
+- Exactly one active stage owns `PUBLICATION`.
+- Legacy `publicado` receives it during migration.
+- Semantic `PUBLISHED` remains recommendation-only.
+- Publication role governs publication lifecycle behavior.
+- Removal of the role-owning stage requires explicit atomic role transfer through the selected reassignment target.
+
 ## Context
 
 The current `ArticleStatus` is a closed status type/enum representation, but Phase 6.4 requires user-customizable workflow stages (renaming, reordering, adding, removing). At the same time, Phase 6.3 currently uses editorial status in the TypeScript UI recommendation logic to distinguish RECOMMENDED from AVAILABLE.
@@ -26,6 +35,7 @@ This architecture explicitly separates:
 - **stage display name**
 - **stage ordering**
 - **optional recommendation semantic classification**
+- **optional lifecycle role**
 
 **Normative Requirements:**
 - Stage identity survives rename.
@@ -38,7 +48,9 @@ This architecture explicitly separates:
 - Custom workflow stages MUST NOT map one-to-one to AI actions.
 - A custom stage without semantic classification may have no stage-specific recommendation.
 - Absence of a recommendation MUST NOT disable an AI action whose evidence prerequisites are satisfied.
+- Exactly one active stage owns the `PUBLICATION` lifecycle role.
 - Stage removal must never orphan articles; affected articles must be resolved before removal can complete.
+- Removal of the `PUBLICATION` role-owning stage requires explicit atomic role transfer through the selected reassignment target.
 
 ## Phase 6.3 Compatibility
 

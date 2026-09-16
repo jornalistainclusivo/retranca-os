@@ -1,7 +1,7 @@
 ---
 jinc-spec-version: 1.0.1
 project-name: Retranca OS
-status: approved
+status: draft
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: SQLite, React, TypeScript, Tauri, Rust
 created-at: 2026-09-15
@@ -11,9 +11,8 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Technical Specification
 
-**PHASE 6.4 — TECHNICAL SPECIFICATION — APPROVED BY HUMAN SPEC GATE**
-Approval authorizes implementation planning only.
-Implementation itself requires a separate Human Implementation Gate.
+**PHASE 6.4 — TECHNICAL SPECIFICATION — RECONCILIATION DRAFT FOR HUMAN RE-APPROVAL**
+NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
 
 ## 1. Requirement Coverage Matrix
 
@@ -109,6 +108,25 @@ A stage cannot be removed if any `Article` currently references it, UNLESS an ex
 **BR-WF-007 (Minimum Stages)** [FR-WF-MIN-001]
 The system rejects any removal operation that results in zero active stages.
 
+
+**BR-WF-PUB-001 (Exactly-One Publication Role)**
+Exactly one ACTIVE stage owns lifecycle_role = PUBLICATION.
+
+**BR-WF-PUB-002 (Semantic vs Lifecycle)**
+semantic_classification = PUBLISHED does not grant publication lifecycle behavior.
+
+**BR-WF-PUB-003 (Role Transfer)**
+Removing the PUBLICATION-role stage requires an explicit active reassignment target and atomic role transfer.
+
+**BR-WF-PUB-004 (Publication Entry)**
+Moving an article into the PUBLICATION-role stage applies publication entry effects (sets completedAt, writes history).
+
+**BR-WF-PUB-005 (Publication Exit)**
+Moving an article out of the PUBLICATION-role stage makes it no longer currently published but does NOT clear completedAt.
+
+**BR-WF-PUB-006 (Same-Stage Assignment)**
+Same-stage assignment is idempotent and does not rewrite lifecycle timestamps or duplicate history.
+
 ## 7. Semantic Classification Contract
 
 **BR-AI-001 (Vocabulary)** [FR-AI-001, ADR-009]
@@ -185,11 +203,13 @@ CREATE TABLE workflow_stages (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL COLLATE NOCASE,
     order_index INTEGER NOT NULL CHECK (order_index >= 0),
-    semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED')),
+    semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN (\'IDEA\', \'RESEARCH\', \'DRAFTING\', \'REVIEW\', \'PUBLISHED\')),
+    lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = \'PUBLICATION\'),
     is_active BOOLEAN NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
+CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = \'PUBLICATION\' AND is_active = 1;
 
 CREATE TABLE categories (
     id TEXT PRIMARY KEY,
@@ -229,7 +249,7 @@ During the `EXPAND` phase of migration, `workflow_stage_id` and `category_id` MU
 
 **BR-MIG-002 (Unknown Legacy Value / Fail Closed)** [SDD 10]
 If an unknown status or category is encountered:
-- Migration FAILS CLOSED. SQLite transaction aborts.
+- Migration FAILS CLOSED ONLY. SQLite transaction aborts.
 - No fallback mapping or guessed reassignment.
 - Application reports `ERR_MIGRATION_UNKNOWN_LEGACY_VALUE`.
 - Original DB remains untouched.

@@ -1,7 +1,7 @@
 ---
 jinc-spec-version: 1.0.1
 project-name: Retranca OS
-status: approved
+status: draft
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
@@ -11,9 +11,8 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Tauri IPC Contracts
 
-**PHASE 6.4 — TECHNICAL SPECIFICATION — APPROVED BY HUMAN SPEC GATE**
-Approval authorizes implementation planning only.
-Implementation itself requires a separate Human Implementation Gate.
+**PHASE 6.4 — TECHNICAL SPECIFICATION — RECONCILIATION DRAFT FOR HUMAN RE-APPROVAL**
+NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
 
@@ -50,6 +49,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
       "display_name": "Idea",
       "order_index": 0,
       "semantic_classification": "IDEA",
+      "lifecycle_role": null,
       "is_active": true
     }
   ]
@@ -105,7 +105,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Command:** `assign_article_stage`
 - **Auth Class:** Free
 - **Idempotency:** Yes (Repeated calls for the same article/stage are a no-op).
-- **Transaction:** Atomic update.
+- **Transaction:** Atomic update. If target owns PUBLICATION role, `completedAt` is set and `updatedAt` is updated. If moving out of PUBLICATION role, `completedAt` is preserved. Same-stage assignment is idempotent.
 - **Request:**
 ```json
 {
@@ -205,7 +205,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Command:** `remove_workflow_stage`
 - **Auth Class:** Protected
 - **Idempotency:** Yes (If already inactive/missing, returns success without DB mutation).
-- **Transaction:** Re-checks references in same transaction. Moves affected articles atomically to `reassign_to_stage_id`, then deactivates source. Rollback on failure. There is NO automatic fallback; explicit target is required if references exist.
+- **Transaction:** Re-checks references in same transaction. Explicit target required if references exist OR if source owns `PUBLICATION` role. Moves affected articles atomically to `reassign_to_stage_id`, transfers `PUBLICATION` role if applicable, then deactivates source. Rollback on failure. There is NO automatic fallback.
 - **Request:**
 ```json
 {
@@ -214,7 +214,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `{ "code": "ERR_UNRESOLVED_STAGE_REFERENCE", "retryable": false, "details": {} }` (or `ERR_LAST_STAGE_REMOVAL`)
+- **Error Response:** `{ "code": "ERR_UNRESOLVED_STAGE_REFERENCE", "retryable": false, "details": {} }` (or `ERR_LAST_STAGE_REMOVAL`, `ERR_PUBLICATION_ROLE_INVARIANT`)
 
 ### 4.5 Create Custom Category
 - **Command:** `create_category`

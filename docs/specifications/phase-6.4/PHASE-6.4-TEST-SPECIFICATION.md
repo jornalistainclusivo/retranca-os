@@ -1,7 +1,7 @@
 ---
 jinc-spec-version: 1.0.1
 project-name: Retranca OS
-status: approved
+status: draft
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
@@ -11,9 +11,8 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
-**PHASE 6.4 — TECHNICAL SPECIFICATION — APPROVED BY HUMAN SPEC GATE**
-Approval authorizes implementation planning only.
-Implementation itself requires a separate Human Implementation Gate.
+**PHASE 6.4 — TECHNICAL SPECIFICATION — RECONCILIATION DRAFT FOR HUMAN RE-APPROVAL**
+NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
 
 This specification outlines the NON-EXECUTABLE test scenarios required to validate Phase 6.4.
 
@@ -38,6 +37,23 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
   - Precondition: None. Action: Create stage with `null` semantic classification. Result: Success.
 - **TEST-WF-009 (Invalid Semantic Classification):** [BR-AI-001]
   - Precondition: `ProActive`. Action: Attempt stage create/update with `semantic_classification = "INVALID"`. Result: Mutation rejected with `ERR_INVALID_SEMANTIC_CLASSIFICATION` and no partial persistence.
+
+### Publication Lifecycle Domain
+- **TEST-PUB-001 (Fresh/default workflow):** Exactly one active PUBLICATION role exists upon initialization.
+- **TEST-PUB-002 (Migration):** Legacy `publicado` seeded/mapped stage has `semantic_classification = PUBLISHED` AND `lifecycle_role = PUBLICATION`.
+- **TEST-PUB-003 (Independence):** A stage with `semantic_classification = PUBLISHED` and `lifecycle_role = null` does NOT cause publication lifecycle effects.
+- **TEST-PUB-004 (Reverse independence):** A stage with `lifecycle_role = PUBLICATION` and `semantic_classification = null` DOES cause publication lifecycle effects.
+- **TEST-PUB-005 (Entry):** Moving from non-publication to publication role sets `completedAt`, changes `updatedAt`, and records history.
+- **TEST-PUB-006 (Exit):** Moving from publication to non-publication leaves article not currently published; `completedAt` is preserved.
+- **TEST-PUB-007 (Re-entry):** Re-entering a publication-role stage sets a new `completedAt` entry timestamp.
+- **TEST-PUB-008 (Idempotent same-stage assignment):** Re-assigning to the same stage performs no timestamp/history duplication.
+- **TEST-PUB-009 (Publication-role removal without target):** Attempting to remove the publication-role stage without an explicit target is rejected with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-010 (Role transfer):** Role transfer provides target active/distinct; article reassignment + role transfer + source deactivation are atomic; exactly one active PUBLICATION remains.
+- **TEST-PUB-011 (Failed role transfer):** If any part of role transfer fails, the whole transaction rolls back.
+- **TEST-PUB-012 (Stats):** Published counts and overdue exclusion follow lifecycle role, not semantic PUBLISHED.
+- **TEST-PUB-013 (Calendar):** `publishDate` still controls date placement; publication visual state follows lifecycle role.
+- **TEST-PUB-014 (AI):** Semantic classification controls recommendation only; lifecycle role does NOT change evidence availability.
+- **TEST-PUB-015 (Browser fallback):** Browser/localStorage fallback mirrors native lifecycle semantics.
 
 ### Category Domain
 - **TEST-CAT-001 (Create & Rename Custom):** [AC-CAT-001, BR-CAT-001, BR-CAT-002]
@@ -109,6 +125,7 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 - **TEST-FREE-001 (Standard Functionality):** [AC-FREE-001]
   - Precondition: Fresh/default Free installation/configuration with `FreeConfirmed`.
   - Action: Verify standard five workflow stages are available/functioning; eight standard categories are available/functioning; ordinary editorial use remains available.
+  - Verification: Moving an article to an EXISTING publication-role stage is an ordinary Free editorial operation. PRO entitlement is required to alter STRUCTURAL configuration, not to publish/move an article within an existing workflow.
   - AI Verification: Verify the 6 Phase 6.3 AI actions (`research_gaps`, `plain_language`, `validate_inclusivity`, `generate_alt_text`, `generate_seo`, `editorial_review`) receive NO PRO entitlement denial. Existing Phase 6.3 evidence/provider/runtime requirements still apply. The test proves entitlement does not artificially restrict existing Free capabilities.
 - **TEST-FREE-002 (Contextual Discoverability):** [AC-FREE-002, UI/UX Contract]
   - Action: Verify PRO features are visibly identified contextually (e.g., locks) without obstructing the ordinary Free editorial flow.
