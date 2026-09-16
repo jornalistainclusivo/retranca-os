@@ -103,11 +103,11 @@ Following ADR-010, the persistence strategy employs a hybrid approach: relationa
 CREATE TABLE workflow_stages (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL UNIQUE,
+    order_index INTEGER NOT NULL CHECK(order_index >= 0),
     semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED')),
     lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = 'PUBLICATION'),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
 CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1;

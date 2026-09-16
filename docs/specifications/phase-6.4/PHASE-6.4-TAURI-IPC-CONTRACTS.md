@@ -156,6 +156,11 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 *All commands below execute within a single SQLite transaction and MUST return `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`, `ERR_ENTITLEMENT_STATE_UNKNOWN`, or `ERR_ENTITLEMENT_UNAVAILABLE` if authorization fails.*
 
+**Mutation Boundary Separation:**
+- `update_workflow_stage`: rename / approved semantic-classification mutation
+- `reorder_workflow_stages`: ordering only
+- `remove_workflow_stage`: safe removal and, when applicable, atomic PUBLICATION role transfer
+
 ### 4.1 Create Stage
 - **Command:** `create_workflow_stage`
 - **Auth Class:** Protected
@@ -164,14 +169,12 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Request:**
 ```json
 {
-  "command": "create_workflow_stage",
-  "payload": {
-    "display_name": "Idea",
-    "semantic_classification": "IDEA"
-  }
+  "display_name": "Fact Checking",
+  "order_index": 2,
+  "semantic_classification": "REVIEW"
 }
 ```
-*Note: `create_workflow_stage` DOES NOT accept `lifecycle_role`. Every normally-created stage receives `lifecycle_role = null`. No client payload can assign `PUBLICATION` during ordinary stage create.*
+*Note: `create_workflow_stage` does not accept `lifecycle_role`; new stage receives `lifecycle_role = null`; client cannot assign `PUBLICATION` through create.*
 - **Success Response:** Returns created `WorkflowStage` object.
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
@@ -183,13 +186,9 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 - **Request:**
 ```json
 {
-  "command": "update_workflow_stage",
-  "payload": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "display_name": "New Idea",
-    "semantic_classification": "IDEA",
-    "order_index": 1
-  }
+  "id": "...",
+  "display_name": "New Name",
+  "semantic_classification": null
 }
 ```
 *Note: `update_workflow_stage` DOES NOT accept or mutate `lifecycle_role`. It may update only its approved editable fields. Renaming or changing semantic classification never changes lifecycle role. Publication role movement occurs only through the approved safe-removal transfer contract in Phase 6.4.*

@@ -54,13 +54,13 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 - **TEST-PUB-013 (Calendar):** [Publication lifecycle compatibility rules] `publishDate` still controls date placement; publication visual state follows lifecycle role.
 - **TEST-PUB-014 (AI):** [BR-WF-PUB-002, BR-AI-003, BR-AI-004] Semantic classification controls recommendation only; lifecycle role does NOT change evidence availability.
 - **TEST-PUB-015 (Browser fallback):** [Publication lifecycle parity contract] Browser/localStorage fallback mirrors native lifecycle semantics.
-- **TEST-PUB-016 (Create assignment blocked):** Arbitrary stage create cannot assign `lifecycle_role`.
-- **TEST-PUB-017 (Update mutation blocked):** Ordinary `update_workflow_stage` cannot mutate `lifecycle_role`.
-- **TEST-PUB-018 (Multiple role invariant):** Attempt to produce two active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
-- **TEST-PUB-019 (Zero role invariant):** Operation that would leave zero active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
-- **TEST-PUB-020 (Inactive target invariant):** Publication-role transfer to inactive target fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
-- **TEST-PUB-021 (Self target invariant):** Publication-role transfer to source itself fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
-- **TEST-PUB-022 (Transfer continuity):** Structural publication-role transfer preserves `completedAt` for affected articles.
+- **TEST-PUB-016 (Create assignment blocked):** [BR-WF-PUB-007] Arbitrary stage create cannot assign `lifecycle_role`.
+- **TEST-PUB-017 (Update mutation blocked):** [BR-WF-PUB-007] Ordinary `update_workflow_stage` cannot mutate `lifecycle_role`.
+- **TEST-PUB-018 (Multiple role invariant):** [BR-WF-PUB-001, BR-WF-PUB-007] Attempt to produce two active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-019 (Zero role invariant):** [BR-WF-PUB-001, BR-WF-PUB-007] Operation that would leave zero active PUBLICATION roles fails with `ERR_PUBLICATION_ROLE_INVARIANT`.
+- **TEST-PUB-020 (Inactive target invariant):** [BR-WF-PUB-003, BR-WF-PUB-007] Publication-role transfer to inactive target fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
+- **TEST-PUB-021 (Self target invariant):** [BR-WF-PUB-003, BR-WF-PUB-007] Publication-role transfer to source itself fails with `ERR_PUBLICATION_ROLE_INVARIANT` and rolls back.
+- **TEST-PUB-022 (Transfer continuity):** [BR-WF-PUB-003, BR-WF-PUB-005] Structural publication-role transfer preserves `completedAt` for affected articles.
 
 ### Category Domain
 - **TEST-CAT-001 (Create & Rename Custom):** [AC-CAT-001, BR-CAT-001, BR-CAT-002]

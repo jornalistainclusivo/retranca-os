@@ -83,6 +83,7 @@ A `WorkflowStage` consists of:
 - `display_name`: `String`
 - `order_index`: `Integer`
 - `semantic_classification`: `String` (Optional/Nullable)
+- `lifecycle_role`: `WorkflowLifecycleRole | null`
 - `is_active`: `Boolean`
 
 **BR-WF-002 (Display Name)** [FR-WF-001, BR-NORM-001]
@@ -142,6 +143,15 @@ Same-stage assignment is idempotent:
 - no publication celebration retrigger.
 
 `semantic_classification` is irrelevant to these lifecycle mutations.
+
+**BR-WF-PUB-007 (Lifecycle Role Mutation Boundary)**
+- ordinary create_workflow_stage cannot assign lifecycle_role;
+- a normally-created stage gets lifecycle_role = null;
+- ordinary update_workflow_stage cannot mutate lifecycle_role;
+- rename does not change lifecycle_role;
+- semantic classification changes do not change lifecycle_role;
+- reorder does not change lifecycle_role;
+- in Phase 6.4, PUBLICATION role movement occurs only as part of the approved atomic safe-removal transfer of the current role-owning stage.
 
 ## 7. Semantic Classification Contract
 
@@ -222,8 +232,7 @@ CREATE TABLE workflow_stages (
     semantic_classification TEXT CHECK(semantic_classification IS NULL OR semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED')),
     lifecycle_role TEXT CHECK (lifecycle_role IS NULL OR lifecycle_role = 'PUBLICATION'),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
 CREATE UNIQUE INDEX idx_workflow_stages_publication ON workflow_stages(lifecycle_role) WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1;
@@ -271,7 +280,6 @@ During the `EXPAND` phase of migration, `workflow_stage_id` and `category_id` MU
    - counts match;
    - `checklist_items` unchanged.
 6. **CUTOVER:** `workflow_stage_id` and `category_id` become logically NOT NULL. (Physical PRAGMA table rebuild deferred/implementation detail).
-   - Migration FAILS CLOSED ONLY. SQLite transaction aborts.
 7. **POSTCONDITIONS:** Domain logic uses new references exclusively.
 
 **BR-MIG-002 (Unknown Legacy Value / Fail Closed)** [SDD 10]
