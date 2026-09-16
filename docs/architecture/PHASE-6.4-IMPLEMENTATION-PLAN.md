@@ -1,7 +1,7 @@
 ---
 jinc-spec-version: 1.0.1
 project-name: Retranca OS
-status: draft
+status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
@@ -10,8 +10,10 @@ updated-at: 2026-09-16
 
 # Phase 6.4 Implementation Plan
 
-**PHASE 6.4 — IMPLEMENTATION PLAN — DRAFT FOR HUMAN IMPLEMENTATION REVIEW**
-NO IMPLEMENTATION AUTHORIZATION IS IMPLIED.
+**PHASE 6.4 — IMPLEMENTATION PLAN — APPROVED BY HUMAN IMPLEMENTATION GATE**
+
+HUMAN IMPLEMENTATION GATE A APPROVED.
+PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
 Implement dynamic workflow stages and commercial entitlement states following the Phase 6.4 architecture's five-state application entitlement model, cleanly separating semantic recommendation from the structural publication lifecycle role, without selecting a concrete commercial adapter.
@@ -309,10 +311,10 @@ All native database mutations use transactions. Failure during migration, stage 
 
 ## Human gates
 - **PRE-GATE**: Human Spec Re-Approval (PASSED).
-- **GATE A**: Human Implementation Plan Approval (PENDING). (Required BEFORE creating `feat/phase-6.4-pro-workflow-customization`, modifying source, adding `uuid` crate, changing `Cargo.toml`, or creating executable migrations/tests).
-- **GATE B**: Post-implementation technical/security review. (Required before PR readiness).
-- **GATE C**: Human Merge Authorization. (Required before merge).
-- **GATE D**: Release/tag authorization if later requested.
+- **GATE A**: Human Implementation Plan Approval (PASSED).
+- **GATE B**: Post-implementation technical/security review (PENDING). (Required before PR readiness).
+- **GATE C**: Human Merge Authorization (PENDING). (Required before merge).
+- **GATE D**: Release/tag authorization (NOT AUTHORIZED / PENDING EXPLICIT HUMAN DECISION).
 
 ## Final Definition of Done
 - all 12 FRs satisfied.
