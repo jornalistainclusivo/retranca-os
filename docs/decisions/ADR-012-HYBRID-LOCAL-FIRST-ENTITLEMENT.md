@@ -88,12 +88,15 @@ CRITICAL: `PRO_UNAVAILABLE` != `FREE_CONFIRMED`. We do not silently convert unce
 ## State Transition Principles
 - `UNKNOWN` → `PRO_ACTIVE` only after valid PRO is established.
 - `UNKNOWN` → `FREE_CONFIRMED` only after sufficient authoritative Free/non-PRO decision.
+- `FREE_CONFIRMED` → `PRO_ACTIVE` only when valid production PRO entitlement is established.
 - `PRO_ACTIVE` → `PRO_TEMPORARILY_UNVERIFIABLE` when current verification is unavailable AND previously-valid continuity remains acceptable.
 - `PRO_TEMPORARILY_UNVERIFIABLE` → `PRO_ACTIVE` when valid PRO is re-established.
 - `PRO_TEMPORARILY_UNVERIFIABLE` → `PRO_UNAVAILABLE` when temporary continuity can no longer be accepted but no confirmed Free/downgrade decision exists.
 - `PRO_ACTIVE` or `PRO_TEMPORARILY_UNVERIFIABLE` → `FREE_CONFIRMED` only when sufficient authoritative information confirms PRO is no longer active.
 - `PRO_UNAVAILABLE` → `PRO_ACTIVE` when valid PRO is restored.
 - `PRO_UNAVAILABLE` → `FREE_CONFIRMED` when sufficient information confirms no active PRO entitlement.
+
+This is the normal architecture-level Free-to-PRO conversion path. It does NOT prescribe how entitlement is purchased, issued, activated, verified, represented, or stored.
 
 ## Offline / Revocation Trade-off
 Because Retranca OS is local-first, instantaneous commercial revocation while a device is completely offline is NOT guaranteed. This is an accepted architectural limitation. Revocation or update becomes effective according to the eventual production design when local validity/freshness semantics require reevaluation, or an approved future authority can be reached and provides updated entitlement status.

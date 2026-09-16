@@ -91,6 +91,8 @@ This specification outlines the NON-EXECUTABLE test scenarios required to valida
 - **TEST-ENT-006 (Mutation Authorization Denials):** [BR-DOWN-003, BR-UNAV-001]
   - Action 1: Class P mutation while `FreeConfirmed`. Result: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
   - Action 2: Class P mutation while `ProUnavailable`. Result: `ERR_ENTITLEMENT_UNAVAILABLE`.
+- **TEST-ENT-007 (FreeConfirmed -> ProActive Transition):** [BR-ENT-SM-002]
+  - Precondition: `FreeConfirmed`. Action: A valid production PRO entitlement is established. Result: Transition to `ProActive` is Allowed. (Must not be triggered by UI state alone or DEVELOPER_PREMIUM override).
 
 ## 4. Phase 6.3 AI Regression Tests (INTEGRATION)
 

@@ -273,6 +273,8 @@ stateDiagram-v2
     Unknown --> ProActive
     Unknown --> FreeConfirmed
 
+    FreeConfirmed --> ProActive : valid production PRO entitlement established
+
     ProActive --> ProTemporarilyUnverifiable
     ProActive --> FreeConfirmed
 
@@ -282,6 +284,10 @@ stateDiagram-v2
 
     ProUnavailable --> ProActive
     ProUnavailable --> FreeConfirmed : ONLY on confirmed no-PRO/downgrade
+
+    note right of FreeConfirmed
+      Normal Free-to-PRO conversion path. Does not prescribe how entitlement is purchased or verified.
+    end note
 ```
 
 ### 18.4 Protected Mutation Sequence Diagram

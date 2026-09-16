@@ -250,6 +250,7 @@ If migration fails or is interrupted (e.g. power loss):
 
 **BR-ENT-SM-002 (Transitions)** [ADR-012]
 - `Unknown` -> `ProActive` | `FreeConfirmed`
+- `FreeConfirmed` -> `ProActive` (valid production PRO entitlement established)
 - `ProActive` -> `ProTemporarilyUnverifiable` | `FreeConfirmed` (requires explicit confirmed downgrade)
 - `ProTemporarilyUnverifiable` -> `ProActive` | `ProUnavailable` | `FreeConfirmed` (requires explicit confirmed downgrade)
 - `ProUnavailable` -> `ProActive` | `FreeConfirmed` (requires explicit confirmed downgrade)
