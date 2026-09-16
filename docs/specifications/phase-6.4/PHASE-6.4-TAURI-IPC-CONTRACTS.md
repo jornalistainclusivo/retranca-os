@@ -1,5 +1,5 @@
 ---
-jinc-spec-version: 1.0.0
+jinc-spec-version: 1.0.1
 project-name: Retranca OS
 status: draft
 related-branch: docs/phase-6.4-product-access-monetization
@@ -14,28 +14,23 @@ authors: Retranca OS Core Team
 **PHASE 6.4 — TECHNICAL SPECIFICATION — DRAFT FOR HUMAN REVIEW**
 No implementation authorization is implied.
 
-This document specifies the Tauri IPC boundaries for Phase 6.4. These contracts serve as the application boundary for the React frontend communicating with the Rust backend.
+This document specifies the Tauri IPC boundaries for Phase 6.4.
 
 ## 1. IPC Security and Authorization Classes
 
-All IPC commands are categorized into one of two Authorization Classes:
+- **Free / Ordinary Editorial (Class F):** Read configuration or perform standard editorial operations on articles. ALWAYS permitted.
+- **Protected Configuration Mutation (Class P):** Modifies structural configuration (Stages, Categories, Templates). MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations undergo identical native authorization checks.
 
-- **Free / Ordinary Editorial (Class F):** These commands read configuration or perform standard editorial operations on articles. They do NOT require PRO entitlement and are ALWAYS permitted (subject to normal validation).
-- **Protected Configuration Mutation (Class P):** These commands modify the structural configuration (Stages, Categories, Templates). They MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations are identical to UI invocations and undergo the same native authorization checks.
-
-All mutation commands must be executed within a single SQLite transaction (Transactional Expectation: Atomic).
-
----
+All mutation commands execute within a single SQLite transaction (Transactional Expectation: Atomic).
 
 ## 2. READ / ORDINARY EDITORIAL (Class F)
 
 ### 2.1 Read Workflow
 - **Command:** `get_workflow_stages`
 - **Auth Class:** Free
-- **BR Refs:** BR-WF-001, BR-WF-004
 - **Idempotency:** Yes (Read-only)
 - **Request:** `{}`
-- **Success Response:** Array of active WorkflowStage objects, ordered by `order_index`.
+- **Success Response:**
 ```json
 {
   "stages": [
@@ -49,15 +44,14 @@ All mutation commands must be executed within a single SQLite transaction (Trans
   ]
 }
 ```
-- **Error Response:** General DB Error.
+- **Error Response:** General failure (SQLite execution).
 
 ### 2.2 Read Categories
 - **Command:** `get_categories`
 - **Auth Class:** Free
-- **BR Refs:** BR-CAT-001
 - **Idempotency:** Yes (Read-only)
 - **Request:** `{}`
-- **Success Response:** Array of active Category objects.
+- **Success Response:**
 ```json
 {
   "categories": [
@@ -70,33 +64,33 @@ All mutation commands must be executed within a single SQLite transaction (Trans
   ]
 }
 ```
-- **Error Response:** General DB Error.
+- **Error Response:** General failure.
 
 ### 2.3 Read Templates
 - **Command:** `get_checklist_templates`
 - **Auth Class:** Free
-- **BR Refs:** BR-CHK-001
 - **Idempotency:** Yes (Read-only)
 - **Request:** `{}`
-- **Success Response:** Array of ChecklistTemplate objects.
+- **Success Response:**
 ```json
 {
   "templates": [
     {
       "id": "999e4567-e89b-12d3-a456-426614174000",
       "name": "SEO Baseline",
-      "items_json": "[{\"label\": \"Check keywords\", \"category\": \"SEO\"}]"
+      "items": [
+        { "label": "Check keywords" }
+      ]
     }
   ]
 }
 ```
-- **Error Response:** General DB Error.
+*Note: The `items` array is structured JSON over IPC, not a raw string.*
 
 ### 2.4 Move Article to Stage
 - **Command:** `assign_article_stage`
 - **Auth Class:** Free
-- **BR Refs:** BR-ART-001
-- **Idempotency:** Yes
+- **Idempotency:** Yes (Repeated calls for the same article/stage are a no-op).
 - **Request:**
 ```json
 {
@@ -105,13 +99,12 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_UnresolvedStageReference` (if stage doesn't exist or is inactive).
+- **Error Response:** `ERR_UNRESOLVED_STAGE_REFERENCE`
 
 ### 2.5 Assign Existing Category
 - **Command:** `assign_article_category`
 - **Auth Class:** Free
-- **BR Refs:** BR-ART-002
-- **Idempotency:** Yes
+- **Idempotency:** Yes (Repeated calls are a no-op).
 - **Request:**
 ```json
 {
@@ -120,13 +113,12 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_UnresolvedCategoryReference` (if category doesn't exist or is inactive).
+- **Error Response:** `ERR_UNRESOLVED_CATEGORY_REFERENCE`
 
 ### 2.6 Apply Existing Checklist Template
 - **Command:** `apply_checklist_template`
 - **Auth Class:** Free
-- **BR Refs:** BR-CHK-002
-- **Idempotency:** No (Appends items)
+- **Idempotency:** No (Appends items. Repeated calls create duplicate copies).
 - **Request:**
 ```json
 {
@@ -134,37 +126,32 @@ All mutation commands must be executed within a single SQLite transaction (Trans
   "template_id": "999e4567-e89b-12d3-a456-426614174000"
 }
 ```
-- **Success Response:** `{ "success": true }` (Inserts items into `checklist_items` table).
-- **Error Response:** `Err_InvalidChecklistTemplate`.
+- **Success Response:** `{ "success": true }`
+- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
 
 ---
 
 ## 3. PROTECTED CONFIGURATION MUTATIONS (Class P)
 
-*All commands below return `Err_ConfirmedFreeProtectedMutationDenial`, `Err_EntitlementStateUnknown`, or `Err_EntitlementUnavailable` if the entitlement check fails.*
+*All commands below return `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`, `ERR_ENTITLEMENT_STATE_UNKNOWN`, or `ERR_ENTITLEMENT_UNAVAILABLE` if authorization fails.*
 
 ### 3.1 Create Stage
 - **Command:** `create_workflow_stage`
-- **Auth Class:** Protected
-- **BR Refs:** BR-WF-001, BR-WF-002, BR-WF-003, BR-ENT-SM-001
-- **Idempotency:** No
+- **Idempotency:** No (Duplicate request returns `ERR_INVALID_WORKFLOW` due to normalized name collision).
 - **Request:**
 ```json
 {
   "display_name": "Fact Checking",
   "order_index": 2,
-  "semantic_classification": "REVIEW" 
+  "semantic_classification": "REVIEW"
 }
 ```
-*Note: ID generated by backend. `semantic_classification` is optional.*
 - **Success Response:** Returns created `WorkflowStage` object.
-- **Error Response:** `Err_InvalidWorkflow` (Duplicate name).
+- **Error Response:** `ERR_INVALID_WORKFLOW`
 
 ### 3.2 Rename/Update Stage
 - **Command:** `update_workflow_stage`
-- **Auth Class:** Protected
-- **BR Refs:** BR-WF-002, BR-WF-003
-- **Idempotency:** Yes
+- **Idempotency:** Yes (Subsequent updates with identical data are no-ops).
 - **Request:**
 ```json
 {
@@ -174,13 +161,12 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_InvalidWorkflow` (Duplicate name).
+- **Error Response:** `ERR_INVALID_WORKFLOW`
 
 ### 3.3 Reorder Stages
 - **Command:** `reorder_workflow_stages`
-- **Auth Class:** Protected
-- **BR Refs:** BR-WF-004
 - **Idempotency:** Yes
+- **Transaction:** Atomic normalization.
 - **Request:**
 ```json
 {
@@ -191,43 +177,36 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_InvalidWorkflow`.
+- **Error Response:** `ERR_INVALID_WORKFLOW`
 
 ### 3.4 Safely Remove Stage
 - **Command:** `remove_workflow_stage`
-- **Auth Class:** Protected
-- **BR Refs:** BR-WF-005, BR-WF-006, BR-WF-007
-- **Idempotency:** Yes
+- **Idempotency:** Yes (If already inactive/missing, returns success without DB mutation).
+- **Transaction:** Re-checks references in same transaction. Moves affected articles atomically to `reassign_to_stage_id`, then deactivates source. Rollback on failure.
 - **Request:**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "fallback_stage_id": "id-to-move-orphaned-articles-to" 
+  "reassign_to_stage_id": "id-to-move-orphaned-articles-to"
 }
 ```
-*Note: `fallback_stage_id` is required if articles exist in the stage being removed.*
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_LastStageRemoval`, `Err_UnresolvedStageReference`.
+- **Error Response:** `ERR_LAST_STAGE_REMOVAL`, `ERR_UNRESOLVED_STAGE_REFERENCE`
 
 ### 3.5 Create Custom Category
 - **Command:** `create_category`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CAT-001, BR-CAT-002
-- **Idempotency:** No
+- **Idempotency:** No (Duplicate returns `ERR_INVALID_CATEGORY`).
 - **Request:**
 ```json
 {
   "name": "Custom SEO"
 }
 ```
-*Backend forces `origin = "custom"`.*
-- **Success Response:** Returns created `Category` object.
-- **Error Response:** `Err_InvalidCategory` (Duplicate name).
+- **Success Response:** Returns created `Category`.
+- **Error Response:** `ERR_INVALID_CATEGORY`
 
 ### 3.6 Rename Custom Category
 - **Command:** `rename_category`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CAT-002
 - **Idempotency:** Yes
 - **Request:**
 ```json
@@ -237,59 +216,56 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_InvalidCategory` (Cannot rename 'standard' origin, Duplicate name).
+- **Error Response:** `ERR_INVALID_CATEGORY`
 
 ### 3.7 Safely Remove Custom Category
 - **Command:** `remove_category`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CAT-002, BR-ART-003
-- **Idempotency:** Yes
+- **Idempotency:** Yes (If already inactive/missing, returns success).
+- **Transaction:** Atomic reassignment exactly as stage removal.
 - **Request:**
 ```json
 {
   "id": "custom-cat-id",
-  "fallback_category_id": "id-to-move-orphans-to"
+  "reassign_to_category_id": "id-to-move-orphans-to"
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_InvalidCategory` (Cannot delete 'standard' origin), `Err_UnresolvedCategoryReference`.
+- **Error Response:** `ERR_INVALID_CATEGORY`, `ERR_UNRESOLVED_CATEGORY_REFERENCE`
 
 ### 3.8 Create Checklist Template
 - **Command:** `create_checklist_template`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CHK-001
-- **Idempotency:** No
+- **Idempotency:** No (Duplicate returns `ERR_MALFORMED_CHECKLIST_TEMPLATE` or similar uniqueness error).
 - **Request:**
 ```json
 {
   "name": "Standard Polish",
-  "items_json": "[{\"label\": \"Grammar\", \"category\": \"Docs\"}]"
+  "items": [
+    { "label": "Grammar" }
+  ]
 }
 ```
-- **Success Response:** Returns created `ChecklistTemplate` object.
-- **Error Response:** `Err_MalformedChecklistTemplate`.
+- **Success Response:** Returns created `ChecklistTemplate`.
+- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
 
 ### 3.9 Update/Reorder Template
 - **Command:** `update_checklist_template`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CHK-001
 - **Idempotency:** Yes
 - **Request:**
 ```json
 {
   "id": "template-id",
   "name": "New Name",
-  "items_json": "[{\"label\": \"New Item\", \"category\": \"Docs\"}]"
+  "items": [
+    { "label": "New Item" }
+  ]
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_MalformedChecklistTemplate`.
+- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`
 
 ### 3.10 Delete Template
 - **Command:** `delete_checklist_template`
-- **Auth Class:** Protected
-- **BR Refs:** BR-CHK-001
-- **Idempotency:** Yes
+- **Idempotency:** Yes (If missing, returns success).
 - **Request:**
 ```json
 {
@@ -297,4 +273,4 @@ All mutation commands must be executed within a single SQLite transaction (Trans
 }
 ```
 - **Success Response:** `{ "success": true }`
-- **Error Response:** `Err_InvalidChecklistTemplate`.
+- **Error Response:** `ERR_MALFORMED_CHECKLIST_TEMPLATE`

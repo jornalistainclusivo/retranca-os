@@ -1,9 +1,9 @@
 ---
-jinc-spec-version: 1.0.0
+jinc-spec-version: 1.0.1
 project-name: Retranca OS
 status: draft
 related-branch: docs/phase-6.4-product-access-monetization
-tech-stack: Jest, Rust tests, Playwright
+tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
 last-updated: 2026-09-15
 authors: Retranca OS Core Team
@@ -14,141 +14,103 @@ authors: Retranca OS Core Team
 **PHASE 6.4 — TECHNICAL SPECIFICATION — DRAFT FOR HUMAN REVIEW**
 No implementation authorization is implied.
 
-This specification outlines the NON-EXECUTABLE test scenarios required to validate Phase 6.4 functionality, migration safety, and security.
+This specification outlines the NON-EXECUTABLE test scenarios required to validate Phase 6.4.
 
 ## 1. Domain Tests (UNIT / INTEGRATION)
 
-### TEST-WF-001: Stage Creation
-- **Upstream:** FR-WF-001, BR-WF-001
-- **Level:** UNIT
-- **Precondition:** Entitlement state is ProActive.
-- **Action:** Create a new stage with valid display name.
-- **Expected Result:** Stage is created with a new UUID and is active.
-- **Expected Error:** None.
+### Workflow Stage Domain
+- **TEST-WF-001 (Create Stage):** [AC-WF-001, BR-WF-001]
+  - Precondition: `ProActive`. Action: Create valid stage. Result: Created with new UUID. Error: None.
+- **TEST-WF-002 (Rename Stage):** [AC-WF-001, BR-WF-001]
+  - Precondition: `ProActive`. Action: Rename existing stage. Result: Name updated.
+- **TEST-WF-003 (Reorder Stages):** [AC-WF-002, BR-WF-004]
+  - Precondition: `ProActive`. Action: Submit valid reorder array. Result: `order_index` updated atomically.
+- **TEST-WF-004 (Blocked Remove - References):** [AC-WF-003, BR-WF-006]
+  - Precondition: `ProActive`. Stage X has 2 articles. Action: Delete X without `reassign_to_stage_id`. Result: Rejected. Error: `ERR_UNRESOLVED_STAGE_REFERENCE`.
+- **TEST-WF-005 (Last Stage Rejection):** [BR-WF-007]
+  - Precondition: 1 active stage. Action: Delete. Result: Rejected. Error: `ERR_LAST_STAGE_REMOVAL`.
+- **TEST-WF-006 (Explicit Atomic Reassignment):** [AC-WF-003, BR-WF-006]
+  - Precondition: Stage X has 2 articles. Action: Delete X with `reassign_to_stage_id` = Y. Result: Articles move to Y, X is soft-deleted.
+- **TEST-WF-007 (Duplicate Normalized Name):** [BR-NORM-001]
+  - Precondition: Stage "Idea " exists. Action: Create " IDEA ". Result: Rejected. Error: `ERR_INVALID_WORKFLOW`.
+- **TEST-WF-008 (Unclassified Stage):** [BR-WF-001]
+  - Precondition: None. Action: Create stage with `null` semantic classification. Result: Success.
 
-### TEST-WF-002: Duplicate Stage Name
-- **Upstream:** BR-WF-003
-- **Level:** UNIT
-- **Precondition:** Entitlement state is ProActive. Stage "Idea" exists.
-- **Action:** Create or rename a stage to "Idea".
-- **Expected Result:** Mutation is rejected.
-- **Expected Error:** `Err_InvalidWorkflow`.
+### Category Domain
+- **TEST-CAT-001 (Create & Rename Custom):** [BR-CAT-001, BR-CAT-002]
+  - Precondition: `ProActive`. Action: Create category "Custom", rename to "Custom 2". Result: Success, origin = 'custom'.
+- **TEST-CAT-002 (Safe Remove & Atomic Reassignment):** [AC-CAT-001, BR-CAT-002]
+  - Action: Delete referenced custom category with reassignment target. Result: Articles reassigned, category soft-deleted.
+- **TEST-CAT-003 (Standard Category Preservation):** [BR-CAT-002]
+  - Action: Delete 'standard' origin category. Result: Rejected. Error: `ERR_INVALID_CATEGORY`.
 
-### TEST-WF-004: Safe Stage Removal
-- **Upstream:** FR-WF-004, BR-WF-006
-- **Level:** INTEGRATION
-- **Precondition:** Stage X has 2 articles. Entitlement state is ProActive.
-- **Action:** Attempt to delete Stage X without providing a fallback stage.
-- **Expected Result:** Deletion is rejected.
-- **Expected Error:** `Err_UnresolvedStageReference`.
+### Checklist Template Domain
+- **TEST-CHK-001 (Create, Rename, Edit Items):** [AC-CHK-001, BR-CHK-001]
+  - Action: Create template, rename, add item, remove item, reorder items. Result: Saved successfully.
+- **TEST-CHK-002 (Apply to Article - Copies Use New IDs):** [BR-CHK-002]
+  - Action: Apply template to article. Result: Article gets copies of items with new `checklist_items` IDs, `completed = false`.
+- **TEST-CHK-003 (Applied Copy Isolation):** [AC-CHK-001, BR-CHK-002]
+  - Action: Edit and delete template after applying to an article. Result: The article's checklist items remain completely unaffected.
 
-### TEST-WF-005: Last Stage Removal
-- **Upstream:** FR-WF-MIN-001, BR-WF-007
-- **Level:** UNIT
-- **Precondition:** Only 1 active stage exists.
-- **Action:** Attempt to delete the stage.
-- **Expected Result:** Deletion is rejected.
-- **Expected Error:** `Err_LastStageRemoval`.
+## 2. Entitlement & Security Tests (SECURITY)
 
-### TEST-CAT-001: Standard Category Protection
-- **Upstream:** BR-CAT-002
-- **Level:** UNIT
-- **Precondition:** Category "IA" exists with origin "standard".
-- **Action:** Attempt to rename or delete "IA".
-- **Expected Result:** Mutation is rejected.
-- **Expected Error:** `Err_InvalidCategory`.
+- **TEST-SEC-001 (Release DEVELOPER_PREMIUM Exclusion):** [AC-ENT-001, Threat Model]
+  - Level: SECURITY (Must run on Release build).
+  - Precondition: App compiled in `release`. Malicious user invokes exposed debug IPC to set `DEVELOPER_PREMIUM = true`.
+  - Action: User invokes Class P mutation `create_workflow_stage` via direct IPC.
+  - Expected Result: The native authorization check ignores the debug flag in release mode. Evaluates to `Unknown` or `FreeConfirmed`. Command is rejected. Error: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED` or `ERR_ENTITLEMENT_STATE_UNKNOWN`.
+- **TEST-SEC-002 (Direct IPC Bypass Attempt):** [AC-ENT-001, Threat Model]
+  - Action: Invoke `create_category` directly while `FreeConfirmed`. Result: Rejected.
 
-## 2. Migration Tests (MIGRATION)
+## 3. Entitlement State Tests (INTEGRATION)
 
-### TEST-MIG-001: Exact Legacy Values mapping
-- **Upstream:** BR-MIG-001, BR-MIG-002
-- **Level:** MIGRATION
-- **Precondition:** DB contains articles with statuses `ideia`, `pesquisa`, `escrita`, `revisao`, `publicado` and standard `categoryTag` values.
-- **Action:** Run migration.
-- **Expected Result:** All articles have correct `workflow_stage_id` and `category_id`. Legacy columns remain. `checklist_items` remain unchanged.
+- **TEST-ENT-001 (All allowed transitions):** [BR-ENT-SM-002]
+  - Action: Cycle through `Unknown` -> `ProActive` -> `ProTemporarilyUnverifiable` -> `ProUnavailable` -> `FreeConfirmed`. Result: State machine accepts.
+- **TEST-ENT-002 (First-launch offline remains Unknown):** [BR-ENT-SM-002]
+  - Action: First launch, no previous PRO evidence, offline. Result: State `Unknown`. Mutation denied. Does NOT become `ProTemporarilyUnverifiable`.
+- **TEST-ENT-003 (FreeConfirmed Denial):** [BR-DOWN-003]
+  - Action: Class P mutation while `FreeConfirmed`. Result: `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`.
+- **TEST-ENT-004 (ProUnavailable Denial):** [BR-UNAV-001]
+  - Action: Class P mutation while `ProUnavailable`. Result: `ERR_ENTITLEMENT_UNAVAILABLE`.
+- **TEST-ENT-005 (ProTemporarilyUnverifiable Allow):** [BR-TEMP-001]
+  - Action: Class P mutation while `ProTemporarilyUnverifiable`. Result: Success.
+- **TEST-ENT-006 (Ordinary Operations Available):** [BR-DOWN-002]
+  - Action: Class F operation (move article) while `ProUnavailable` or `FreeConfirmed`. Result: Success.
 
-### TEST-MIG-002: Unknown Status / Fails Closed
-- **Upstream:** BR-MIG-003
-- **Level:** MIGRATION
-- **Precondition:** DB contains an article with status `unknown_status`.
-- **Action:** Run migration.
-- **Expected Result:** Migration transaction rolls back. DB remains exactly as it was.
-- **Expected Error:** `Err_MigrationUnknownLegacyValue`.
+## 4. Phase 6.3 AI Regression Tests (INTEGRATION)
 
-### TEST-MIG-003: Empty Database
-- **Upstream:** BR-MIG-001
-- **Level:** MIGRATION
-- **Precondition:** DB has zero articles.
-- **Action:** Run migration.
-- **Expected Result:** Base tables created. Standard stages and categories are bootstrapped. Success.
+- **TEST-AI-001 (Valid Evidence in Unclassified Stage):** [AC-AI-001, BR-AI-003, BR-AI-004]
+  - Precondition: Article has valid evidence for `proofread` equivalent (`editorial_review`). Stage has `null` semantic classification.
+  - Action: Query action availability. Result: `editorial_review` is AVAILABLE.
+- **TEST-AI-002 (Rust Evidence Failure):** [AC-AI-001, BR-AI-004]
+  - Precondition: Article is empty (no text). Stage semantic is `REVIEW`.
+  - Action: Query action availability. Result: `editorial_review` is UNAVAILABLE because content evidence fails Rust validation.
 
-### TEST-MIG-004: Interrupted Migration & Rerun
-- **Upstream:** BR-MIG-001, NFR-DATA-001
-- **Level:** MIGRATION
-- **Precondition:** Migration is interrupted halfway.
-- **Action:** Application restarts and retries migration.
-- **Expected Result:** Previous partial transaction rolled back automatically by SQLite. Rerun succeeds fully.
+## 5. Free Baseline Tests (INTEGRATION)
 
-## 3. Entitlement & Security Tests (SECURITY)
+- **TEST-FREE-001 (Standard Functionality):** [AC-FREE-001]
+  - Precondition: Fresh DB, `FreeConfirmed`.
+  - Action: Ordinary editorial operations, move between 5 standard stages, use standard categories, use 6 local Phase 6.3 AI actions (`research_gaps`, `plain_language`, `validate_inclusivity`, `generate_alt_text`, `generate_seo`, `editorial_review`).
+  - Result: All succeed perfectly without PRO.
+- **TEST-FREE-002 (Contextual Discoverability):** [AC-FREE-002, UI/UX Contract]
+  - Action: Verify PRO features are visibly identified contextually (e.g., locks) without obstructing the ordinary Free editorial flow.
 
-### TEST-SEC-001: Release-Build Debug Entitlement Exclusion
-- **Upstream:** BR-ENT-SM-001, Threat Model
-- **Level:** SECURITY / INTEGRATION
-- **Precondition:** Application is compiled in `release` profile. A malicious user injects the `DEVELOPER_PREMIUM` override via environment variable or tampered local config.
-- **Action:** The malicious user invokes direct IPC `create_workflow_stage`.
-- **Expected Result:** The native authorization check ignores `DEVELOPER_PREMIUM` in release mode. The application evaluates to `Unknown` or `FreeConfirmed`.
-- **Expected Error:** `Err_EntitlementStateUnknown` or `Err_ConfirmedFreeProtectedMutationDenial`.
+## 6. Migration Test Vectors (MIGRATION)
 
-### TEST-SEC-002: Direct IPC Bypass Attempt
-- **Upstream:** FR-ENT-001
-- **Level:** SECURITY
-- **Precondition:** UI is hacked to show PRO buttons even when `FreeConfirmed`.
-- **Action:** Direct IPC invocation of `create_category`.
-- **Expected Result:** Native handler checks `EntitlementDecisionProvider`, sees `FreeConfirmed`, and rejects.
-- **Expected Error:** `Err_ConfirmedFreeProtectedMutationDenial`.
+- **TEST-MIG-001 (`ideia` -> IDEA mapped):** [BR-MIG-002] Legacy `ideia` backfills to the IDEA standard stage UUID.
+- **TEST-MIG-002 (`pesquisa` mapped):** [BR-MIG-002] Legacy `pesquisa` backfills correctly.
+- **TEST-MIG-003 (`escrita` mapped):** [BR-MIG-002] Legacy `escrita` backfills correctly.
+- **TEST-MIG-004 (`revisao` mapped):** [BR-MIG-002] Legacy `revisao` backfills correctly.
+- **TEST-MIG-005 (`publicado` mapped):** [BR-MIG-002] Legacy `publicado` backfills correctly.
+- **TEST-MIG-006 (8 Standard Categories):** [BR-MIG-002] All 8 legacy standard `categoryTag` values map to bootstrapped standard category UUIDs.
+- **TEST-MIG-007 (Empty DB):** [BR-MIG-001] Empty DB creates tables and bootstraps standard entities successfully.
+- **TEST-MIG-008 (Multiple articles sharing stage/category):** [BR-MIG-001] Many articles with same legacy status correctly resolve to the exact same single UUID reference.
+- **TEST-MIG-009 (Existing checklist_items):** [BR-MIG-001] Migration runs, `checklist_items` table is untouched and data is perfectly preserved.
+- **TEST-MIG-010 (Unknown status):** [BR-MIG-003] Article has status `limbo`. Migration FAILS CLOSED (`ERR_MIGRATION_UNKNOWN_LEGACY_VALUE`). DB untouched.
+- **TEST-MIG-011 (Unknown category):** [BR-MIG-003] Article has category `random`. Migration FAILS CLOSED.
+- **TEST-MIG-012 (Interrupted/Failed Migration & Backup Recovery):** [BR-MIG-003] Simulate power loss halfway. Restart. SQLite rolls back partial transaction. Rerun succeeds.
 
-### TEST-DOWN-001: Confirmed Downgrade Protection
-- **Upstream:** FR-DOWN-001, BR-DOWN-001
-- **Level:** INTEGRATION
-- **Precondition:** User created custom stage "Final Edit". State transitions from `ProActive` to `FreeConfirmed`.
-- **Action 1:** Read workflow stages.
-- **Expected Result 1:** "Final Edit" is still returned.
-- **Action 2:** Move article to "Final Edit".
-- **Expected Result 2:** Success (Class F command).
-- **Action 3:** Rename "Final Edit".
-- **Expected Result 3:** Rejected (`Err_ConfirmedFreeProtectedMutationDenial`).
-
-### TEST-OFFLINE-001: Temporary Unverifiability
-- **Upstream:** NFR-OFFLINE-001, BR-TEMP-001
-- **Level:** INTEGRATION
-- **Precondition:** Valid PRO state exists, but network goes down causing `ProTemporarilyUnverifiable`.
-- **Action:** Create custom category.
-- **Expected Result:** Success. Mutation is allowed.
-
-### TEST-OFFLINE-002: ProUnavailable
-- **Upstream:** BR-UNAV-001
-- **Level:** INTEGRATION
-- **Precondition:** Temporary continuity exhausted, state is `ProUnavailable`.
-- **Action:** Create custom category.
-- **Expected Result:** Rejected. `Err_EntitlementUnavailable`.
-
-## 4. AI Regression Tests (INTEGRATION)
-
-### TEST-AI-001: Unclassified Stage Action Availability
-- **Upstream:** FR-AI-001, BR-AI-004
-- **Level:** INTEGRATION
-- **Precondition:** Article is in custom stage "Limbo" with NO semantic classification.
-- **Action:** Query AI actions for the article.
-- **Expected Result:** If the article content has valid evidence for an action (e.g., text exists for proofreading), the action is AVAILABLE. The unclassified stage does NOT disable it.
-
-### TEST-AI-002: Evidence Validation Overrides Semantics
-- **Upstream:** BR-AI-004
-- **Level:** INTEGRATION
-- **Precondition:** Article is empty. Stage is "Drafting" (Semantic = DRAFTING).
-- **Action:** Attempt to run Proofread action.
-- **Expected Result:** Rust rejects the action because there is no text (Evidence Validation fails). The semantic classification does NOT force the action to be available.
-
-## 5. Gherkin Scenarios (E2E / ACCEPTANCE)
+## 7. Tool-Neutral Acceptance Scenarios (E2E)
 
 ```gherkin
 Feature: Safe Stage Removal
@@ -156,20 +118,13 @@ Feature: Safe Stage Removal
   I want to remove a workflow stage safely
   So that I don't lose track of articles currently in that stage
 
-  Scenario: Attempting to remove a stage containing articles
-    Given I am a PRO user
-    And the stage "Fact Checking" contains 3 articles
-    When I attempt to delete "Fact Checking" without a fallback
-    Then the system should reject the deletion
-    And I should see an error indicating unresolved references
-
   Scenario: Reassigning articles during stage removal
     Given I am a PRO user
     And the stage "Fact Checking" contains 3 articles
     When I attempt to delete "Fact Checking"
     And I select "Drafting" as the fallback stage
-    Then "Fact Checking" should be marked inactive
-    And the 3 articles should be moved to "Drafting"
+    Then "Fact Checking" should be marked inactive (soft-deleted)
+    And the 3 articles should be moved to "Drafting" atomically
 ```
 
 ```gherkin
@@ -178,7 +133,7 @@ Feature: Entitlement Downgrade Preservation
   I want to keep my custom workflow
   So that my existing editorial process isn't destroyed
 
-  Scenario: Downgrading to Free
+  Scenario: Downgrading to Free [AC-DOWN-001, AC-DOWN-002]
     Given I was a PRO user
     And I have a custom stage "Social Media"
     When my entitlement becomes FreeConfirmed

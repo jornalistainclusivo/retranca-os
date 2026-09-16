@@ -1,5 +1,5 @@
 ---
-jinc-spec-version: 1.0.0
+jinc-spec-version: 1.0.1
 project-name: Retranca OS
 status: draft
 related-branch: docs/phase-6.4-product-access-monetization
@@ -14,90 +14,121 @@ authors: Retranca OS Core Team
 **PHASE 6.4 — TECHNICAL SPECIFICATION — DRAFT FOR HUMAN REVIEW**
 No implementation authorization is implied.
 
-## 1. Coverage Report
+## 1. Requirement Coverage Matrix
 
-| Requirement | Description | Specified In |
+| Requirement | Description (PRD Exact) | Specified In |
 | --- | --- | --- |
-| **FR-WF-001** | Support custom stage creation | BR-WF-001, DB Schema, IPC: Create Stage, Test: TEST-WF-001 |
-| **FR-WF-002** | Support custom stage renaming | BR-WF-002, IPC: Rename Stage, Test: TEST-WF-002 |
-| **FR-WF-003** | Support stage reordering | BR-WF-004, IPC: Reorder Stage, Test: TEST-WF-003 |
-| **FR-WF-004** | Support safe stage removal | BR-WF-005, BR-WF-006, IPC: Remove Stage, Test: TEST-WF-004 |
-| **FR-WF-MIN-001** | Minimum 1 active stage | BR-WF-007, IPC: Remove Stage, Test: TEST-WF-005 |
-| **FR-CAT-001** | Custom categories | BR-CAT-001, BR-CAT-002, DB Schema, IPC: Categories, Test: TEST-CAT-001 |
-| **FR-CHK-001** | Reusable checklist templates | BR-CHK-001, DB Schema, IPC: Checklists, Test: TEST-CHK-001 |
-| **FR-CHK-002** | Template application applies copy | BR-CHK-002, IPC: Apply Template, Test: TEST-CHK-002 |
-| **FR-AI-001** | Semantic mapping to AI | BR-AI-001, BR-AI-002, Test: TEST-AI-001 |
-| **FR-DOWN-001** | Free tier fallback (downgrade) | BR-DOWN-001, Entitlement State Machine, Test: TEST-DOWN-001 |
-| **FR-DOWN-002** | Preserve existing configuration | BR-DOWN-002, BR-DOWN-003, Test: TEST-DOWN-002 |
-| **FR-ENT-001** | Entitlement boundary enforcement | BR-ENT-001, Entitlement Port, IPC Authorization, Test: TEST-SEC-001 |
-| **NFR-A11Y-001**| Keyboard/Screen-reader a11y | UI/UX Contract, Test: TEST-UI-001 |
-| **NFR-DATA-001**| No data loss on failure | Migration Contract, BR-ERR-001, Test: TEST-MIG-001 |
-| **NFR-OFFLINE-001**| Local-first operation | Entitlement State Machine (Temporary Unverifiability), Test: TEST-OFFLINE-001 |
+| **FR-WF-001** | rename an existing workflow stage | BR-WF-001, IPC: update_workflow_stage, Test: TEST-WF-002 |
+| **FR-WF-002** | add a new workflow stage | BR-WF-001, IPC: create_workflow_stage, Test: TEST-WF-001 |
+| **FR-WF-003** | remove a workflow stage with safe resolution | BR-WF-006, IPC: remove_workflow_stage, Test: TEST-WF-004 |
+| **FR-WF-004** | reorder workflow stages | BR-WF-004, BR-WF-008, IPC: reorder_workflow_stages, Test: TEST-WF-003 |
+| **FR-WF-MIN-001** | reject zero active stages | BR-WF-007, IPC: remove_workflow_stage, Test: TEST-WF-005 |
+| **FR-CAT-001** | create / rename / safely delete custom categories | BR-CAT-001, BR-CAT-002, IPC: create/rename/remove_category, Test: TEST-CAT-001 |
+| **FR-CHK-001** | create / rename / apply custom checklist templates | BR-CHK-001, IPC: create/update/apply_checklist_template, Test: TEST-CHK-001 |
+| **FR-CHK-002** | add / edit / remove / reorder items within a checklist template | BR-CHK-001, IPC: update_checklist_template, Test: TEST-CHK-002 |
+| **FR-AI-001** | preserve evidence-based AI action availability independent of custom stage display name | BR-AI-001, BR-AI-003, Test: TEST-AI-001, TEST-AI-002 |
+| **FR-DOWN-001** | retain user data, articles and custom configuration safely after entitlement is no longer active | BR-DOWN-001, BR-DOWN-002, Test: TEST-DOWN-001 |
+| **FR-DOWN-002** | block NEW PRO configuration changes while Free | BR-DOWN-003, IPC Auth, Test: TEST-DOWN-001 |
+| **FR-ENT-001** | allow continued usage/editing of existing PRO configuration during temporary unverifiability after valid PRO | BR-TEMP-001, Entitlement State Machine, Test: TEST-OFFLINE-001 |
+| **NFR-A11Y-001** | configuration interfaces fully keyboard accessible | UI/UX Contract, Test: TEST-UI-001 |
+| **NFR-DATA-001** | configuration changes preserve referential AND semantic integrity of editorial content/configuration | BR-ART-003, BR-MIG-001, IPC Transactional Semantics, Test: TEST-DATA-001 |
+| **NFR-OFFLINE-001** | temporary connectivity / verification unavailability causes neither local data loss nor unsafe state transitions | BR-TEMP-001, BR-UNAV-001, Test: TEST-OFFLINE-001 |
 
-## 2. Traceability Format
+## 2. Acceptance Criteria Traceability
+
+| Acceptance Criteria | Mapped To |
+| --- | --- |
+| **AC-WF-001** | BR-WF-001, BR-WF-004, TEST-WF-001 |
+| **AC-WF-002** | BR-WF-004, BR-WF-008, IPC: reorder_workflow_stages, TEST-WF-003 |
+| **AC-WF-003** | BR-WF-006, IPC: remove_workflow_stage, TEST-WF-004 |
+| **AC-CAT-001** | BR-CAT-002, IPC: create/rename/remove_category, TEST-CAT-002 |
+| **AC-CHK-001** | BR-CHK-001, BR-CHK-002, IPC: apply_checklist_template, TEST-CHK-001, TEST-CHK-003 |
+| **AC-AI-001** | BR-AI-003, TEST-AI-001, TEST-AI-002 |
+| **AC-DOWN-001** | BR-DOWN-001, BR-DOWN-002, BR-DOWN-003, TEST-DOWN-001 |
+| **AC-DOWN-002** | BR-DOWN-001, BR-DOWN-002, TEST-DOWN-001 |
+| **AC-FREE-001** | BR-DOWN-002, Migration Contract, TEST-FREE-001 |
+| **AC-FREE-002** | UI/UX Contract, TEST-FREE-002 |
+| **AC-ENT-001** | BR-ENT-SM-001, BR-ENT-SM-002, IPC Authorization, TEST-SEC-001, TEST-SEC-002 |
+
+## 3. Traceability Format
 
 The normative rules follow this identifier format: `BR-<DOMAIN>-<ID>`.
-Example: `BR-WF-001`. Each rule traces back to the approved Phase 6.4 PRD, SDD, and ADRs.
+Each rule traces back to the approved Phase 6.4 PRD, SDD, and ADRs.
 
-## 3. Domain Identifiers
+## 4. Domain Identifiers
 
-Identities for custom entities use canonical textual UUID representation (e.g. `123e4567-e89b-12d3-a456-426614174000`).
-The exact UUID version (e.g., v4) is an implementation detail (Rust `uuid` crate recommended).
+Identities for custom entities use canonical textual UUID representation (e.g., `123e4567-e89b-12d3-a456-426614174000`).
 - `WorkflowStageId`: `String` (UUID format)
 - `CategoryId`: `String` (UUID format)
 - `ChecklistTemplateId`: `String` (UUID format)
 
 Identities must remain stable across renames, reorders, entitlement downgrade, and application restart.
 
-## 4. Workflow Stage Contract
+## 5. Name Normalization & Uniqueness
 
-**BR-WF-001 (Attributes)** [FR-WF-001, ADR-009]
+**BR-NORM-001 (Normalization)**
+All names (workflow stages, categories, checklist templates) are trimmed of leading and trailing whitespace.
+Uniqueness is enforced case-insensitively using SQLite `NOCASE` collation (ASCII case folding).
+Empty names are rejected.
+
+**BR-NORM-002 (Soft Delete Name Reuse)**
+When a stage or category is safely removed (soft deleted, `is_active = false`), its name is explicitly mutated (e.g., suffixed with `__deleted__<UUID>`) in the same transaction to free up the original name for reuse, preserving historical identity while avoiding ambiguous active names.
+
+## 6. Workflow Stage Contract
+
+**BR-WF-001 (Attributes)** [FR-WF-001, FR-WF-002, ADR-009]
 A `WorkflowStage` consists of:
 - `id`: `WorkflowStageId`
 - `display_name`: `String`
 - `order_index`: `Integer`
-- `semantic_classification`: `SemanticClassification` (Optional/Nullable)
+- `semantic_classification`: `String` (Optional/Nullable)
 - `is_active`: `Boolean`
 
-**BR-WF-002 (Display Name)** [FR-WF-002]
+**BR-WF-002 (Display Name)** [FR-WF-001, BR-NORM-001]
 `display_name` MUST be non-empty after trim.
 
 **BR-WF-003 (Uniqueness)**
-`display_name` MUST be unique across all active stages.
+`display_name` MUST be unique across all active stages (case-insensitive `NOCASE`).
 
-**BR-WF-004 (Ordering)** [FR-WF-003]
-`order_index` is zero-based and deterministic. Gaps are allowed conceptually but UI must reorder contiguously.
+**BR-WF-004 (Ordering Semantics)** [FR-WF-004]
+- Active workflow order is zero-based.
+- Active stages MUST have contiguous indexes `0..N-1`.
+- No duplicate active order indexes.
+- Create-at-position atomically shifts later indexes.
+- Reorder requests contain the complete active stage set exactly once and normalize atomically.
+- Removal compacts indexes atomically.
+- Backend validation enforces contiguous sequences.
 
-**BR-WF-005 (Safe Removal - Soft Delete)** [FR-WF-004]
-Stage removal sets `is_active = false`. It MUST NOT permanently delete the row to maintain historical referential integrity if needed, though articles must be resolved.
+**BR-WF-005 (Safe Removal - Soft Delete)** [FR-WF-003]
+Stage removal sets `is_active = false` and applies BR-NORM-002. It MUST NOT permanently delete the row.
 
-**BR-WF-006 (Safe Removal - No Orphaning)** [FR-WF-004]
-A stage cannot be removed if any `Article` currently references it, unless an explicit resolution target (another stage) is provided for reassignment.
+**BR-WF-006 (Safe Removal - Reassignment)** [FR-WF-003]
+A stage cannot be removed if any `Article` currently references it, UNLESS an explicit resolution target (`reassign_to_stage_id`) is provided for atomic reassignment.
 
 **BR-WF-007 (Minimum Stages)** [FR-WF-MIN-001]
 The system rejects any removal operation that results in zero active stages.
 
-## 5. Semantic Classification Contract
+## 7. Semantic Classification Contract
 
 **BR-AI-001 (Vocabulary)** [FR-AI-001, ADR-009]
 The semantic classification vocabulary is exactly:
 `IDEA`, `RESEARCH`, `DRAFTING`, `REVIEW`, `PUBLISHED`, or `NULL` (unclassified).
 
 **BR-AI-002 (Legacy Mapping)** [FR-AI-001]
-Legacy statuses map exactly to semantic classifications:
+Legacy statuses map exactly:
 - `ideia` -> `IDEA`
 - `pesquisa` -> `RESEARCH`
 - `escrita` -> `DRAFTING`
 - `revisao` -> `REVIEW`
 - `publicado` -> `PUBLISHED`
 
-**BR-AI-003 (Semantic Principle)** [ADR-009, SDD 5]
+**BR-AI-003 (Semantic Principle)** [FR-AI-001, ADR-009, SDD 5]
 Semantic classification may affect RECOMMENDED UX.
 It MUST NOT independently make an action AVAILABLE.
 It MUST NOT make an evidence-valid action UNAVAILABLE.
-No custom stage -> AI action 1:1 relationship exists.
+No custom stage -> AI action 1:1 relationship exists. Validation relies entirely on content evidence (Rust orchestrator).
 
-## 6. Category Contract
+## 8. Category Contract
 
 **BR-CAT-001 (Attributes)** [FR-CAT-001, ADR-010]
 A `Category` consists of:
@@ -107,108 +138,113 @@ A `Category` consists of:
 - `is_active`: `Boolean`
 
 **BR-CAT-002 (Validation)** [FR-CAT-001]
-- `name` MUST be non-empty after trim.
-- `name` MUST be unique (case-insensitive normalization).
-- The 8 legacy categories bootstrap exactly with `origin = 'standard'`.
-- Standard categories CANNOT be destructively deleted (`is_active = false`).
-- Custom category removal requires explicit resolution if referenced by articles. No silent reassignment.
+- `name` MUST be non-empty after trim and unique (BR-NORM-001).
+- The 8 legacy standard categories bootstrap exactly with `origin = 'standard'`.
+- Standard categories CANNOT be destructively deleted (`is_active = false` is blocked).
+- Custom category removal sets `is_active = false` and renames per BR-NORM-002.
+- Removal of a referenced category requires an explicit resolution target (`reassign_to_category_id`). No silent reassignment.
 
-## 7. Checklist Template Contract
+## 9. Checklist Template Contract
 
-**BR-CHK-001 (Attributes)** [FR-CHK-001, ADR-010]
+**BR-CHK-001 (Attributes)** [FR-CHK-001, FR-CHK-002, ADR-010]
 A `ChecklistTemplate` consists of:
 - `id`: `ChecklistTemplateId`
 - `name`: `String`
-- `items_json`: `String` (JSON array of `{ label: string, category: string }`)
+- Ordered list of template items.
 
-**BR-CHK-002 (Application)** [FR-CHK-002, ADR-010]
-Applying a template creates independent, article-owned rows in `checklist_items`.
-No runtime relationship to the template is preserved on the article.
-Template mutations or deletions DO NOT alter applied article checklist instances.
+A `ChecklistTemplateItem` consists ONLY of:
+- `label`: `String`
+*No arbitrary template category/taxonomy is introduced.*
 
-## 8. Article Reference Evolution
+**BR-CHK-002 (Application Contract)** [FR-CHK-001, ADR-010]
+Applying a template to an article:
+- Generates a fresh, unique ID for each copied checklist item.
+- Copies the `label`.
+- Sets `completed = false`.
+- Sets `articleId` to the target article.
+- DOES NOT retain a required FK or runtime dependency on the template.
+- Template mutation or deletion DOES NOT alter applied article checklist instances.
+
+## 10. Article Reference Evolution
 
 **BR-ART-001 (Stage Reference)** [ADR-009]
-`articles.workflow_stage_id` MUST be a NOT NULL reference to a valid active `WorkflowStage`. (SQLite FK enforced).
+`articles.workflow_stage_id` MUST be a NOT NULL reference to a valid `WorkflowStage`.
 
 **BR-ART-002 (Category Reference)** [ADR-010]
-`articles.category_id` MUST be a NOT NULL reference to a valid active `Category`. (SQLite FK enforced).
+`articles.category_id` MUST be a NOT NULL reference to a valid `Category`.
 
-**BR-ART-003 (Referential Integrity)**
-Orphaned references are strictly prohibited. Deletions of referenced stages or categories must fail or require explicit atomic reassignment.
+**BR-ART-003 (Referential Integrity)** [NFR-DATA-001]
+Orphaned references are strictly prohibited. The database schema enforces this via Foreign Key constraints (`ON DELETE RESTRICT`).
 
-## 9. SQLite / Drizzle Target Schema
+## 11. SQLite Target Schema & Constraint Contract
 
-```typescript
-// Drizzle Schema Definition Concepts (Not executable code, specification only)
-export const workflowStages = sqliteTable('workflow_stages', {
-  id: text('id').primaryKey(), // UUID
-  displayName: text('display_name').notNull().unique(),
-  orderIndex: integer('order_index').notNull(),
-  semanticClassification: text('semantic_classification'), // 'IDEA' | 'RESEARCH' | etc.
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
-});
+```sql
+-- Specification Only
 
-export const categories = sqliteTable('categories', {
-  id: text('id').primaryKey(), // UUID
-  name: text('name').notNull().unique(),
-  origin: text('origin').notNull().default('custom'), // 'standard' | 'custom'
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
-});
+CREATE TABLE workflow_stages (
+    id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL COLLATE NOCASE,
+    order_index INTEGER NOT NULL CHECK (order_index >= 0),
+    semantic_classification TEXT CHECK(semantic_classification IN ('IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED', NULL)),
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX idx_workflow_stages_active_name ON workflow_stages(display_name) WHERE is_active = 1;
 
-export const checklistTemplates = sqliteTable('checklist_templates', {
-  id: text('id').primaryKey(), // UUID
-  name: text('name').notNull().unique(),
-  itemsJson: text('items_json').notNull(), // JSON array
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
-});
+CREATE TABLE categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL COLLATE NOCASE,
+    origin TEXT NOT NULL CHECK(origin IN ('standard', 'custom')),
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX idx_categories_active_name ON categories(name) WHERE is_active = 1;
 
-// Articles changes
-export const articles = sqliteTable('articles', {
-  // existing fields...
-  workflowStageId: text('workflow_stage_id').notNull().references(() => workflowStages.id),
-  categoryId: text('category_id').notNull().references(() => categories.id),
-  // legacy status and categoryTag columns remain during migration
-});
+CREATE TABLE checklist_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL COLLATE NOCASE,
+    items_json TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX idx_checklist_templates_name ON checklist_templates(name);
 
-// checklist_items table remains UNCHANGED.
+-- articles table modifications
+ALTER TABLE articles ADD COLUMN workflow_stage_id TEXT NOT NULL REFERENCES workflow_stages(id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE articles ADD COLUMN category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ```
+*Application validation enforces atomic reference reassignment before soft-deleting targets.*
 
-## 10. Ordering Semantics
+## 12. Migration Contract
 
-- **Workflow Stages:** Zero-based contiguous `order_index`. Gaps resulting from deletion must be normalized dynamically on read or explicitly normalized on write. Ordering mutations must be atomic (e.g. array of ID+Order passed to Rust).
-- **Checklist Templates:** The `items_json` JSON array inherently preserves zero-based ordering natively.
+**BR-MIG-001 (Phases & Strict Mapping)** [ADR-009, SDD 9]
+1. **PRECONDITIONS:** DB accessible, recognized schema version, pre-migration backup successful.
+2. **EXPAND:** Create `workflow_stages`, `categories`, `checklist_templates`. Add nullable `workflow_stage_id`, `category_id` to `articles`.
+3. **BACKFILL:** Seed exact legacy statuses (`ideia`, `pesquisa`, `escrita`, `revisao`, `publicado`) and 8 standard categories. Map `status` to `workflow_stage_id` and `categoryTag` to `category_id`.
+4. **VERIFY:** Every article has a recognized legacy status and categoryTag; every article has non-null valid new references; counts match; `checklist_items` unchanged.
+5. **CUTOVER:** `workflow_stage_id` and `category_id` become logically NOT NULL. (Physical PRAGMA table rebuild deferred/implementation detail).
+6. **POSTCONDITIONS:** Domain logic uses new references exclusively.
 
-## 11. Migration Contract
-
-**BR-MIG-001 (Phases)** [ADR-009, SDD 9]
-1. **EXPAND:** Create `workflow_stages`, `categories`, `checklist_templates`. Add nullable `workflow_stage_id`, `category_id` to `articles`.
-2. **BACKFILL:** Seed default stages/categories. Map existing `status` to `workflow_stage_id` and `categoryTag` to `category_id`.
-3. **VERIFY:** Verify NO article has a NULL `workflow_stage_id` or `category_id`.
-4. **CUTOVER:** (Future step) Make columns NOT NULL and drop legacy columns. For Phase 6.4, legacy columns remain but are ignored by domain logic.
-
-**BR-MIG-002 (Strict Mapping)** [SDD 10]
-Legacy statuses exactly: `ideia`, `pesquisa`, `escrita`, `revisao`, `publicado`.
-Legacy categories exactly mapped to their 8 original standard counterparts.
-
-**BR-MIG-003 (Unknown Failure)** [SDD 10]
-If an unknown legacy status or category is encountered:
-- Migration FAILS CLOSED.
+**BR-MIG-002 (Unknown Value / Fail Closed)** [SDD 10]
+If an unknown status or category is encountered:
+- Migration FAILS CLOSED. SQLite transaction aborts.
 - No fallback mapping or guessed reassignment.
-- SQLite transaction rolls back.
-- Application reports `Err_MigrationUnknownLegacyValue`.
+- Application reports `ERR_MIGRATION_UNKNOWN_LEGACY_VALUE`.
 - Original DB remains untouched.
 
-## 12. Entitlement Application State Machine
+**BR-MIG-003 (Failure & Retry Contract)**
+If migration fails or is interrupted:
+- Partial SQLite transaction rolls back.
+- Application restart triggers retry.
+- Lossless pre-6.4 binary rollback is NOT supported after custom dynamic data exists.
+
+## 13. Entitlement Application State Machine
 
 **BR-ENT-SM-001 (States)** [ADR-012]
 - `Unknown`: Insufficient entitlement decision.
 - `FreeConfirmed`: PRO is not active.
 - `ProActive`: Valid PRO entitlement.
-- `ProTemporarilyUnverifiable`: Previously valid PRO, current verification temporarily unavailable.
-- `ProUnavailable`: Unverifiable beyond allowed continuity (e.g. freshness exhausted).
+- `ProTemporarilyUnverifiable`: Previously valid PRO, current verification/refresh temporarily unavailable.
+- `ProUnavailable`: Unverifiable beyond allowed continuity (e.g., freshness exhausted).
 
 **BR-ENT-SM-002 (Transitions)** [ADR-012]
 - `Unknown` -> `ProActive` | `FreeConfirmed`
@@ -216,13 +252,16 @@ If an unknown legacy status or category is encountered:
 - `ProTemporarilyUnverifiable` -> `ProActive` | `ProUnavailable` | `FreeConfirmed` (on confirmed downgrade ONLY)
 - `ProUnavailable` -> `ProActive` | `FreeConfirmed` (on confirmed downgrade ONLY)
 
-**BR-ENT-SM-003 (No Implicit Downgrade)**
-`ProUnavailable` != `FreeConfirmed`. First-launch offline without credible previous PRO evidence remains `Unknown` (or goes to `FreeConfirmed` if verified), it MUST NOT become `ProTemporarilyUnverifiable`.
+First-launch offline with no credible previous PRO evidence remains `Unknown` (or goes to `FreeConfirmed` if verified), it MUST NOT become `ProTemporarilyUnverifiable`.
+`ProUnavailable` != `FreeConfirmed`.
 
-## 13. Entitlement Decision Port
+## 14. Entitlement Decision Port
 
+**NORMATIVE APPLICATION CONTRACT (Semantic)**
+The application must expose a native boundary interface (e.g., a Rust trait) capable of evaluating the entitlement state without assuming blocking execution.
+
+**NON-NORMATIVE RUST SHAPE EXAMPLE (Rust 1.77.2 Compatible)**
 ```rust
-// CONCEPTUAL RUST CONTRACT
 pub enum EntitlementState {
     Unknown,
     FreeConfirmed,
@@ -231,86 +270,82 @@ pub enum EntitlementState {
     ProUnavailable,
 }
 
-#[async_trait::async_trait] // Conceptual, exact async trait mechanic left to implementation
 pub trait EntitlementDecisionProvider: Send + Sync {
+    // Native async fn in trait supported since Rust 1.75
     async fn check_entitlement(&self) -> Result<EntitlementState, EntitlementError>;
 }
 ```
-**Constraint:** The concrete provider, SDK, HTTP client, or auth system MUST NOT be selected in this spec. A test/fake provider may be used in tests, but `DEVELOPER_PREMIUM` must remain debug-only.
+*Note: Do not select `async_trait`, boxed futures, provider SDKs, HTTP client, or runtime architecture.*
 
-## 14. Protected Mutation Authorization
+## 15. Protected Mutation Authorization
 
-For EVERY protected configuration mutation (IPC commands):
+For EVERY protected configuration mutation (Class P):
 - `ProActive`: PERMIT evaluation.
 - `ProTemporarilyUnverifiable`: PERMIT evaluation (Temporary continuity).
-- `FreeConfirmed`: DENY (`Err_ConfirmedFreeProtectedMutationDenial`).
-- `Unknown`: DENY (`Err_EntitlementStateUnknown`).
-- `ProUnavailable`: DENY (`Err_EntitlementUnavailable`).
+- `FreeConfirmed`: DENY (`ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`).
+- `Unknown`: DENY (`ERR_ENTITLEMENT_STATE_UNKNOWN`).
+- `ProUnavailable`: DENY (`ERR_ENTITLEMENT_UNAVAILABLE`).
+*Authorization success does NOT bypass business validation.*
 
-*Authorization success does NOT bypass business/data-integrity rules.*
+## 16. Error Contract (Canonical Vocabulary)
 
-## 15. Error Contract
+Stable canonical semantic error codes:
+- `ERR_INVALID_WORKFLOW`: Validation failed (e.g., duplicate name). User fixable.
+- `ERR_LAST_STAGE_REMOVAL`: Cannot remove last stage. User fixable.
+- `ERR_UNRESOLVED_STAGE_REFERENCE`: Stage referenced, needs reassignment. User fixable.
+- `ERR_UNRESOLVED_CATEGORY_REFERENCE`: Category referenced, needs reassignment. User fixable.
+- `ERR_INVALID_SEMANTIC_CLASSIFICATION`: Invalid semantic mapping. System error.
+- `ERR_INVALID_CATEGORY`: Invalid operation (e.g., delete standard). System error.
+- `ERR_MALFORMED_CHECKLIST_TEMPLATE`: Bad template structure. System error.
+- `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`: Downgrade rejection. User fixable (upgrade).
+- `ERR_ENTITLEMENT_STATE_UNKNOWN`: Uninitialized state. Retryable.
+- `ERR_ENTITLEMENT_UNAVAILABLE`: ProUnavailable. Retryable.
+- `ERR_MIGRATION_UNKNOWN_LEGACY_VALUE`: Unmappable migration value. Manual repair needed.
+- `ERR_MIGRATION_FAILED`: General migration failure. Fatal.
 
-Semantic error codes:
-- `Err_InvalidWorkflow`: Invalid workflow save (e.g., duplicate names). [User fixable]
-- `Err_LastStageRemoval`: Attempted to remove last active stage. [User fixable]
-- `Err_UnresolvedStageReference`: Stage referenced by articles during delete. [User fixable via reassignment]
-- `Err_UnresolvedCategoryReference`: Category referenced by articles during delete. [User fixable via reassignment]
-- `Err_InvalidSemanticClassification`: Invalid semantic classification string. [System error]
-- `Err_InvalidCategory`: Invalid category operation (e.g., delete standard). [System error]
-- `Err_MalformedChecklistTemplate`: Invalid JSON structure. [System error]
-- `Err_ConfirmedFreeProtectedMutationDenial`: Tauri rejected PRO mutation. [Downgrade logic]
-- `Err_EntitlementStateUnknown`: State unknown. [Retryable]
-- `Err_EntitlementUnavailable`: ProUnavailable. [Retryable on network]
-- `Err_MigrationUnknownLegacyValue`: Unmappable value. [Manual DB repair needed]
-- `Err_MigrationFailed`: General SQLite migration error. [Fatal]
+## 17. UI / UX Contracts
 
-## 16. UI / UX Contracts
+- **Workflow Configuration:** Dedicated settings interface.
+- **PRO Discoverability:** Contextual indicators on custom actions for Free tier without permanently obstructive locked surfaces.
+- **Explicit Save/Cancel:** Settings changes require explicit save.
+- **Destructive Confirmation:** Deleting stages/categories requires confirmation.
+- **Reference Resolution:** Deletion of referenced entities forces a dropdown selection for explicit atomic reassignment.
+- **A11y (NFR-A11Y-001):** Fully keyboard-accessible ordering (buttons + drag-and-drop), focus trapping, screen-reader success/error announcements.
 
-- **Workflow Configuration:** Dedicated settings modal/pane.
-- **PRO Discoverability:** Contextual indicators (e.g., "PRO" lock icons on custom actions in Free tier) without permanent obstructive popups.
-- **Explicit Save/Cancel:** Workflow/Category configuration changes require explicit Save to commit to SQLite.
-- **Destructive Confirmation:** Deleting stages/categories requires explicit user confirmation.
-- **Reference Resolution:** If deleting a stage/category with linked articles, a UI dropdown MUST prompt the user to select the new stage/category for those articles.
-- **A11y:** Keyboard-accessible ordering (Up/Down buttons alongside drag-and-drop), focus trapping in modals, screen-reader success/error announcements (`aria-live="polite"`).
+## 18. Downgrade Contract
 
-## 17. Downgrade Contract
-
-**BR-DOWN-001 (Confirmed Downgrade Preservation)** [FR-DOWN-002, ADR-011]
-On `FreeConfirmed`, the system MUST NOT silently reset to defaults or remap custom entities.
-Articles, custom workflow stages, custom categories, checklist templates, and article checklist history MUST be preserved.
+**BR-DOWN-001 (Preservation)** [FR-DOWN-001, ADR-011]
+On `FreeConfirmed`, the system MUST NOT silently reset to defaults or remap custom entities. Articles, custom workflow stages, custom categories, checklist templates, and checklist history MUST be preserved.
 
 **BR-DOWN-002 (Editorial Operation)** [FR-DOWN-001]
-While `FreeConfirmed`, ordinary editorial operations using the preserved custom structures MUST be allowed.
+While `FreeConfirmed`, ordinary editorial operations using preserved custom structures continue uninterrupted.
 
-**BR-DOWN-003 (Mutation Denial)** [FR-DOWN-001]
-While `FreeConfirmed`, NEW PRO configuration changes MUST be denied.
+**BR-DOWN-003 (Mutation Denial)** [FR-DOWN-002]
+While `FreeConfirmed`, NEW PRO configuration changes are DENIED.
 
-## 18. Temporary Unverifiability & ProUnavailable Contract
+## 19. Temporary Unverifiability & ProUnavailable Contract
 
-**BR-TEMP-001 (Temporary Unverifiability)** [ADR-012]
-While `ProTemporarilyUnverifiable`, existing configuration use continues, and configuration editing is PERMITTED. Exact continuity duration is OUT OF SPEC.
+**BR-TEMP-001 (Temporary Unverifiability)** [FR-ENT-001, NFR-OFFLINE-001]
+While `ProTemporarilyUnverifiable` (after credible previously-valid PRO):
+- Ordinary editorial operations continue.
+- Existing configuration use continues.
+- Configuration editing is PERMITTED (not denied solely due to unverifiability).
 
-**BR-UNAV-001 (Pro Unavailable)** [ADR-012]
-While `ProUnavailable`, protected configuration mutations are DENIED. Ordinary editorial work continues. Data remains intact. Recovery remains possible.
+**BR-UNAV-001 (Pro Unavailable)** [NFR-OFFLINE-001]
+While `ProUnavailable`:
+- Protected configuration mutations are DENIED.
+- Ordinary editorial work continues.
+- Data remains intact. Recovery remains possible.
 
-## 19. Phase 6.3 AI Regression Contract
+## 20. Phase 6.3 AI Regression Contract
 
-**BR-AI-004 (Action Availability)** [ADR-008]
-Rust evidence validation remains authoritative for all 6 Phase 6.3 AI actions.
-Custom stage display names are untrusted editorial data, not orchestration policy.
-An unclassified custom stage CANNOT disable an evidence-valid AI action.
-The 6 Phase 6.3 AI actions remain Free.
-
-## 20. Security Contracts
-
-- **Frontend spoofing / TOCTOU:** Native Tauri layer performs entitlement checks immediately prior to DB transaction.
-- **Direct IPC mutation:** Direct IPC calls to protected commands are gated by the exact same native authorization logic.
-- **Debug entitlement abuse:** `DEVELOPER_PREMIUM` is strictly stripped/ignored in release builds (Mandatory Release Test).
-- **Downgrade data destruction:** Prevented by BR-DOWN-001.
+**BR-AI-004 (Action Availability)** [FR-AI-001, ADR-008]
+Rust evidence validation remains authoritative for all 6 Phase 6.3 AI actions (`research_gaps`, `plain_language`, `validate_inclusivity`, `generate_alt_text`, `generate_seo`, `editorial_review`).
+An unclassified stage CANNOT disable an evidence-valid action.
+The 6 Phase 6.3 actions remain Free.
 
 ## 21. Commercial Entitlement Adapter Boundary
 
 🔴 **DEFERRED — SEPARATE HUMAN GATE REQUIRED**
 The concrete commercial entitlement adapter is OUT OF SCOPE.
-This Spec DOES NOT select: commercial provider, payment provider, authentication provider, account model, proof format, cryptographic algorithm, key topology, secure-storage product, freshness duration, machine binding, or revocation protocol.
+This Spec DOES NOT select: commercial provider, payment provider, authentication provider, account model, proof format, cryptographic algorithm, key topology, secure storage, exact freshness duration, machine binding, or revocation protocol.
