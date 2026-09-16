@@ -62,8 +62,8 @@ export const articles = sqliteTable('articles', {
   updatedAt: text('updatedAt').notNull(),
   completedAt: text('completedAt'),
   // Phase 6.4 EXPAND: nullable during transition, NOT NULL after Slice 2 CUTOVER
-  workflowStageId: text('workflow_stage_id'),
-  categoryId: text('category_id'),
+  workflowStageId: text('workflow_stage_id').references(() => workflowStages.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+  categoryId: text('category_id').references(() => categories.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
 });
 
 // ──────────────────────────────────────────────────────
