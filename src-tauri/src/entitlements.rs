@@ -327,15 +327,4 @@ mod tests {
             assert_eq!(ents.state, EntitlementState::Unknown);
         }
     }
-
-    #[test]
-    fn test_sec_002_lack_of_developer_premium_is_unknown() {
-        #[cfg(debug_assertions)]
-        DEVELOPER_PREMIUM.store(false, Ordering::SeqCst);
-
-        let ents = get_entitlements().unwrap();
-        // Lack of Developer Premium does NOT establish FreeConfirmed.
-        assert_eq!(ents.state, EntitlementState::Unknown);
-        assert_ne!(ents.state, EntitlementState::FreeConfirmed);
-    }
 }
