@@ -54,7 +54,7 @@ export const fromArticleProps = (article: Article): { article: DbArticle; checkl
       case 'escrita': return STANDARD_WORKFLOW_IDS.PRODUCAO;
       case 'revisao': return STANDARD_WORKFLOW_IDS.REVISAO;
       case 'publicado': return STANDARD_WORKFLOW_IDS.PUBLICADO;
-      default: return null;
+      default: throw new Error(`ERR_MIGRATION_UNKNOWN_LEGACY_VALUE: Unknown status ${status}`);
     }
   };
 
@@ -68,7 +68,7 @@ export const fromArticleProps = (article: Article): { article: DbArticle; checkl
       case 'Blog': return STANDARD_CATEGORY_IDS.BLOG;
       case 'Social': return STANDARD_CATEGORY_IDS.SOCIAL;
       case 'Linguagem Simples': return STANDARD_CATEGORY_IDS.LINGUAGEM_SIMPLES;
-      default: return null;
+      default: throw new Error(`ERR_MIGRATION_UNKNOWN_LEGACY_VALUE: Unknown categoryTag ${categoryTag}`);
     }
   };
 
