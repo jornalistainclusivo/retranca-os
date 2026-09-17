@@ -3,8 +3,8 @@ pub mod entitlements;
 pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
-pub mod provisioning;
 pub mod phase64;
+pub mod provisioning;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;
