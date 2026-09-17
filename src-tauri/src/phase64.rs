@@ -291,7 +291,11 @@ pub async fn assign_article_stage(
 
     let current_stage_id = article.get::<String, _>("workflow_stage_id");
     if current_stage_id == request.workflow_stage_id {
-        tx.rollback().await.ok();
+        tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
         return Ok(SuccessResponse { success: true });
     }
 
@@ -373,12 +377,16 @@ pub async fn assign_article_category(
         details: serde_json::json!({}),
     })?;
 
-    let cat_exists =
+    let cat_exists: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE id = ? AND is_active = 1")
             .bind(&request.category_id)
             .fetch_one(&mut *tx)
             .await
-            .unwrap_or(0i64);
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
 
     if cat_exists == 0 {
         return Err(CanonicalError {
@@ -412,7 +420,11 @@ pub async fn assign_article_category(
     if rows_affected > 0 {
         tx.commit().await.ok();
     } else {
-        tx.rollback().await.ok();
+        tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
     }
 
     Ok(SuccessResponse { success: true })
@@ -455,7 +467,11 @@ pub async fn apply_checklist_template(
     })?;
 
     let items: Vec<ChecklistTemplateItem> =
-        serde_json::from_str(&template.get::<String, _>("items_json")).unwrap_or_default();
+        serde_json::from_str(&template.get::<String, _>("items_json")).map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     for item in items {
         let id = new_domain_id();
@@ -506,12 +522,25 @@ pub async fn create_workflow_stage(
         details: serde_json::json!({}),
     })?;
 
-    // Uniqueness validation on name?
-    let count = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE display_name = ?")
-        .bind(&request.display_name)
+    let display_name = request.display_name.trim().to_string();
+    if display_name.is_empty() {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_WORKFLOW".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE LOWER(display_name) = LOWER(?) AND is_active = 1")
+        .bind(&display_name)
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or(0i64);
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+
 
     if count > 0 {
         return Err(CanonicalError {
@@ -520,6 +549,34 @@ pub async fn create_workflow_stage(
             details: serde_json::json!({}),
         });
     }
+    
+    let active_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+        
+    let insert_index = request.order_index;
+    if insert_index < 0 || insert_index > active_count {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_WORKFLOW".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
+    sqlx::query("UPDATE workflow_stages SET order_index = order_index + 1 WHERE is_active = 1 AND order_index >= ?")
+        .bind(insert_index)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     let id = new_domain_id();
     let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')")
@@ -531,7 +588,7 @@ pub async fn create_workflow_stage(
             details: serde_json::json!({}),
         })?;
 
-    sqlx::query("INSERT INTO workflow_stages (id, display_name, order_index, semantic_classification, lifecycle_role, is_active, created_at) VALUES (?, ?, ?, ?, NULL, 1, ?)").bind(&id).bind(&request.display_name).bind(request.order_index).bind(&request.semantic_classification).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
+    sqlx::query("INSERT INTO workflow_stages (id, display_name, order_index, semantic_classification, lifecycle_role, is_active, created_at) VALUES (?, ?, ?, ?, NULL, 1, ?)").bind(&id).bind(&display_name).bind(request.order_index).bind(&request.semantic_classification).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
         code: "ERR_INVALID_WORKFLOW".into(),
         retryable: false,
         details: serde_json::json!({}),
@@ -545,7 +602,7 @@ pub async fn create_workflow_stage(
 
     Ok(WorkflowStage {
         id: id.clone(),
-        display_name: request.display_name,
+        display_name: display_name,
         order_index: request.order_index,
         semantic_classification: sem_class,
         lifecycle_role: None,
@@ -620,7 +677,36 @@ pub async fn update_workflow_stage(
         .unwrap()
         .get::<Option<String>, _>("semantic_classification");
 
-    let new_name = request.display_name.unwrap_or(current_name);
+    let new_name = if let Some(n) = request.display_name {
+        let trimmed = n.trim().to_string();
+        if trimmed.is_empty() {
+            return Err(CanonicalError {
+                code: "ERR_INVALID_WORKFLOW".into(),
+                retryable: false,
+                details: serde_json::json!({}),
+            });
+        }
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE LOWER(display_name) = LOWER(?) AND is_active = 1 AND id != ?")
+            .bind(&trimmed)
+            .bind(&request.id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
+        if count > 0 {
+            return Err(CanonicalError {
+                code: "ERR_INVALID_WORKFLOW".into(),
+                retryable: false,
+                details: serde_json::json!({}),
+            });
+        }
+        trimmed
+    } else {
+        current_name
+    };
     let new_class = if request.semantic_classification.is_some() {
         request.semantic_classification
     } else {
@@ -677,6 +763,37 @@ pub async fn reorder_workflow_stages(
         details: serde_json::json!({}),
     })?;
 
+    let active_stages = sqlx::query("SELECT id FROM workflow_stages WHERE is_active = 1")
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+    let active_count = active_stages.len();
+    if request.stage_orders.len() != active_count {
+        return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+    }
+    let mut provided_ids = std::collections::HashSet::new();
+    let mut provided_orders = std::collections::HashSet::new();
+    for order in &request.stage_orders {
+        provided_ids.insert(order.id.clone());
+        if order.order_index < 0 || order.order_index >= active_count as i64 {
+            return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+        }
+        provided_orders.insert(order.order_index);
+    }
+    if provided_ids.len() != active_count || provided_orders.len() != active_count {
+        return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+    }
+    for row in active_stages {
+        let row_id: String = row.get("id");
+        if !provided_ids.contains(&row_id) {
+            return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+        }
+    }
+
     for order in request.stage_orders {
         sqlx::query("UPDATE workflow_stages SET order_index = ? WHERE id = ?")
             .bind(order.order_index)
@@ -721,7 +838,7 @@ pub async fn remove_workflow_stage(
         details: serde_json::json!({}),
     })?;
 
-    let source = sqlx::query("SELECT lifecycle_role, is_active FROM workflow_stages WHERE id = ?")
+    let source = sqlx::query("SELECT lifecycle_role, is_active, order_index FROM workflow_stages WHERE id = ?")
         .bind(&request.id)
         .fetch_optional(&mut *tx)
         .await
@@ -734,15 +851,45 @@ pub async fn remove_workflow_stage(
     let source = match source {
         Some(s) => s,
         None => {
-            tx.rollback().await.ok();
+            tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
             return Ok(SuccessResponse { success: true });
         }
     };
 
     if source.get::<i32, _>("is_active") == 0 {
-        tx.rollback().await.ok();
+        tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
         return Ok(SuccessResponse { success: true });
     }
+
+    let active_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+    if active_count <= 1 {
+        tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+        return Err(CanonicalError {
+            code: "ERR_LAST_STAGE_REMOVAL".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
 
     let is_pub =
         source.get::<Option<String>, _>("lifecycle_role").as_deref() == Some("PUBLICATION");
@@ -795,7 +942,11 @@ pub async fn remove_workflow_stage(
             .bind(&request.id)
             .fetch_all(&mut *tx)
             .await
-            .unwrap_or_default();
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
 
         for a in articles {
             sqlx::query("UPDATE articles SET workflow_stage_id = ?, updatedAt = ? WHERE id = ?")
@@ -834,12 +985,16 @@ pub async fn remove_workflow_stage(
         }
     } else {
         // Find articles in source, since reassign_to_stage_id is None we can't if there are any
-        let has_articles =
+        let has_articles: i64 =
             sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE workflow_stage_id = ?")
                 .bind(&request.id)
                 .fetch_one(&mut *tx)
                 .await
-                .unwrap_or(0i64);
+                .map_err(|_| CanonicalError {
+                    code: "ERR_DATABASE_FAILURE".into(),
+                    retryable: true,
+                    details: serde_json::json!({}),
+                })?;
         if has_articles > 0 {
             return Err(CanonicalError {
                 code: "ERR_UNRESOLVED_STAGE_REFERENCE".into(), // spec says it's required if articles exist, wait
@@ -849,6 +1004,8 @@ pub async fn remove_workflow_stage(
         }
     }
 
+    let source_order_index = source.get::<i64, _>("order_index");
+    
     // deactivate source
     sqlx::query("UPDATE workflow_stages SET is_active = 0, order_index = 9999 WHERE id = ?")
         .bind(&request.id)
@@ -859,13 +1016,32 @@ pub async fn remove_workflow_stage(
             retryable: true,
             details: serde_json::json!({}),
         })?;
+        
+    // compact remaining active ordering
+    sqlx::query("UPDATE workflow_stages SET order_index = order_index - 1 WHERE is_active = 1 AND order_index > ?")
+        .bind(source_order_index)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     // verify exactly one ACTIVE PUBLICATION role
-    let pub_count = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1")
-        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+    let pub_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1")
+        .fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     if pub_count != 1 {
-        tx.rollback().await.ok();
+        tx.rollback().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
         return Err(CanonicalError {
             code: "ERR_PUBLICATION_ROLE_INVARIANT".into(),
             retryable: false,
@@ -903,11 +1079,24 @@ pub async fn create_category(
         details: serde_json::json!({}),
     })?;
 
-    let count = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE name = ?")
-        .bind(&request.name)
+    let name = request.name.trim().to_string();
+    if name.is_empty() {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CATEGORY".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND is_active = 1")
+        .bind(&name)
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or(0i64);
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     if count > 0 {
         return Err(CanonicalError {
@@ -927,7 +1116,7 @@ pub async fn create_category(
             details: serde_json::json!({}),
         })?;
 
-    sqlx::query("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES (?, ?, 'custom', 1, ?)").bind(&id).bind(&request.name).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
+    sqlx::query("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES (?, ?, 'custom', 1, ?)").bind(&id).bind(&name).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
         code: "ERR_INVALID_CATEGORY".into(),
         retryable: false,
         details: serde_json::json!({}),
@@ -941,7 +1130,7 @@ pub async fn create_category(
 
     Ok(Category {
         id: id.clone(),
-        name: request.name,
+        name: name,
         origin: CategoryOrigin::Custom,
         is_active: true,
         created_at: Some(now),
@@ -996,8 +1185,35 @@ pub async fn rename_category(
         });
     }
 
+    let name = request.name.trim().to_string();
+    if name.is_empty() {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CATEGORY".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+    
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND is_active = 1 AND id != ?")
+        .bind(&name)
+        .bind(&request.id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
+    if count > 0 {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CATEGORY".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
     sqlx::query("UPDATE categories SET name = ? WHERE id = ?")
-        .bind(&request.name)
+        .bind(&name)
         .bind(&request.id)
         .execute(&mut *tx)
         .await
@@ -1064,11 +1280,15 @@ pub async fn remove_category(
         });
     }
 
-    let has_articles = sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category_id = ?")
+    let has_articles: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category_id = ?")
         .bind(&request.id)
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or(0i64);
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     if has_articles > 0 {
         if request.reassign_to_category_id.is_none() {
@@ -1088,12 +1308,16 @@ pub async fn remove_category(
             });
         }
 
-        let target_active = sqlx::query_scalar("SELECT is_active FROM categories WHERE id = ?")
+        let target_active_opt: Option<i64> = sqlx::query_scalar("SELECT is_active FROM categories WHERE id = ?")
             .bind(target_id)
             .fetch_optional(&mut *tx)
             .await
-            .unwrap_or(None)
-            .unwrap_or(0i64);
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
+        let target_active = target_active_opt.unwrap_or(0i64);
 
         if target_active == 0 {
             return Err(CanonicalError {
@@ -1165,11 +1389,33 @@ pub async fn create_checklist_template(
         details: serde_json::json!({}),
     })?;
 
-    let count = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE name = ?")
-        .bind(&request.name)
+    let name = request.name.trim().to_string();
+    if name.is_empty() {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+    
+    // validate items
+    if request.items.iter().any(|i| i.label.trim().is_empty()) {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE LOWER(name) = LOWER(?)")
+        .bind(&name)
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or(0i64);
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     if count > 0 {
         return Err(CanonicalError {
@@ -1188,13 +1434,17 @@ pub async fn create_checklist_template(
             retryable: true,
             details: serde_json::json!({}),
         })?;
-    let items_json = serde_json::to_string(&request.items).unwrap_or_else(|_| "[]".into());
+    let items_json = serde_json::to_string(&request.items).map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     sqlx::query(
         "INSERT INTO checklist_templates (id, name, items_json, created_at) VALUES (?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&request.name)
+    .bind(&name)
     .bind(&items_json)
     .bind(&now)
     .execute(&mut *tx)
@@ -1213,7 +1463,7 @@ pub async fn create_checklist_template(
 
     Ok(ChecklistTemplate {
         id: id.clone(),
-        name: request.name,
+        name: name,
         items: request.items,
         created_at: Some(now),
     })
@@ -1242,11 +1492,15 @@ pub async fn update_checklist_template(
         details: serde_json::json!({}),
     })?;
 
-    let exists = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE id = ?")
+    let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE id = ?")
         .bind(&request.id)
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or(0i64);
+        .map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
 
     if exists == 0 {
         return Err(CanonicalError {
@@ -1256,7 +1510,11 @@ pub async fn update_checklist_template(
         });
     }
 
-    let items_json = serde_json::to_string(&request.items).unwrap_or_else(|_| "[]".into());
+    let items_json = serde_json::to_string(&request.items).map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     sqlx::query("UPDATE checklist_templates SET name = ?, items_json = ? WHERE id = ?")
         .bind(&request.name)
