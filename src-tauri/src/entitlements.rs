@@ -130,12 +130,12 @@ pub fn get_entitlements() -> Result<EntitlementStatus, String> {
             if DEVELOPER_PREMIUM.load(Ordering::SeqCst) {
                 EntitlementState::ProActive
             } else {
-                EntitlementState::FreeConfirmed
+                EntitlementState::Unknown
             }
         }
         #[cfg(not(debug_assertions))]
         {
-            EntitlementState::FreeConfirmed
+            EntitlementState::Unknown
         }
     };
 
@@ -303,7 +303,7 @@ mod tests {
             let ents = get_entitlements().unwrap();
             assert_eq!(ents.entitlement_type, "FREE");
             assert_eq!(ents.is_premium, false);
-            assert_eq!(ents.state, EntitlementState::FreeConfirmed);
+            assert_eq!(ents.state, EntitlementState::Unknown);
         }
 
         // Let's also just ensure compiling it passes debug tests
@@ -324,7 +324,18 @@ mod tests {
             let ents = get_entitlements().unwrap();
             assert_eq!(ents.entitlement_type, "FREE");
             assert_eq!(ents.is_premium, false);
-            assert_eq!(ents.state, EntitlementState::FreeConfirmed);
+            assert_eq!(ents.state, EntitlementState::Unknown);
         }
+    }
+
+    #[test]
+    fn test_sec_002_lack_of_developer_premium_is_unknown() {
+        #[cfg(debug_assertions)]
+        DEVELOPER_PREMIUM.store(false, Ordering::SeqCst);
+
+        let ents = get_entitlements().unwrap();
+        // Lack of Developer Premium does NOT establish FreeConfirmed.
+        assert_eq!(ents.state, EntitlementState::Unknown);
+        assert_ne!(ents.state, EntitlementState::FreeConfirmed);
     }
 }
