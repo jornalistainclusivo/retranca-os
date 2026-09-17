@@ -4,7 +4,6 @@ pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
 pub mod provisioning;
-pub mod shared_pool;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;
@@ -38,7 +37,6 @@ pub fn run() {
             set_developer_premium,
             get_ollama_models,
             orchestrator::start_orchestrated_inference,
-            shared_pool::check_shared_pool_proof,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
