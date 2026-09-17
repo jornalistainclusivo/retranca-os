@@ -36,7 +36,17 @@ impl std::fmt::Display for EntitlementError {
 }
 
 pub trait EntitlementDecisionProvider: Send + Sync {
+    #[allow(async_fn_in_trait)]
     async fn check_entitlement(&self) -> Result<EntitlementState, EntitlementError>;
+}
+
+pub struct AppEntitlementProvider;
+
+impl EntitlementDecisionProvider for AppEntitlementProvider {
+    async fn check_entitlement(&self) -> Result<EntitlementState, EntitlementError> {
+        let status = get_entitlements().map_err(|_| EntitlementError::EntitlementStateUnknown)?;
+        Ok(status.state)
+    }
 }
 
 pub enum EntitlementEvidence {

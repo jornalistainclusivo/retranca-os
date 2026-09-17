@@ -23,6 +23,7 @@ use tokio::sync::Mutex as AsyncMutex;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .manage(entitlements::AppEntitlementProvider)
         .manage(JobRegistry(StdMutex::new(HashMap::new())))
         .manage(DownloadRegistry(AsyncMutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![

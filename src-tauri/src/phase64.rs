@@ -32,7 +32,7 @@ pub async fn get_pool<'a>(
         retryable: true,
         details: serde_json::json!({ "error": "Database not initialized" }),
     })?;
-    
+
     #[allow(irrefutable_let_patterns)]
     let DbPool::Sqlite(pool) = pool_enum else {
         return Err(CanonicalError {
@@ -41,7 +41,7 @@ pub async fn get_pool<'a>(
             details: serde_json::json!({ "error": "DbPool is not Sqlite" }),
         });
     };
-    
+
     Ok(pool.clone())
 }
 
@@ -54,10 +54,10 @@ pub async fn verify_user_version(pool: &Pool<Sqlite>) -> Result<(), CanonicalErr
             retryable: true,
             details: serde_json::json!({ "error": e.to_string() }),
         })?;
-        
+
     if version != 1 {
         return Err(CanonicalError {
-            code: "ERR_SCHEMA_NOT_READY".into(),
+            code: "ERR_DATABASE_FAILURE".into(),
             retryable: false,
             details: serde_json::json!({ "current_version": version }),
         });
@@ -65,17 +65,25 @@ pub async fn verify_user_version(pool: &Pool<Sqlite>) -> Result<(), CanonicalErr
     Ok(())
 }
 
-pub fn get_authoritative_state() -> Result<EntitlementState, CanonicalError> {
-    let status = crate::entitlements::get_entitlements().map_err(|e| CanonicalError {
-        code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
-        retryable: false,
-        details: serde_json::json!({ "error": e }),
-    })?;
-    Ok(status.state)
-}
+use crate::entitlements::EntitlementDecisionProvider;
+use std::sync::Arc;
 
-pub fn authorize_protected() -> Result<(), CanonicalError> {
-    let state = get_authoritative_state()?;
+pub async fn authorize_protected(
+    provider: &State<'_, crate::entitlements::AppEntitlementProvider>,
+) -> Result<(), CanonicalError> {
+    let state = provider.check_entitlement().await.map_err(|e| match e {
+        crate::entitlements::EntitlementError::EntitlementStateUnknown => CanonicalError {
+            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        },
+        _ => CanonicalError {
+            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        },
+    })?;
+
     crate::entitlements::authorize_mutation(&state).map_err(|e| match e {
         EntitlementError::ConfirmedFreeProtectedMutationDenied => CanonicalError {
             code: "ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED".into(),
@@ -275,8 +283,12 @@ pub async fn assign_article_stage(
     }
 
     let is_target_pub = target_stage.get::<Option<String>, _>("lifecycle_role").as_deref() == Some("PUBLICATION");
-    
-    let now = chrono::Utc::now().to_rfc3339();
+
+    let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
     let history_id = new_domain_id();
     let action_desc = "Estágio alterado".to_string();
 
@@ -332,7 +344,7 @@ pub async fn assign_article_category(
     let cat_exists = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE id = ? AND is_active = 1").bind(&request.category_id)
     .fetch_one(&mut *tx)
     .await
-    .unwrap_or(0);
+    .unwrap_or(0i64);
 
     if cat_exists == 0 {
         return Err(CanonicalError {
@@ -342,12 +354,20 @@ pub async fn assign_article_category(
         });
     }
 
-    let now = chrono::Utc::now().to_rfc3339();
-    let rows_affected = sqlx::query("UPDATE articles SET category_id = ?, updatedAt = ? WHERE id = ?").bind(&request.category_id).bind(&now).bind(&request.article_id)
+    let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
+    let result = sqlx::query("UPDATE articles SET category_id = ?, updatedAt = ? WHERE id = ?").bind(&request.category_id).bind(&now).bind(&request.article_id)
     .execute(&mut *tx)
     .await
-    .unwrap_or(sqlx::sqlite::SqliteQueryResult::default())
-    .rows_affected();
+    .map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
+    let rows_affected = result.rows_affected();
 
     if rows_affected > 0 {
         tx.commit().await.ok();
@@ -394,7 +414,7 @@ pub async fn apply_checklist_template(
     })?;
 
     let items: Vec<ChecklistTemplateItem> = serde_json::from_str(&template.get::<String, _>("items_json")).unwrap_or_default();
-    
+
     for item in items {
         let id = new_domain_id();
         sqlx::query("INSERT INTO checklist_items (id, articleId, label, completed, category) VALUES (?, ?, ?, 0, NULL)").bind(&id).bind(&request.article_id).bind(item.label).execute(&mut *tx).await.map_err(|_| CanonicalError {
@@ -423,12 +443,13 @@ pub struct CreateWorkflowStageRequest {
 #[tauri::command]
 pub async fn create_workflow_stage(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateWorkflowStageRequest,
 ) -> Result<WorkflowStage, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
-    
+
     // validate
     let sem_class = validate_semantic_classification(request.semantic_classification.as_deref())
         .map_err(|_| CanonicalError {
@@ -445,8 +466,8 @@ pub async fn create_workflow_stage(
 
     // Uniqueness validation on name?
     let count = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE display_name = ?").bind(&request.display_name)
-        .fetch_one(&mut *tx).await.unwrap_or(0);
-        
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+
     if count > 0 {
         return Err(CanonicalError {
             code: "ERR_INVALID_WORKFLOW".into(),
@@ -456,7 +477,11 @@ pub async fn create_workflow_stage(
     }
 
     let id = new_domain_id();
-    let now = chrono::Utc::now().to_rfc3339();
+    let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     sqlx::query("INSERT INTO workflow_stages (id, display_name, order_index, semantic_classification, lifecycle_role, is_active, created_at) VALUES (?, ?, ?, ?, NULL, 1, ?)").bind(&id).bind(&request.display_name).bind(request.order_index).bind(&request.semantic_classification).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
         code: "ERR_INVALID_WORKFLOW".into(),
@@ -491,9 +516,10 @@ pub struct UpdateWorkflowStageRequest {
 #[tauri::command]
 pub async fn update_workflow_stage(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -532,7 +558,7 @@ pub async fn update_workflow_stage(
 
     let current_name = stage.as_ref().unwrap().get::<String, _>("display_name").clone();
     let current_class = stage.unwrap().get::<Option<String>, _>("semantic_classification");
-    
+
     let new_name = request.display_name.unwrap_or(current_name);
     let new_class = if request.semantic_classification.is_some() {
         request.semantic_classification
@@ -569,9 +595,10 @@ pub struct ReorderWorkflowStagesRequest {
 #[tauri::command]
 pub async fn reorder_workflow_stages(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: ReorderWorkflowStagesRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -607,9 +634,10 @@ pub struct RemoveWorkflowStageRequest {
 #[tauri::command]
 pub async fn remove_workflow_stage(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -632,7 +660,7 @@ pub async fn remove_workflow_stage(
             return Ok(SuccessResponse { success: true });
         }
     };
-    
+
     if source.get::<i32, _>("is_active") == 0 {
         tx.rollback().await.ok();
         return Ok(SuccessResponse { success: true });
@@ -670,12 +698,16 @@ pub async fn remove_workflow_stage(
         }
 
         // Reassign
-        let now = chrono::Utc::now().to_rfc3339();
-        
+        let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
+
         // Find articles in source
         let articles = sqlx::query("SELECT id FROM articles WHERE workflow_stage_id = ?").bind(&request.id)
             .fetch_all(&mut *tx).await.unwrap_or_default();
-            
+
         for a in articles {
             sqlx::query(
                 "UPDATE articles SET workflow_stage_id = ?, updatedAt = ? WHERE id = ?"
@@ -689,14 +721,22 @@ pub async fn remove_workflow_stage(
         if is_pub {
             // Transfer PUBLICATION role
             sqlx::query("UPDATE workflow_stages SET lifecycle_role = NULL WHERE id = ?").bind(&request.id)
-                .execute(&mut *tx).await.ok();
+                .execute(&mut *tx).await.map_err(|_| CanonicalError {
+                    code: "ERR_DATABASE_FAILURE".into(),
+                    retryable: true,
+                    details: serde_json::json!({}),
+                })?;
             sqlx::query("UPDATE workflow_stages SET lifecycle_role = 'PUBLICATION' WHERE id = ?").bind(target_id)
-                .execute(&mut *tx).await.ok();
+                .execute(&mut *tx).await.map_err(|_| CanonicalError {
+                    code: "ERR_DATABASE_FAILURE".into(),
+                    retryable: true,
+                    details: serde_json::json!({}),
+                })?;
         }
     } else {
         // Find articles in source, since reassign_to_stage_id is None we can't if there are any
         let has_articles = sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE workflow_stage_id = ?").bind(&request.id)
-            .fetch_one(&mut *tx).await.unwrap_or(0);
+            .fetch_one(&mut *tx).await.unwrap_or(0i64);
         if has_articles > 0 {
             return Err(CanonicalError {
                 code: "ERR_UNRESOLVED_STAGE_REFERENCE".into(), // spec says it's required if articles exist, wait
@@ -716,8 +756,8 @@ pub async fn remove_workflow_stage(
 
     // verify exactly one ACTIVE PUBLICATION role
     let pub_count = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1")
-        .fetch_one(&mut *tx).await.unwrap_or(0);
-    
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+
     if pub_count != 1 {
         tx.rollback().await.ok();
         return Err(CanonicalError {
@@ -744,9 +784,10 @@ pub struct CreateCategoryRequest {
 #[tauri::command]
 pub async fn create_category(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateCategoryRequest,
 ) -> Result<Category, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -757,8 +798,8 @@ pub async fn create_category(
     })?;
 
     let count = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE name = ?").bind(&request.name)
-        .fetch_one(&mut *tx).await.unwrap_or(0);
-        
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+
     if count > 0 {
         return Err(CanonicalError {
             code: "ERR_INVALID_CATEGORY".into(),
@@ -768,7 +809,11 @@ pub async fn create_category(
     }
 
     let id = new_domain_id();
-    let now = chrono::Utc::now().to_rfc3339();
+    let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     sqlx::query("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES (?, ?, 'custom', 1, ?)").bind(&id).bind(&request.name).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
         code: "ERR_INVALID_CATEGORY".into(),
@@ -800,9 +845,10 @@ pub struct RenameCategoryRequest {
 #[tauri::command]
 pub async fn rename_category(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RenameCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -860,9 +906,10 @@ pub struct RemoveCategoryRequest {
 #[tauri::command]
 pub async fn remove_category(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -896,7 +943,7 @@ pub async fn remove_category(
     }
 
     let has_articles = sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category_id = ?").bind(&request.id)
-        .fetch_one(&mut *tx).await.unwrap_or(0);
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
 
     if has_articles > 0 {
         if request.reassign_to_category_id.is_none() {
@@ -906,7 +953,7 @@ pub async fn remove_category(
                 details: serde_json::json!({}),
             });
         }
-        
+
         let target_id = request.reassign_to_category_id.as_ref().unwrap();
         if target_id == &request.id {
             return Err(CanonicalError {
@@ -917,7 +964,7 @@ pub async fn remove_category(
         }
 
         let target_active = sqlx::query_scalar("SELECT is_active FROM categories WHERE id = ?").bind(target_id)
-            .fetch_optional(&mut *tx).await.unwrap_or(None).unwrap_or(0);
+            .fetch_optional(&mut *tx).await.unwrap_or(None).unwrap_or(0i64);
 
         if target_active == 0 {
             return Err(CanonicalError {
@@ -927,7 +974,11 @@ pub async fn remove_category(
             });
         }
 
-        let now = chrono::Utc::now().to_rfc3339();
+        let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
         sqlx::query("UPDATE articles SET category_id = ?, updatedAt = ? WHERE category_id = ?").bind(target_id).bind(&now).bind(&request.id)
             .execute(&mut *tx).await.map_err(|_| CanonicalError {
                 code: "ERR_DATABASE_FAILURE".into(),
@@ -961,9 +1012,10 @@ pub struct CreateChecklistTemplateRequest {
 #[tauri::command]
 pub async fn create_checklist_template(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateChecklistTemplateRequest,
 ) -> Result<ChecklistTemplate, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -974,8 +1026,8 @@ pub async fn create_checklist_template(
     })?;
 
     let count = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE name = ?").bind(&request.name)
-        .fetch_one(&mut *tx).await.unwrap_or(0);
-        
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+
     if count > 0 {
         return Err(CanonicalError {
             code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
@@ -985,7 +1037,11 @@ pub async fn create_checklist_template(
     }
 
     let id = new_domain_id();
-    let now = chrono::Utc::now().to_rfc3339();
+    let now: String = sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").fetch_one(&mut *tx).await.map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
     let items_json = serde_json::to_string(&request.items).unwrap_or_else(|_| "[]".into());
 
     sqlx::query("INSERT INTO checklist_templates (id, name, items_json, created_at) VALUES (?, ?, ?, ?)").bind(&id).bind(&request.name).bind(&items_json).bind(&now).execute(&mut *tx).await.map_err(|_| CanonicalError {
@@ -1018,9 +1074,10 @@ pub struct UpdateChecklistTemplateRequest {
 #[tauri::command]
 pub async fn update_checklist_template(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1031,8 +1088,8 @@ pub async fn update_checklist_template(
     })?;
 
     let exists = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE id = ?").bind(&request.id)
-        .fetch_one(&mut *tx).await.unwrap_or(0);
-        
+        .fetch_one(&mut *tx).await.unwrap_or(0i64);
+
     if exists == 0 {
         return Err(CanonicalError {
             code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
@@ -1066,9 +1123,10 @@ pub struct DeleteChecklistTemplateRequest {
 #[tauri::command]
 pub async fn delete_checklist_template(
     instances: State<'_, DbInstances>,
+    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: DeleteChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected()?;
+    authorize_protected(&provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
