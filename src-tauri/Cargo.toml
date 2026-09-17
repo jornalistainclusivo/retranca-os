@@ -17,6 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
+sqlx = { version = "=0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
@@ -37,4 +38,3 @@ uuid = { version = "1.20.0", features = ["v4"] }
 [dev-dependencies]
 mockito = "1.7.2"
 tempfile = "3.27.0"
-sqlx = { version = "=0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }

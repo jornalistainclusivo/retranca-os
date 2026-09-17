@@ -8,7 +8,7 @@ export const getDb = async () => {
   if (dbInstance) return dbInstance;
   
   // Inicialização assíncrona do plugin nativo Tauri
-  const sqlite = await Database.load('sqlite:retranca.db');
+  const sqlite = await Database.get('sqlite:retranca.db');
   
   // Garantia de migração (DDL) na inicialização — existing tables
   await sqlite.execute(`
