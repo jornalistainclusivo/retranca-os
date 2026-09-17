@@ -4,6 +4,7 @@ pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
 pub mod provisioning;
+pub mod phase64;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;
@@ -37,6 +38,22 @@ pub fn run() {
             set_developer_premium,
             get_ollama_models,
             orchestrator::start_orchestrated_inference,
+            phase64::get_workflow_stages,
+            phase64::get_categories,
+            phase64::get_checklist_templates,
+            phase64::assign_article_stage,
+            phase64::assign_article_category,
+            phase64::apply_checklist_template,
+            phase64::create_workflow_stage,
+            phase64::update_workflow_stage,
+            phase64::reorder_workflow_stages,
+            phase64::remove_workflow_stage,
+            phase64::create_category,
+            phase64::rename_category,
+            phase64::remove_category,
+            phase64::create_checklist_template,
+            phase64::update_checklist_template,
+            phase64::delete_checklist_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
