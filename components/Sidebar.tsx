@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ActiveView, CategoryTag, TimeFilter, Article } from '@/types/editorial';
+import { ActiveView, TimeFilter, Article, CategoryEntity, WorkflowStage } from '@/types/editorial';
 import { 
   Kanban, 
   ListFilter, 
@@ -22,21 +22,12 @@ interface SidebarProps {
   setActiveView: (view: ActiveView) => void;
   timeFilter: TimeFilter;
   setTimeFilter: (tf: TimeFilter) => void;
-  selectedCategories: CategoryTag[];
-  setSelectedCategories: (cats: CategoryTag[]) => void;
+  selectedCategories: string[];
+  setSelectedCategories: (cats: string[]) => void;
   articles: Article[];
+  categories: CategoryEntity[];
+  workflowStages: WorkflowStage[];
 }
-
-const CATEGORY_OPTIONS: CategoryTag[] = [
-  'IA',
-  'Acessibilidade',
-  'Inclusão',
-  'SEO',
-  'Docs',
-  'Blog',
-  'Social',
-  'Linguagem Simples',
-];
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
@@ -46,6 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedCategories,
   setSelectedCategories,
   articles,
+  categories,
+  workflowStages,
 }) => {
   // Counts calculation
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -62,22 +55,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
       const now = new Date();
       return artDate.getMonth() === now.getMonth() && artDate.getFullYear() === now.getFullYear();
     }).length,
-    atrasados: articles.filter(a => a.status !== 'publicado' && a.publishDate < todayStr).length,
+    atrasados: articles.filter(a => {
+      const isPub = workflowStages.find(s => s.id === a.workflowStageId)?.lifecycleRole === 'PUBLICATION';
+      return !isPub && a.publishDate < todayStr;
+    }).length,
   };
 
-  const toggleCategory = (cat: CategoryTag) => {
-    if (selectedCategories.includes(cat)) {
-      setSelectedCategories(selectedCategories.filter(c => c !== cat));
+  const toggleCategory = (catId: string) => {
+    if (selectedCategories.includes(catId)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== catId));
     } else {
-      setSelectedCategories([...selectedCategories, cat]);
+      setSelectedCategories([...selectedCategories, catId]);
     }
   };
 
   const selectAllCategories = () => {
-    if (selectedCategories.length === CATEGORY_OPTIONS.length) {
+    if (selectedCategories.length === categories.length) {
       setSelectedCategories([]);
     } else {
-      setSelectedCategories([...CATEGORY_OPTIONS]);
+      setSelectedCategories(categories.map(c => c.id));
     }
   };
 
@@ -264,31 +260,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={selectAllCategories}
             className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
-            {selectedCategories.length === CATEGORY_OPTIONS.length ? 'Limpar' : 'Todos'}
+            {selectedCategories.length === categories.length ? 'Limpar' : 'Todos'}
           </button>
         </div>
 
         <div className="space-y-1">
-          {CATEGORY_OPTIONS.map((cat) => {
-            const isChecked = selectedCategories.includes(cat);
+          {categories.map((cat) => {
+            const isChecked = selectedCategories.includes(cat.id);
             return (
               <label
-                key={cat}
+                key={cat.id}
                 className="flex items-center justify-between px-2 py-1 rounded-lg text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
               >
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={isChecked}
-                    onChange={() => toggleCategory(cat)}
+                    onChange={() => toggleCategory(cat.id)}
                     className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                   />
                   <span className={`text-slate-700 dark:text-slate-300 font-medium ${isChecked ? 'font-bold text-blue-700 dark:text-blue-300' : ''}`}>
-                    {cat}
+                    {cat.name}
                   </span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  {articles.filter(a => a.categoryTag === cat).length}
+                  {articles.filter(a => a.categoryId === cat.id).length}
                 </span>
               </label>
             );

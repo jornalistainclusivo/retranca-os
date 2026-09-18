@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Article } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
 
 interface CalendarViewProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   onSelectArticle: (article: Article) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   articles,
+  workflowStages,
   onSelectArticle,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date('2026-08-01'));
@@ -121,24 +123,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
               {/* Day Articles Pills */}
               <div className="flex-1 overflow-y-auto mt-1 space-y-1 pr-0.5">
-                {dayArticles.map((art) => (
-                  <div
-                    key={art.id}
-                    onClick={() => onSelectArticle(art)}
-                    className={`p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all ${
-                      art.status === 'publicado'
-                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : art.status === 'revisao'
-                        ? 'bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800'
-                        : art.status === 'escrita'
-                        ? 'bg-yellow-50 text-yellow-800 dark:bg-amber-950 dark:text-amber-300 border border-yellow-200 dark:border-amber-800'
-                        : 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                    }`}
-                    title={art.title}
-                  >
-                    {art.status === 'publicado' ? '✓ ' : ''}{art.title}
-                  </div>
-                ))}
+                {dayArticles.map((art) => {
+                  const stage = workflowStages.find(s => s.id === art.workflowStageId);
+                  const isPublished = stage?.lifecycleRole === 'PUBLICATION';
+                  const isReview = stage?.semanticClassification === 'REVIEW' && !isPublished;
+                  const isProduction = stage?.semanticClassification === 'DRAFTING' && !isPublished;
+
+                  return (
+                    <div
+                      key={art.id}
+                      onClick={() => onSelectArticle(art)}
+                      className={`p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all ${
+                        isPublished
+                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : isReview
+                          ? 'bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800'
+                          : isProduction
+                          ? 'bg-yellow-50 text-yellow-800 dark:bg-amber-950 dark:text-amber-300 border border-yellow-200 dark:border-amber-800'
+                          : 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                      }`}
+                      title={art.title}
+                    >
+                      {isPublished ? '✓ ' : ''}{art.title}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

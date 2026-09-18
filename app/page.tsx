@@ -1,39 +1,69 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Article, ArticleStatus, ActiveView, TimeFilter, CategoryTag } from '@/types/editorial';
-import { getStoredArticles, saveArticles } from '@/lib/storage';
-import { Header } from '@/components/Header';
-import { Sidebar } from '@/components/Sidebar';
-import { KanbanBoard } from '@/components/KanbanBoard';
-import { ListView } from '@/components/ListView';
-import { CalendarView } from '@/components/CalendarView';
-import { StatsView } from '@/components/StatsView';
-import { GovernanceView } from '@/components/GovernanceView';
-import { ArticleModal } from '@/components/ArticleModal';
-import { MotivationalModal } from '@/components/MotivationalModal';
-import { AiAssistantModal } from '@/components/AiAssistantModal';
-import { ModelDownloadModal } from '@/components/ModelDownloadModal';
-import type { ModelStatus, LocalAiCapabilities, ProviderType } from '@/types/ai';
+import React, { useState, useEffect } from "react";
+import {
+  Article,
+  ArticleStatus,
+  ActiveView,
+  TimeFilter,
+  CategoryTag,
+  WorkflowStage,
+  CategoryEntity,
+} from "@/types/editorial";
+import { getStoredArticles, saveArticles } from "@/lib/storage";
+import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
+import { KanbanBoard } from "@/components/KanbanBoard";
+import { ListView } from "@/components/ListView";
+import { CalendarView } from "@/components/CalendarView";
+import { StatsView } from "@/components/StatsView";
+import { GovernanceView } from "@/components/GovernanceView";
+import { ArticleModal } from "@/components/ArticleModal";
+import { MotivationalModal } from "@/components/MotivationalModal";
+import { AiAssistantModal } from "@/components/AiAssistantModal";
+import { ModelDownloadModal } from "@/components/ModelDownloadModal";
+import type {
+  ModelStatus,
+  LocalAiCapabilities,
+  ProviderType,
+} from "@/types/ai";
 
-import { fetchAllRawArticles, saveRawArticle, deleteRawArticle } from '@/lib/api/articles';
-import { toArticleProps, fromArticleProps } from '@/lib/adapters/articleAdapter';
-import { getDb } from '@/db/client';
-import { seedDatabase, setDbInstanceForSeed } from '@/lib/api/seed';
-import { articles as articlesSchema } from '@/db/schema';
+import {
+  fetchAllRawArticles,
+  saveRawArticle,
+  deleteRawArticle,
+  fetchWorkflowStages,
+  fetchCategories,
+  assignArticleStage,
+  assignArticleCategory,
+} from "@/lib/api/articles";
+import {
+  toArticleProps,
+  fromArticleProps,
+} from "@/lib/adapters/articleAdapter";
+import { getDb } from "@/db/client";
+import { seedDatabase, setDbInstanceForSeed } from "@/lib/api/seed";
+import { articles as articlesSchema } from "@/db/schema";
+import {
+  getStoredWorkflowStages,
+  getStoredCategories,
+  browserAssignArticleStage,
+  browserAssignArticleCategory,
+} from "@/lib/storage";
 
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [workflowStages, setWorkflowStages] = useState<WorkflowStage[]>([]);
+  const [categories, setCategories] = useState<CategoryEntity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeView, setActiveView] = useState<ActiveView>('kanban');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('todas');
-  const [selectedCategories, setSelectedCategories] = useState<CategoryTag[]>([
-    'IA', 'Acessibilidade', 'Inclusão', 'SEO', 'Docs', 'Blog', 'Social', 'Linguagem Simples'
-  ]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeView, setActiveView] = useState<ActiveView>("kanban");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("todas");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
   const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
     return false;
   });
@@ -45,10 +75,14 @@ export default function Home() {
   const [isMotivationalModalOpen, setIsMotivationalModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [modelStatus, setModelStatus] = useState<ModelStatus>('MISSING');
-  const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false);
-  const [capabilities, setCapabilities] = useState<LocalAiCapabilities | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<ProviderType>('NONE');
+  const [modelStatus, setModelStatus] = useState<ModelStatus>("MISSING");
+  const [isDownloadModalDismissed, setIsDownloadModalDismissed] =
+    useState(false);
+  const [capabilities, setCapabilities] = useState<LocalAiCapabilities | null>(
+    null,
+  );
+  const [selectedProvider, setSelectedProvider] =
+    useState<ProviderType>("NONE");
 
   // Montagem Inicial: Conexão, Seed e Fetch
   useEffect(() => {
@@ -56,31 +90,43 @@ export default function Home() {
       try {
         const db = await getDb();
         setDbInstanceForSeed(db);
-        
+
         const existingArticles = await db.select().from(articlesSchema);
         if (existingArticles.length === 0) {
-          console.log('Database empty. Running seed...');
+          console.log("Database empty. Running seed...");
           await seedDatabase();
         }
 
         const rawData = await fetchAllRawArticles();
-        const adaptedArticles = rawData.map(raw => toArticleProps(raw.article, raw.checklists, raw.history));
-        
+        const adaptedArticles = rawData.map((raw) =>
+          toArticleProps(raw.article, raw.checklists, raw.history),
+        );
+
+        const stages = await fetchWorkflowStages();
+        const cats = await fetchCategories();
+
+        setWorkflowStages(stages);
+        setCategories(cats);
+        // default select all categories
+        setSelectedCategories(cats.map((c) => c.id));
         setArticles(adaptedArticles);
 
         // Preflight Check for AI Model
-        if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
-          const { invoke } = await import('@tauri-apps/api/core');
+        if (
+          typeof window !== "undefined" &&
+          (window as any).__TAURI_INTERNALS__
+        ) {
+          const { invoke } = await import("@tauri-apps/api/core");
           try {
-            const result = await invoke<LocalAiCapabilities>('preflight_check');
+            const result = await invoke<LocalAiCapabilities>("preflight_check");
             const caps = { ...result };
-            
+
             if (caps.hardware && !caps.hardware.local_ai_supported) {
-              setModelStatus('INCOMPATIBLE');
+              setModelStatus("INCOMPATIBLE");
             } else if (caps.model_exists) {
-              setModelStatus('READY');
+              setModelStatus("READY");
             } else {
-              setModelStatus('MISSING');
+              setModelStatus("MISSING");
             }
 
             // Use provider selection from the Rust backend directly.
@@ -88,10 +134,9 @@ export default function Home() {
             // Do NOT override selected_provider in the frontend.
             setCapabilities(caps);
             setSelectedProvider(caps.selected_provider);
-
           } catch (e) {
-            console.error('Preflight check failed:', e);
-            setModelStatus('MISSING');
+            console.error("Preflight check failed:", e);
+            setModelStatus("MISSING");
           }
         }
       } catch (e) {
@@ -101,12 +146,17 @@ export default function Home() {
         setIsMounted(true);
       }
     };
-    
+
     // Certificar-se de executar apenas no client e no ambiente Tauri
-    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
       initializeApp();
     } else {
       const initFallback = async () => {
+        const stages = getStoredWorkflowStages();
+        const cats = getStoredCategories();
+        setWorkflowStages(stages);
+        setCategories(cats);
+        setSelectedCategories(cats.map((c) => c.id));
         setArticles(getStoredArticles());
         setIsLoading(false);
         setIsMounted(true);
@@ -118,28 +168,36 @@ export default function Home() {
   // Sync storage listener
   useEffect(() => {
     const handleStorageChange = () => {
-      if (typeof window !== 'undefined' && !(window as any).__TAURI_INTERNALS__) {
+      if (
+        typeof window !== "undefined" &&
+        !(window as any).__TAURI_INTERNALS__
+      ) {
         setArticles(getStoredArticles());
       }
     };
-    window.addEventListener('jinc_storage_updated', handleStorageChange);
-    return () => window.removeEventListener('jinc_storage_updated', handleStorageChange);
+    window.addEventListener("jinc_storage_updated", handleStorageChange);
+    return () =>
+      window.removeEventListener("jinc_storage_updated", handleStorageChange);
   }, []);
 
   // Update DOM dark mode class
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
 
   // Handler de atualização otimista (Atualizado para refletir no SQLite)
-  const updateArticlesState = async (newArticles: Article[], savedArticle?: Article, deletedId?: string) => {
+  const updateArticlesState = async (
+    newArticles: Article[],
+    savedArticle?: Article,
+    deletedId?: string,
+  ) => {
     setArticles(newArticles);
-    
-    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
       if (savedArticle) {
         await saveRawArticle(fromArticleProps(savedArticle));
       }
@@ -151,23 +209,31 @@ export default function Home() {
     }
   };
 
-  // Handler for changing an article status
-  const handleUpdateStatus = (id: string, newStatus: ArticleStatus) => {
+  // Handler for changing an article stage natively
+  const handleUpdateStage = async (id: string, newStageId: string) => {
     const previous = articles.find((a) => a.id === id);
+    if (!previous) return;
+
+    const stage = workflowStages.find((s) => s.id === newStageId);
+    if (!stage) return;
+
+    const isPublished =
+      stage.semanticClassification === "PUBLISHED" ||
+      stage.lifecycleRole === "PUBLICATION";
     let changedArticle: Article | undefined;
-    
+
     const updated = articles.map((art) => {
       if (art.id === id) {
         changedArticle = {
           ...art,
-          status: newStatus,
-          completedAt: newStatus === 'publicado' ? new Date().toISOString() : art.completedAt,
+          workflowStageId: newStageId,
+          completedAt: isPublished ? new Date().toISOString() : art.completedAt,
           updatedAt: new Date().toISOString(),
           history: [
             {
               id: `h_${Date.now()}`,
               date: new Date().toISOString(),
-              action: `Status alterado de ${art.status.toUpperCase()} para ${newStatus.toUpperCase()}`,
+              action: `Movido para a etapa ${stage.displayName}`,
             },
             ...art.history,
           ],
@@ -177,10 +243,16 @@ export default function Home() {
       return art;
     });
 
-    updateArticlesState(updated, changedArticle);
+    setArticles(updated);
 
-    // Trigger motivational celebration pop-up when an article becomes 'publicado'
-    if (previous && previous.status !== 'publicado' && newStatus === 'publicado') {
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+      await assignArticleStage(id, newStageId);
+    } else {
+      browserAssignArticleStage(id, newStageId);
+      saveArticles(updated);
+    }
+
+    if (previous.workflowStageId !== newStageId && isPublished) {
       setIsMotivationalModalOpen(true);
     }
   };
@@ -191,7 +263,7 @@ export default function Home() {
     const updated = articles.map((art) => {
       if (art.id === articleId) {
         const updatedChecklists = art.checklists.map((chk) =>
-          chk.id === checklistId ? { ...chk, completed: !chk.completed } : chk
+          chk.id === checklistId ? { ...chk, completed: !chk.completed } : chk,
         );
         changedArticle = {
           ...art,
@@ -202,24 +274,102 @@ export default function Home() {
       }
       return art;
     });
-    updateArticlesState(updated, changedArticle);
+    setArticles(updated);
+
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+      if (changedArticle) {
+        saveRawArticle(fromArticleProps(changedArticle));
+      }
+    } else {
+      saveArticles(updated);
+    }
   };
 
   // Handler for saving an article from CMS modal
-  const handleSaveArticle = (savedArticle: Article) => {
-    const exists = articles.some((a) => a.id === savedArticle.id);
+  const handleSaveArticle = async (savedArticle: Article) => {
+    const previous = articles.find((a) => a.id === savedArticle.id);
+    const exists = previous !== undefined;
+
+    const stage = workflowStages.find(
+      (s) => s.id === savedArticle.workflowStageId,
+    );
+    const isPublished = stage
+      ? stage.semanticClassification === "PUBLISHED" ||
+        stage.lifecycleRole === "PUBLICATION"
+      : false;
+
+    if (
+      isPublished &&
+      previous &&
+      previous.workflowStageId !== savedArticle.workflowStageId
+    ) {
+      savedArticle.completedAt = new Date().toISOString();
+    }
+
     let updated: Article[];
     if (exists) {
-      updated = articles.map((a) => (a.id === savedArticle.id ? savedArticle : a));
+      updated = articles.map((a) =>
+        a.id === savedArticle.id ? savedArticle : a,
+      );
     } else {
       updated = [savedArticle, ...articles];
     }
-    updateArticlesState(updated, savedArticle);
+    setArticles(updated);
+
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+      // Normal metadata save (native save protects domain fields)
+      await saveRawArticle(fromArticleProps(savedArticle));
+
+      // Explicit IPC domain transitions
+      if (
+        previous &&
+        previous.workflowStageId !== savedArticle.workflowStageId &&
+        savedArticle.workflowStageId
+      ) {
+        await assignArticleStage(savedArticle.id, savedArticle.workflowStageId);
+      }
+
+      if (
+        previous &&
+        previous.categoryId !== savedArticle.categoryId &&
+        savedArticle.categoryId
+      ) {
+        await assignArticleCategory(savedArticle.id, savedArticle.categoryId);
+      }
+    } else {
+      // Browser fallback transitions
+      if (
+        previous &&
+        previous.workflowStageId !== savedArticle.workflowStageId &&
+        savedArticle.workflowStageId
+      ) {
+        browserAssignArticleStage(
+          savedArticle.id,
+          savedArticle.workflowStageId,
+        );
+      }
+      if (
+        previous &&
+        previous.categoryId !== savedArticle.categoryId &&
+        savedArticle.categoryId
+      ) {
+        browserAssignArticleCategory(savedArticle.id, savedArticle.categoryId);
+      }
+      saveArticles(updated);
+    }
+
+    if (
+      previous &&
+      previous.workflowStageId !== savedArticle.workflowStageId &&
+      isPublished
+    ) {
+      setIsMotivationalModalOpen(true);
+    }
   };
 
   // Handler for deleting an article
   const handleDeleteArticle = (id: string) => {
-    if (confirm('Excluir esta pauta da Agenda JINC?')) {
+    if (confirm("Excluir esta pauta da Agenda JINC?")) {
       const updated = articles.filter((a) => a.id !== id);
       updateArticlesState(updated, undefined, id);
       setIsArticleModalOpen(false);
@@ -231,30 +381,69 @@ export default function Home() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const newArt: Article = {
       id: `art_${Date.now()}`,
-      title: '',
-      status: 'ideia',
-      categoryTag: 'Acessibilidade',
-      tags: ['Acessibilidade', 'Jornalismo'],
+      title: "",
+      status: "ideia",
+      categoryTag: "Acessibilidade",
+      workflowStageId:
+        workflowStages.length > 0 ? workflowStages[0].id : undefined,
+      categoryId: categories.length > 0 ? categories[0].id : undefined,
+      tags: ["Acessibilidade", "Jornalismo"],
       publishDate: todayStr,
-      summary: '',
-      objective: '',
-      keyword: '',
-      persona: 'Leitores do Jornalista Inclusivo',
-      cta: 'Saiba mais no nosso portal',
-      internalLinks: '',
-      externalLinks: '',
-      estimatedTime: '2h',
-      spentTime: '0m',
-      notes: '',
+      summary: "",
+      objective: "",
+      keyword: "",
+      persona: "Leitores do Jornalista Inclusivo",
+      cta: "Saiba mais no nosso portal",
+      internalLinks: "",
+      externalLinks: "",
+      estimatedTime: "2h",
+      spentTime: "0m",
+      notes: "",
       checklists: [
-        { id: 'c1', label: 'Pesquisa e checagem de fontes', completed: false, category: 'pesquisa' },
-        { id: 'c2', label: 'Linguagem Simples (fácil leitura)', completed: false, category: 'editorial' },
-        { id: 'c3', label: 'Otimização SEO e palavra-chave no H1', completed: false, category: 'seo' },
-        { id: 'c4', label: 'Descrição Alt Text WCAG 2.2', completed: false, category: 'wcag' },
-        { id: 'c5', label: 'Auditoria Ética de IA', completed: false, category: 'ia' },
-        { id: 'c6', label: 'Divulgação nas redes sociais e newsletter', completed: false, category: 'distribuicao' },
+        {
+          id: "c1",
+          label: "Pesquisa e checagem de fontes",
+          completed: false,
+          category: "pesquisa",
+        },
+        {
+          id: "c2",
+          label: "Linguagem Simples (fácil leitura)",
+          completed: false,
+          category: "editorial",
+        },
+        {
+          id: "c3",
+          label: "Otimização SEO e palavra-chave no H1",
+          completed: false,
+          category: "seo",
+        },
+        {
+          id: "c4",
+          label: "Descrição Alt Text WCAG 2.2",
+          completed: false,
+          category: "wcag",
+        },
+        {
+          id: "c5",
+          label: "Auditoria Ética de IA",
+          completed: false,
+          category: "ia",
+        },
+        {
+          id: "c6",
+          label: "Divulgação nas redes sociais e newsletter",
+          completed: false,
+          category: "distribuicao",
+        },
       ],
-      history: [{ id: `h_${Date.now()}`, date: new Date().toISOString(), action: 'Pauta criada' }],
+      history: [
+        {
+          id: `h_${Date.now()}`,
+          date: new Date().toISOString(),
+          action: "Pauta criada",
+        },
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -274,47 +463,68 @@ export default function Home() {
       const matchKeyword = art.keyword.toLowerCase().includes(term);
       const matchNotes = art.notes.toLowerCase().includes(term);
       const matchTag = art.tags.some((t) => t.toLowerCase().includes(term));
-      if (!matchTitle && !matchSummary && !matchKeyword && !matchNotes && !matchTag) {
+      if (
+        !matchTitle &&
+        !matchSummary &&
+        !matchKeyword &&
+        !matchNotes &&
+        !matchTag
+      ) {
         return false;
       }
     }
 
-    // Category Tag Filter
-    if (selectedCategories.length > 0 && !selectedCategories.includes(art.categoryTag)) {
+    // Category ID Filter
+    if (
+      selectedCategories.length > 0 &&
+      art.categoryId &&
+      !selectedCategories.includes(art.categoryId)
+    ) {
       return false;
     }
 
     // Period Filter
-    if (timeFilter === 'hoje') {
+    if (timeFilter === "hoje") {
       return art.publishDate === todayStr;
     }
-    if (timeFilter === 'semana') {
-      const diff = (new Date(art.publishDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24);
+    if (timeFilter === "semana") {
+      const diff =
+        (new Date(art.publishDate).getTime() - new Date().getTime()) /
+        (1000 * 3600 * 24);
       return diff >= -1 && diff <= 7;
     }
-    if (timeFilter === 'mes') {
+    if (timeFilter === "mes") {
       const artDate = new Date(art.publishDate);
       const now = new Date();
-      return artDate.getMonth() === now.getMonth() && artDate.getFullYear() === now.getFullYear();
+      return (
+        artDate.getMonth() === now.getMonth() &&
+        artDate.getFullYear() === now.getFullYear()
+      );
     }
-    if (timeFilter === 'atrasados') {
-      return art.status !== 'publicado' && art.publishDate < todayStr;
+    if (timeFilter === "atrasados") {
+      const isPub =
+        workflowStages.find((s) => s.id === art.workflowStageId)
+          ?.lifecycleRole === "PUBLICATION";
+      return !isPub && art.publishDate < todayStr;
     }
 
     return true;
   });
 
-  const publishedCount = articles.filter((a) => a.status === 'publicado').length;
+  const publishedCount = articles.filter((a) => {
+    const isPub =
+      workflowStages.find((s) => s.id === a.workflowStageId)?.lifecycleRole ===
+      "PUBLICATION";
+    return isPub;
+  }).length;
 
-  const showDownloadModal = 
-    modelStatus !== 'READY' && 
-    !isDownloadModalDismissed;
+  const showDownloadModal =
+    modelStatus !== "READY" && !isDownloadModalDismissed;
 
   if (!isMounted) return null;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      
       {/* Header */}
       <Header
         articles={articles}
@@ -332,7 +542,6 @@ export default function Home() {
       {/* Main Body */}
       <main className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          
           {/* Sidebar Navigation */}
           {!isFocusMode && (
             <Sidebar
@@ -343,6 +552,8 @@ export default function Home() {
               selectedCategories={selectedCategories}
               setSelectedCategories={setSelectedCategories}
               articles={articles}
+              categories={categories}
+              workflowStages={workflowStages}
             />
           )}
 
@@ -354,34 +565,37 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {activeView === 'kanban' && (
+                {activeView === "kanban" && (
                   <KanbanBoard
                     articles={filteredArticles}
+                    workflowStages={workflowStages}
                     searchTerm={searchTerm}
                     onSelectArticle={(art) => {
                       setSelectedArticle(art);
                       setIsArticleModalOpen(true);
                     }}
-                    onUpdateArticleStatus={handleUpdateStatus}
+                    onUpdateArticleStage={handleUpdateStage}
                     onToggleChecklist={handleToggleChecklist}
                   />
                 )}
 
-                {activeView === 'lista' && (
+                {activeView === "lista" && (
                   <ListView
                     articles={filteredArticles}
+                    workflowStages={workflowStages}
                     searchTerm={searchTerm}
                     onSelectArticle={(art) => {
                       setSelectedArticle(art);
                       setIsArticleModalOpen(true);
                     }}
-                    onUpdateStatus={handleUpdateStatus}
+                    onUpdateStage={handleUpdateStage}
                   />
                 )}
 
-                {activeView === 'calendario' && (
+                {activeView === "calendario" && (
                   <CalendarView
                     articles={filteredArticles}
+                    workflowStages={workflowStages}
                     onSelectArticle={(art) => {
                       setSelectedArticle(art);
                       setIsArticleModalOpen(true);
@@ -389,17 +603,14 @@ export default function Home() {
                   />
                 )}
 
-                {activeView === 'estatisticas' && (
-                  <StatsView articles={articles} />
+                {activeView === "estatisticas" && (
+                  <StatsView articles={articles} workflowStages={workflowStages} />
                 )}
 
-                {activeView === 'documentos' && (
-                  <GovernanceView />
-                )}
+                {activeView === "documentos" && <GovernanceView />}
               </>
             )}
           </div>
-
         </div>
       </main>
 
@@ -408,7 +619,8 @@ export default function Home() {
         <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>
-              © 2026 <strong>Retranca</strong> — Organizando o jornalismo antes que ele vire notícia
+              © 2026 <strong>Retranca</strong> — Organizando o jornalismo antes
+              que ele vire notícia
             </span>
             <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
               WCAG 2.2 AA • Geometric Balance Design • Gemini 3.6 Flash
@@ -420,11 +632,13 @@ export default function Home() {
       {/* Modals */}
       <ArticleModal
         article={selectedArticle}
+        workflowStages={workflowStages}
+        categories={categories}
         isOpen={isArticleModalOpen}
         onClose={() => setIsArticleModalOpen(false)}
         onSave={handleSaveArticle}
         onDelete={handleDeleteArticle}
-        provider={capabilities?.selected_provider ?? 'NONE'}
+        provider={capabilities?.selected_provider ?? "NONE"}
         isFocusMode={isFocusMode}
         setIsFocusMode={setIsFocusMode}
       />
@@ -441,44 +655,49 @@ export default function Home() {
         provider={selectedProvider}
       />
 
-      <ModelDownloadModal 
+      <ModelDownloadModal
         isOpen={showDownloadModal}
         modelStatus={modelStatus}
         onStartDownload={async () => {
-          setModelStatus('DOWNLOADING');
-          if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+          setModelStatus("DOWNLOADING");
+          if (
+            typeof window !== "undefined" &&
+            (window as any).__TAURI_INTERNALS__
+          ) {
             try {
-              const { invoke } = await import('@tauri-apps/api/core');
-              const { listen } = await import('@tauri-apps/api/event');
-              
-              const unlistenVerifying = await listen('download-verifying', () => {
-                setModelStatus('VERIFYING');
-              });
+              const { invoke } = await import("@tauri-apps/api/core");
+              const { listen } = await import("@tauri-apps/api/event");
+
+              const unlistenVerifying = await listen(
+                "download-verifying",
+                () => {
+                  setModelStatus("VERIFYING");
+                },
+              );
 
               // The actual command blocks until success (atomic rename) or fails
-              await invoke('download_model', {
+              await invoke("download_model", {
                 jobId: `download_${Date.now()}`,
               });
 
               unlistenVerifying();
-              setModelStatus('READY');
-              setSelectedProvider('SIDECAR');
+              setModelStatus("READY");
+              setSelectedProvider("SIDECAR");
             } catch (e) {
-              console.error('Download failed:', e);
-              setModelStatus('FAILED');
+              console.error("Download failed:", e);
+              setModelStatus("FAILED");
             }
           } else {
             // Fallback for non-Tauri dev environment
-            setTimeout(() => setModelStatus('VERIFYING'), 5000);
+            setTimeout(() => setModelStatus("VERIFYING"), 5000);
             setTimeout(() => {
-              setModelStatus('READY');
-              setSelectedProvider('SIDECAR');
+              setModelStatus("READY");
+              setSelectedProvider("SIDECAR");
             }, 8000);
           }
         }}
         onDismiss={() => setIsDownloadModalDismissed(true)}
       />
-
     </div>
   );
 }

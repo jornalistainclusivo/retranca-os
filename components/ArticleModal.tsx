@@ -16,7 +16,7 @@ import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter
 import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
 import React, { useState, useEffect } from 'react';
-import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
+import { Article, ArticleStatus, CategoryTag, ChecklistItem, WorkflowStage, CategoryEntity } from '@/types/editorial';
 import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
 import { 
   X, 
@@ -44,6 +44,8 @@ import {
 
 interface ArticleModalProps {
   article: Article | null;
+  workflowStages: WorkflowStage[];
+  categories: CategoryEntity[];
   isOpen: boolean;
   onClose: () => void;
   onSave: (article: Article) => void;
@@ -53,27 +55,10 @@ interface ArticleModalProps {
   provider?: ProviderType;
 }
 
-const CATEGORIES: CategoryTag[] = [
-  'IA',
-  'Acessibilidade',
-  'Inclusão',
-  'SEO',
-  'Docs',
-  'Blog',
-  'Social',
-  'Linguagem Simples',
-];
-
-const STATUS_OPTIONS: { id: ArticleStatus; label: string }[] = [
-  { id: 'ideia', label: 'Ideia (Cinza)' },
-  { id: 'pesquisa', label: 'Pesquisa (Azul)' },
-  { id: 'escrita', label: 'Escrita (Amarelo)' },
-  { id: 'revisao', label: 'Revisão (Laranja)' },
-  { id: 'publicado', label: 'Publicado (Verde)' },
-];
-
 export const ArticleModal: React.FC<ArticleModalProps> = ({
   article,
+  workflowStages,
+  categories,
   isOpen,
   onClose,
   onSave,
@@ -88,6 +73,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     title: '',
     status: 'ideia',
     categoryTag: 'Acessibilidade',
+    workflowStageId: workflowStages.length > 0 ? workflowStages[0].id : undefined,
+    categoryId: categories.length > 0 ? categories[0].id : undefined,
     tags: [],
     publishDate: '',
     summary: '',
@@ -204,7 +191,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       {
         id: `h_${Date.now()}`,
         date: new Date().toISOString(),
-        action: `Edição de detalhes CMS salvas (Status: ${formData.status.toUpperCase()})`,
+        action: `Edição de detalhes CMS salvas (Etapa: ${workflowStages.find(s => s.id === formData.workflowStageId)?.displayName || formData.status})`,
       },
       ...formData.history,
     ];
@@ -441,19 +428,19 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               />
             </div>
 
-            {/* Status */}
+            {/* Stage */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
-                Status Editorial
+                Etapa do Fluxo
               </label>
               <select
-                value={formData.status}
-                onChange={(e) => handleChange('status', e.target.value as ArticleStatus)}
+                value={formData.workflowStageId || ''}
+                onChange={(e) => handleChange('workflowStageId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
-                {STATUS_OPTIONS.map((st) => (
+                {workflowStages.map((st) => (
                   <option key={st.id} value={st.id}>
-                    {st.label}
+                    {st.displayName}
                   </option>
                 ))}
               </select>
@@ -465,13 +452,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 Categoria Principal
               </label>
               <select
-                value={formData.categoryTag}
-                onChange={(e) => handleChange('categoryTag', e.target.value as CategoryTag)}
+                value={formData.categoryId || ''}
+                onChange={(e) => handleChange('categoryId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
