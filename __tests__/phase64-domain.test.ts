@@ -350,3 +350,241 @@ describe('Phase 6.4 Storage and Migration Logic', () => {
     expect(saved[0].categoryId).toBe('cat1'); // unchanged
   });
 });
+
+import { saveRawArticle, RawArticleData } from '@/lib/api/articles';
+import { getDb } from '@/db/client';
+import { createNewArticle, mergeBrowserSaveArticle } from '@/lib/storage';
+
+vi.mock('@/db/client', () => ({
+  getDb: vi.fn(),
+}));
+
+describe('Phase 6.4 Authoritative History and Save Logic', () => {
+  const mockDb: any = {};
+  mockDb.select = vi.fn(() => mockDb);
+  mockDb.from = vi.fn(() => mockDb);
+  mockDb.where = vi.fn(() => mockDb);
+  mockDb.insert = vi.fn(() => mockDb);
+  mockDb.values = vi.fn(() => mockDb);
+  mockDb.update = vi.fn(() => mockDb);
+  mockDb.set = vi.fn(() => mockDb);
+  mockDb.delete = vi.fn(() => mockDb);
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(getDb).mockResolvedValue(mockDb as any);
+  });
+
+  const baseRaw: RawArticleData = {
+    article: {
+      id: 'art1',
+      title: 'T',
+      status: 'ideia',
+      categoryTag: 'IA',
+      tags: '[]',
+      publishDate: '2020',
+      summary: '',
+      objective: '',
+      keyword: '',
+      persona: '',
+      cta: '',
+      internalLinks: '',
+      externalLinks: '',
+      estimatedTime: '',
+      spentTime: '',
+      notes: '',
+      createdAt: '2020',
+      updatedAt: '2020',
+      completedAt: null,
+      workflowStageId: 'st1',
+      categoryId: 'cat1',
+    },
+    checklists: [],
+    history: [],
+  };
+
+  it('A. saveRawArticle performs idempotent history merge when article exists', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article]) // 1. select article
+                .mockResolvedValueOnce([]) // 2. update article
+                .mockResolvedValueOnce([]) // 3. delete checklists
+                .mockResolvedValueOnce([{ id: 'h1' }]); // 4. select history
+
+    const newRaw = {
+      ...baseRaw,
+      history: [{ id: 'h1', articleId: 'art1', date: '2020', action: 'Old' }, { id: 'h2', articleId: 'art1', date: '2021', action: 'New' }],
+    };
+
+    await saveRawArticle(newRaw);
+    
+    // Only h2 should be inserted
+    expect(mockDb.insert).toHaveBeenCalled();
+    expect(mockDb.values).toHaveBeenCalledWith([{ id: 'h2', articleId: 'art1', date: '2021', action: 'New' }]);
+  });
+
+  it('B. saveRawArticle prevents native history overwrites (preserves IDs on conflict)', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article]) // 1. select article
+                .mockResolvedValueOnce([]) // 2. update article
+                .mockResolvedValueOnce([]) // 3. delete checklists
+                .mockResolvedValueOnce([{ id: 'h1' }, { id: 'h2' }]); // 4. select history
+
+    const newRaw = {
+      ...baseRaw,
+      history: [{ id: 'h1', articleId: 'art1', date: '2020', action: 'Stale overwrite' }], // frontend tries to overwrite
+    };
+
+    await saveRawArticle(newRaw);
+    
+    // No history insert should be called because h1 is already in native db
+    expect(mockDb.insert).not.toHaveBeenCalledWith(expect.anything()); // It might be called for checklists, but raw.checklists is []
+  });
+
+  it('C. saveRawArticle protects authoritative domain fields from stale overwrite', async () => {
+    mockDb.where.mockResolvedValueOnce([{ ...baseRaw.article, workflowStageId: 'native-stage', categoryId: 'native-cat', completedAt: 'native-date' }]); 
+    mockDb.where.mockResolvedValueOnce([]); // no history
+
+    const newRaw = {
+      ...baseRaw,
+      article: { ...baseRaw.article, workflowStageId: 'stale-stage', categoryId: 'stale-cat', completedAt: 'stale-date' }
+    };
+
+    await saveRawArticle(newRaw);
+    
+    expect(mockDb.update).toHaveBeenCalled();
+    expect(mockDb.set).toHaveBeenCalledWith(expect.objectContaining({
+      workflowStageId: 'native-stage',
+      categoryId: 'native-cat',
+      completedAt: 'native-date'
+    }));
+  });
+
+  it('D. saveRawArticle successfully updates checklists alongside article', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article]);
+    mockDb.where.mockResolvedValueOnce([]);
+
+    const newRaw = {
+      ...baseRaw,
+      checklists: [{ id: 'c1', articleId: 'art1', label: 'C1', completed: 1, category: 'seo' }]
+    };
+
+    await saveRawArticle(newRaw);
+    expect(mockDb.delete).toHaveBeenCalled(); // deletes old checklists
+    expect(mockDb.insert).toHaveBeenCalled();
+    expect(mockDb.values).toHaveBeenCalledWith(newRaw.checklists); // inserts new checklists
+  });
+
+  it('E. saveRawArticle inserts new article with initial history correctly', async () => {
+    mockDb.where.mockResolvedValueOnce([]); // New article, does not exist
+
+    const newRaw = {
+      ...baseRaw,
+      history: [{ id: 'h1', articleId: 'art1', date: '2020', action: 'Created' }],
+    };
+
+    await saveRawArticle(newRaw);
+    expect(mockDb.insert).toHaveBeenCalledTimes(2); // one for article, one for history
+    expect(mockDb.values).toHaveBeenCalledWith(newRaw.article);
+    expect(mockDb.values).toHaveBeenCalledWith(newRaw.history);
+  });
+
+  it('F. saveRawArticle handles empty history arrays gracefully', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article]);
+    mockDb.where.mockResolvedValueOnce([]);
+    
+    await saveRawArticle(baseRaw);
+    expect(mockDb.update).toHaveBeenCalled();
+    // Insert for history should not be called
+    expect(mockDb.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('Phase 6.4 Article Creation and Browser History Merge', () => {
+  const activeStages: WorkflowStage[] = [
+    { id: 'st1', displayName: 'S1', orderIndex: 1, semanticClassification: 'IDEA', lifecycleRole: null, isActive: true },
+    { id: 'st2', displayName: 'S2', orderIndex: 2, semanticClassification: 'PUBLISHED', lifecycleRole: 'PUBLICATION', isActive: true },
+  ];
+  const activeCats: CategoryEntity[] = [
+    { id: 'cat1', name: 'C1', origin: 'standard', isActive: true },
+  ];
+
+  it('G. new article chooses the lowest-order ACTIVE workflow stage', () => {
+    const art = createNewArticle([{ ...activeStages[1], orderIndex: 0 }, activeStages[0]], activeCats);
+    expect(art?.workflowStageId).toBe('st2'); // st2 has orderIndex 0 now
+  });
+
+  it('H. new article chooses an ACTIVE category', () => {
+    const inactiveCats: CategoryEntity[] = [{ id: 'cat2', name: 'C2', origin: 'custom', isActive: false }];
+    const art = createNewArticle(activeStages, [...inactiveCats, ...activeCats]);
+    expect(art?.categoryId).toBe('cat1');
+  });
+
+  it('I. no active workflow stage prevents creation', () => {
+    const inactiveStages = activeStages.map(s => ({ ...s, isActive: false }));
+    const art = createNewArticle(inactiveStages, activeCats);
+    expect(art).toBeNull();
+  });
+
+  it('J. no active category prevents creation', () => {
+    const inactiveCats = activeCats.map(c => ({ ...c, isActive: false }));
+    const art = createNewArticle(activeStages, inactiveCats);
+    expect(art).toBeNull();
+  });
+
+  it('K. mergeBrowserSaveArticle preserves the browser domain transition rather than overwriting it with stale metadata', () => {
+    const prev: Article = {
+      id: 'a1', title: 'T', status: 'ideia', categoryTag: 'IA', tags: [], publishDate: '2020',
+      summary: '', objective: '', keyword: '', persona: '', cta: '', internalLinks: '', externalLinks: '',
+      estimatedTime: '', spentTime: '', notes: '', checklists: [],
+      history: [{ id: 'h1', date: '2020', action: 'Move' }],
+      createdAt: '2020', updatedAt: '2020',
+      workflowStageId: 'new-stage', // domain transition happened in browser
+      categoryId: 'new-cat',
+      completedAt: '2020'
+    };
+
+    const staleSaved: Article = {
+      ...prev,
+      workflowStageId: 'old-stage', // UI sent stale stage
+      categoryId: 'old-cat',
+      completedAt: 'old-date',
+      history: [{ id: 'h2', date: '2021', action: 'Edit' }]
+    };
+
+    const merged = mergeBrowserSaveArticle(prev, staleSaved);
+    expect(merged.workflowStageId).toBe('new-stage');
+    expect(merged.categoryId).toBe('new-cat');
+    expect(merged.completedAt).toBe('2020');
+  });
+
+  it('L. mergeBrowserSaveArticle performs non-destructive merge of history', () => {
+    const prev: Article = {
+      id: 'a1', title: 'T', status: 'ideia', categoryTag: 'IA', tags: [], publishDate: '2020',
+      summary: '', objective: '', keyword: '', persona: '', cta: '', internalLinks: '', externalLinks: '',
+      estimatedTime: '', spentTime: '', notes: '', checklists: [],
+      history: [{ id: 'h1', date: '2020', action: 'A' }, { id: 'h2', date: '2020', action: 'B' }],
+      createdAt: '2020', updatedAt: '2020',
+    };
+
+    const saved: Article = {
+      ...prev,
+      history: [{ id: 'h2', date: '2020', action: 'B' }, { id: 'h3', date: '2021', action: 'C' }]
+    };
+
+    const merged = mergeBrowserSaveArticle(prev, saved);
+    expect(merged.history).toHaveLength(3);
+    expect(merged.history.map(h => h.id)).toEqual(['h1', 'h2', 'h3']);
+  });
+
+  it('M. mergeBrowserSaveArticle handles undefined previous article gracefully', () => {
+    const saved: Article = {
+      id: 'a1', title: 'T', status: 'ideia', categoryTag: 'IA', tags: [], publishDate: '2020',
+      summary: '', objective: '', keyword: '', persona: '', cta: '', internalLinks: '', externalLinks: '',
+      estimatedTime: '', spentTime: '', notes: '', checklists: [],
+      history: [{ id: 'h1', date: '2020', action: 'A' }],
+      createdAt: '2020', updatedAt: '2020',
+    };
+
+    const merged = mergeBrowserSaveArticle(undefined, saved);
+    expect(merged).toEqual(saved);
+  });
+});
+

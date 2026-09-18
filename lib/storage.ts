@@ -250,3 +250,66 @@ export const importArticlesJSON = (file: File): Promise<Article[]> => {
     reader.readAsText(file);
   });
 };
+
+export const createNewArticle = (workflowStages: WorkflowStage[], categories: CategoryEntity[]): Article | null => {
+  const activeStages = workflowStages.filter((s) => s.isActive).sort((a, b) => a.orderIndex - b.orderIndex);
+  const activeCats = categories.filter((c) => c.isActive);
+
+  if (activeStages.length === 0 || activeCats.length === 0) {
+    return null;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  return {
+    id: `art_${Date.now()}`,
+    title: "",
+    status: "ideia",
+    categoryTag: "Acessibilidade",
+    workflowStageId: activeStages[0].id,
+    categoryId: activeCats[0].id,
+    tags: ["Acessibilidade", "Jornalismo"],
+    publishDate: todayStr,
+    summary: "",
+    objective: "",
+    keyword: "",
+    persona: "Leitores do Jornalista Inclusivo",
+    cta: "Saiba mais no nosso portal",
+    internalLinks: "",
+    externalLinks: "",
+    estimatedTime: "2h",
+    spentTime: "0m",
+    notes: "",
+    checklists: [
+      { id: "c1", label: "Pesquisa e checagem de fontes", completed: false, category: "pesquisa" },
+      { id: "c2", label: "Linguagem Simples (fácil leitura)", completed: false, category: "editorial" },
+      { id: "c3", label: "Otimização SEO e palavra-chave no H1", completed: false, category: "seo" },
+      { id: "c4", label: "Descrição Alt Text WCAG 2.2", completed: false, category: "wcag" },
+      { id: "c5", label: "Auditoria Ética de IA", completed: false, category: "ia" },
+      { id: "c6", label: "Divulgação nas redes sociais e newsletter", completed: false, category: "distribuicao" },
+    ],
+    history: [
+      { id: `h_${Date.now()}`, date: new Date().toISOString(), action: "Pauta criada" },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+export const mergeBrowserSaveArticle = (previous: Article | undefined, savedArticle: Article): Article => {
+  const metadataArticle = { ...savedArticle };
+  if (previous) {
+    metadataArticle.workflowStageId = previous.workflowStageId;
+    metadataArticle.categoryId = previous.categoryId;
+    metadataArticle.completedAt = previous.completedAt;
+    
+    const historyToSave = [...previous.history];
+    const prevHistoryIds = new Set(historyToSave.map(h => h.id));
+    for (const h of savedArticle.history) {
+      if (!prevHistoryIds.has(h.id)) {
+        historyToSave.push(h);
+      }
+    }
+    metadataArticle.history = historyToSave;
+  }
+  return metadataArticle;
+};

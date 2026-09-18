@@ -4,12 +4,30 @@ import { eq } from 'drizzle-orm';
 import { invoke } from '@tauri-apps/api/core';
 import { WorkflowStage, CategoryEntity, WorkflowLifecycleRole, SemanticClassification, CategoryOrigin } from '@/types/editorial';
 
+export interface RawWorkflowStage {
+  id: string;
+  display_name: string;
+  order_index: number;
+  semantic_classification: string;
+  lifecycle_role: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface RawCategory {
+  id: string;
+  name: string;
+  origin: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface GetWorkflowStagesResponse {
-  stages: any[];
+  stages: RawWorkflowStage[];
 }
 
 export interface GetCategoriesResponse {
-  categories: any[];
+  categories: RawCategory[];
 }
 
 export interface RawArticleData {
@@ -46,18 +64,26 @@ export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
 
     await db.update(articles).set(updateData).where(eq(articles.id, raw.article.id));
     await db.delete(checklistItems).where(eq(checklistItems.articleId, raw.article.id));
-    // History is NOT deleted/overwritten to prevent wiping out native transition history
-    // We only insert new history if provided
+    
+    // History is NOT deleted to prevent wiping out native transition history.
+    // We only insert genuinely new history entries.
+    if (raw.history.length > 0) {
+      const existingHistory = await db.select().from(historyEntries).where(eq(historyEntries.articleId, raw.article.id));
+      const existingHistoryIds = new Set(existingHistory.map((h: DbHistoryEntry) => h.id));
+      const newHistory = raw.history.filter((h: DbHistoryEntry) => !existingHistoryIds.has(h.id));
+      if (newHistory.length > 0) {
+        await db.insert(historyEntries).values(newHistory);
+      }
+    }
   } else {
     await db.insert(articles).values(raw.article);
+    if (raw.history.length > 0) {
+      await db.insert(historyEntries).values(raw.history);
+    }
   }
   
   if (raw.checklists.length > 0) {
     await db.insert(checklistItems).values(raw.checklists);
-  }
-  
-  if (raw.history.length > 0 && existing.length === 0) {
-    await db.insert(historyEntries).values(raw.history);
   }
 };
 
