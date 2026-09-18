@@ -1,3 +1,4 @@
+use crate::entitlements::EntitlementDecisionProvider;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Row, Sqlite};
 use tauri::State;
@@ -5,8 +6,8 @@ use tauri_plugin_sql::{DbInstances, DbPool};
 
 use crate::entitlements::EntitlementError;
 use crate::models::workflow::{
-    validate_lifecycle_role, validate_semantic_classification, Category, CategoryOrigin,
-    ChecklistTemplate, ChecklistTemplateItem, WorkflowStage, new_domain_id
+    new_domain_id, validate_lifecycle_role, validate_semantic_classification, Category,
+    CategoryOrigin, ChecklistTemplate, ChecklistTemplateItem, WorkflowStage,
 };
 
 #[derive(Debug, Serialize)]
@@ -67,9 +68,8 @@ pub async fn verify_user_version(pool: &Pool<Sqlite>) -> Result<(), CanonicalErr
     Ok(())
 }
 
-use crate::entitlements::EntitlementDecisionProvider;
 pub async fn authorize_protected(
-    provider: &State<'_, crate::entitlements::AppEntitlementProvider>,
+    provider: &impl EntitlementDecisionProvider,
 ) -> Result<(), CanonicalError> {
     let state = provider.check_entitlement().await.map_err(|e| match e {
         crate::entitlements::EntitlementError::EntitlementStateUnknown => CanonicalError {
@@ -418,7 +418,11 @@ pub async fn assign_article_category(
     let rows_affected = result.rows_affected();
 
     if rows_affected > 0 {
-        tx.commit().await.ok();
+        tx.commit().await.map_err(|_| CanonicalError {
+            code: "ERR_DATABASE_FAILURE".into(),
+            retryable: true,
+            details: serde_json::json!({}),
+        })?;
     } else {
         tx.rollback().await.map_err(|_| CanonicalError {
             code: "ERR_DATABASE_FAILURE".into(),
@@ -467,10 +471,12 @@ pub async fn apply_checklist_template(
     })?;
 
     let items: Vec<ChecklistTemplateItem> =
-        serde_json::from_str(&template.get::<String, _>("items_json")).map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
+        serde_json::from_str(&template.get::<String, _>("items_json")).map_err(|_| {
+            CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            }
         })?;
 
     for item in items {
@@ -504,7 +510,15 @@ pub async fn create_workflow_stage(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateWorkflowStageRequest,
 ) -> Result<WorkflowStage, CanonicalError> {
-    authorize_protected(&provider).await?;
+    create_workflow_stage_internal(instances, &*provider, request).await
+}
+
+pub async fn create_workflow_stage_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: CreateWorkflowStageRequest,
+) -> Result<WorkflowStage, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -541,7 +555,6 @@ pub async fn create_workflow_stage(
             details: serde_json::json!({}),
         })?;
 
-
     if count > 0 {
         return Err(CanonicalError {
             code: "ERR_INVALID_WORKFLOW".into(),
@@ -549,16 +562,17 @@ pub async fn create_workflow_stage(
             details: serde_json::json!({}),
         });
     }
-    
-    let active_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
-        
+
+    let active_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
+
     let insert_index = request.order_index;
     if insert_index < 0 || insert_index > active_count {
         return Err(CanonicalError {
@@ -601,8 +615,8 @@ pub async fn create_workflow_stage(
     })?;
 
     Ok(WorkflowStage {
-        id: id.clone(),
-        display_name: display_name,
+        id,
+        display_name,
         order_index: request.order_index,
         semantic_classification: sem_class,
         lifecycle_role: None,
@@ -624,7 +638,15 @@ pub async fn update_workflow_stage(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    update_workflow_stage_internal(instances, &*provider, request).await
+}
+
+pub async fn update_workflow_stage_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: UpdateWorkflowStageRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -753,7 +775,15 @@ pub async fn reorder_workflow_stages(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: ReorderWorkflowStagesRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    reorder_workflow_stages_internal(instances, &*provider, request).await
+}
+
+pub async fn reorder_workflow_stages_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: ReorderWorkflowStagesRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -773,24 +803,40 @@ pub async fn reorder_workflow_stages(
         })?;
     let active_count = active_stages.len();
     if request.stage_orders.len() != active_count {
-        return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+        return Err(CanonicalError {
+            code: "ERR_INVALID_WORKFLOW".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
     }
     let mut provided_ids = std::collections::HashSet::new();
     let mut provided_orders = std::collections::HashSet::new();
     for order in &request.stage_orders {
         provided_ids.insert(order.id.clone());
         if order.order_index < 0 || order.order_index >= active_count as i64 {
-            return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+            return Err(CanonicalError {
+                code: "ERR_INVALID_WORKFLOW".into(),
+                retryable: false,
+                details: serde_json::json!({}),
+            });
         }
         provided_orders.insert(order.order_index);
     }
     if provided_ids.len() != active_count || provided_orders.len() != active_count {
-        return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+        return Err(CanonicalError {
+            code: "ERR_INVALID_WORKFLOW".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
     }
     for row in active_stages {
         let row_id: String = row.get("id");
         if !provided_ids.contains(&row_id) {
-            return Err(CanonicalError { code: "ERR_INVALID_WORKFLOW".into(), retryable: false, details: serde_json::json!({}) });
+            return Err(CanonicalError {
+                code: "ERR_INVALID_WORKFLOW".into(),
+                retryable: false,
+                details: serde_json::json!({}),
+            });
         }
     }
 
@@ -828,7 +874,15 @@ pub async fn remove_workflow_stage(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    remove_workflow_stage_internal(instances, &*provider, request).await
+}
+
+pub async fn remove_workflow_stage_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: RemoveWorkflowStageRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -838,24 +892,26 @@ pub async fn remove_workflow_stage(
         details: serde_json::json!({}),
     })?;
 
-    let source = sqlx::query("SELECT lifecycle_role, is_active, order_index FROM workflow_stages WHERE id = ?")
-        .bind(&request.id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+    let source = sqlx::query(
+        "SELECT lifecycle_role, is_active, order_index FROM workflow_stages WHERE id = ?",
+    )
+    .bind(&request.id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     let source = match source {
         Some(s) => s,
         None => {
             tx.rollback().await.map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
             return Ok(SuccessResponse { success: true });
         }
     };
@@ -869,14 +925,15 @@ pub async fn remove_workflow_stage(
         return Ok(SuccessResponse { success: true });
     }
 
-    let active_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+    let active_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1")
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
     if active_count <= 1 {
         tx.rollback().await.map_err(|_| CanonicalError {
             code: "ERR_DATABASE_FAILURE".into(),
@@ -889,7 +946,6 @@ pub async fn remove_workflow_stage(
             details: serde_json::json!({}),
         });
     }
-
 
     let is_pub =
         source.get::<Option<String>, _>("lifecycle_role").as_deref() == Some("PUBLICATION");
@@ -1005,7 +1061,7 @@ pub async fn remove_workflow_stage(
     }
 
     let source_order_index = source.get::<i64, _>("order_index");
-    
+
     // deactivate source
     sqlx::query("UPDATE workflow_stages SET is_active = 0, order_index = 9999 WHERE id = ?")
         .bind(&request.id)
@@ -1016,7 +1072,7 @@ pub async fn remove_workflow_stage(
             retryable: true,
             details: serde_json::json!({}),
         })?;
-        
+
     // compact remaining active ordering
     sqlx::query("UPDATE workflow_stages SET order_index = order_index - 1 WHERE is_active = 1 AND order_index > ?")
         .bind(source_order_index)
@@ -1069,7 +1125,15 @@ pub async fn create_category(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateCategoryRequest,
 ) -> Result<Category, CanonicalError> {
-    authorize_protected(&provider).await?;
+    create_category_internal(instances, &*provider, request).await
+}
+
+pub async fn create_category_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: CreateCategoryRequest,
+) -> Result<Category, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1088,15 +1152,17 @@ pub async fn create_category(
         });
     }
 
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND is_active = 1")
-        .bind(&name)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND is_active = 1",
+    )
+    .bind(&name)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
 
     if count > 0 {
         return Err(CanonicalError {
@@ -1130,7 +1196,7 @@ pub async fn create_category(
 
     Ok(Category {
         id: id.clone(),
-        name: name,
+        name,
         origin: CategoryOrigin::Custom,
         is_active: true,
         created_at: Some(now),
@@ -1149,7 +1215,15 @@ pub async fn rename_category(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RenameCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    rename_category_internal(instances, &*provider, request).await
+}
+
+pub async fn rename_category_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: RenameCategoryRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1193,7 +1267,7 @@ pub async fn rename_category(
             details: serde_json::json!({}),
         });
     }
-    
+
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND is_active = 1 AND id != ?")
         .bind(&name)
         .bind(&request.id)
@@ -1244,7 +1318,15 @@ pub async fn remove_category(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    remove_category_internal(instances, &*provider, request).await
+}
+
+pub async fn remove_category_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: RemoveCategoryRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1280,15 +1362,16 @@ pub async fn remove_category(
         });
     }
 
-    let has_articles: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category_id = ?")
-        .bind(&request.id)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+    let has_articles: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM articles WHERE category_id = ?")
+            .bind(&request.id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
 
     if has_articles > 0 {
         if request.reassign_to_category_id.is_none() {
@@ -1308,15 +1391,16 @@ pub async fn remove_category(
             });
         }
 
-        let target_active_opt: Option<i64> = sqlx::query_scalar("SELECT is_active FROM categories WHERE id = ?")
-            .bind(target_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|_| CanonicalError {
-                code: "ERR_DATABASE_FAILURE".into(),
-                retryable: true,
-                details: serde_json::json!({}),
-            })?;
+        let target_active_opt: Option<i64> =
+            sqlx::query_scalar("SELECT is_active FROM categories WHERE id = ?")
+                .bind(target_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|_| CanonicalError {
+                    code: "ERR_DATABASE_FAILURE".into(),
+                    retryable: true,
+                    details: serde_json::json!({}),
+                })?;
         let target_active = target_active_opt.unwrap_or(0i64);
 
         if target_active == 0 {
@@ -1379,7 +1463,15 @@ pub async fn create_checklist_template(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateChecklistTemplateRequest,
 ) -> Result<ChecklistTemplate, CanonicalError> {
-    authorize_protected(&provider).await?;
+    create_checklist_template_internal(instances, &*provider, request).await
+}
+
+pub async fn create_checklist_template_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: CreateChecklistTemplateRequest,
+) -> Result<ChecklistTemplate, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1397,7 +1489,7 @@ pub async fn create_checklist_template(
             details: serde_json::json!({}),
         });
     }
-    
+
     // validate items
     if request.items.iter().any(|i| i.label.trim().is_empty()) {
         return Err(CanonicalError {
@@ -1407,15 +1499,16 @@ pub async fn create_checklist_template(
         });
     }
 
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE LOWER(name) = LOWER(?)")
-        .bind(&name)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| CanonicalError {
-            code: "ERR_DATABASE_FAILURE".into(),
-            retryable: true,
-            details: serde_json::json!({}),
-        })?;
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE LOWER(name) = LOWER(?)")
+            .bind(&name)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
 
     if count > 0 {
         return Err(CanonicalError {
@@ -1463,7 +1556,7 @@ pub async fn create_checklist_template(
 
     Ok(ChecklistTemplate {
         id: id.clone(),
-        name: name,
+        name,
         items: request.items,
         created_at: Some(now),
     })
@@ -1482,7 +1575,15 @@ pub async fn update_checklist_template(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    update_checklist_template_internal(instances, &*provider, request).await
+}
+
+pub async fn update_checklist_template_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: UpdateChecklistTemplateRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1491,6 +1592,23 @@ pub async fn update_checklist_template(
         retryable: true,
         details: serde_json::json!({}),
     })?;
+
+    let name = request.name.trim().to_string();
+    if name.is_empty() {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
+    if request.items.iter().any(|i| i.label.trim().is_empty()) {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
 
     let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM checklist_templates WHERE id = ?")
         .bind(&request.id)
@@ -1510,6 +1628,27 @@ pub async fn update_checklist_template(
         });
     }
 
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM checklist_templates WHERE LOWER(name) = LOWER(?) AND id != ?",
+    )
+    .bind(&name)
+    .bind(&request.id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|_| CanonicalError {
+        code: "ERR_DATABASE_FAILURE".into(),
+        retryable: true,
+        details: serde_json::json!({}),
+    })?;
+
+    if count > 0 {
+        return Err(CanonicalError {
+            code: "ERR_INVALID_CHECKLIST_TEMPLATE".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        });
+    }
+
     let items_json = serde_json::to_string(&request.items).map_err(|_| CanonicalError {
         code: "ERR_DATABASE_FAILURE".into(),
         retryable: true,
@@ -1517,7 +1656,7 @@ pub async fn update_checklist_template(
     })?;
 
     sqlx::query("UPDATE checklist_templates SET name = ?, items_json = ? WHERE id = ?")
-        .bind(&request.name)
+        .bind(&name)
         .bind(&items_json)
         .bind(&request.id)
         .execute(&mut *tx)
@@ -1548,7 +1687,15 @@ pub async fn delete_checklist_template(
     provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: DeleteChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(&provider).await?;
+    delete_checklist_template_internal(instances, &*provider, request).await
+}
+
+pub async fn delete_checklist_template_internal(
+    instances: State<'_, DbInstances>,
+    provider: &impl EntitlementDecisionProvider,
+    request: DeleteChecklistTemplateRequest,
+) -> Result<SuccessResponse, CanonicalError> {
+    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
