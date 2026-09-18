@@ -35,18 +35,19 @@ const CATEGORY_TO_CATEGORY_ID: Record<string, string> = {
 const migrateArticles = (articles: Article[]): Article[] => {
   return articles.map((art) => {
     const updatedArt = { ...art };
-    if (
-      !updatedArt.workflowStageId &&
-      STATUS_TO_WORKFLOW_ID[art.status as string]
-    ) {
-      updatedArt.workflowStageId = STATUS_TO_WORKFLOW_ID[art.status as string];
+    if (!updatedArt.workflowStageId) {
+      if (STATUS_TO_WORKFLOW_ID[art.status as string]) {
+        updatedArt.workflowStageId = STATUS_TO_WORKFLOW_ID[art.status as string];
+      } else {
+        throw new Error("ERR_MIGRATION_UNKNOWN_LEGACY_VALUE");
+      }
     }
-    if (
-      !updatedArt.categoryId &&
-      CATEGORY_TO_CATEGORY_ID[art.categoryTag as string]
-    ) {
-      updatedArt.categoryId =
-        CATEGORY_TO_CATEGORY_ID[art.categoryTag as string];
+    if (!updatedArt.categoryId) {
+      if (CATEGORY_TO_CATEGORY_ID[art.categoryTag as string]) {
+        updatedArt.categoryId = CATEGORY_TO_CATEGORY_ID[art.categoryTag as string];
+      } else {
+        throw new Error("ERR_MIGRATION_UNKNOWN_LEGACY_VALUE");
+      }
     }
     return updatedArt;
   });
@@ -68,14 +69,13 @@ export const getStoredWorkflowStages = (): WorkflowStage[] => {
       (s: WorkflowStage) => s.lifecycleRole === "PUBLICATION" && s.isActive,
     );
     if (pubStages.length !== 1) {
-      localStorage.setItem(
-        WORKFLOWS_STORAGE_KEY,
-        JSON.stringify(DEFAULT_WORKFLOW_STAGES),
-      );
-      return DEFAULT_WORKFLOW_STAGES;
+      throw new Error("ERR_PUBLICATION_ROLE_INVARIANT");
     }
     return parsed;
   } catch (e) {
+    if (e instanceof Error && e.message === "ERR_PUBLICATION_ROLE_INVARIANT") {
+      throw e;
+    }
     return DEFAULT_WORKFLOW_STAGES;
   }
 };
@@ -114,31 +114,10 @@ export const getStoredArticles = (): Article[] => {
         ? parsed
         : ALL_INITIAL_ARTICLES;
 
-    let hasChanges = false;
-    const migratedArticles = articles.map((art) => {
-      let changed = false;
-      const updatedArt = { ...art };
+    const migratedArticles = migrateArticles(articles);
 
-      if (!updatedArt.workflowStageId) {
-        const standardId = STATUS_TO_WORKFLOW_ID[updatedArt.status as string];
-        if (standardId) {
-          updatedArt.workflowStageId = standardId;
-          changed = true;
-        }
-      }
-
-      if (!updatedArt.categoryId) {
-        const standardId =
-          CATEGORY_TO_CATEGORY_ID[updatedArt.categoryTag as string];
-        if (standardId) {
-          updatedArt.categoryId = standardId;
-          changed = true;
-        }
-      }
-
-      if (changed) hasChanges = true;
-      return updatedArt;
-    });
+    // Idempotency: if any changed due to migration, save
+    const hasChanges = JSON.stringify(articles) !== JSON.stringify(migratedArticles);
 
     if (hasChanges) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedArticles));
@@ -146,6 +125,9 @@ export const getStoredArticles = (): Article[] => {
 
     return migratedArticles;
   } catch (e) {
+    if (e instanceof Error && e.message === "ERR_MIGRATION_UNKNOWN_LEGACY_VALUE") {
+      throw e;
+    }
     console.error("Error loading articles from localStorage", e);
     return migrateArticles(ALL_INITIAL_ARTICLES);
   }

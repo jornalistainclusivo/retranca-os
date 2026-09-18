@@ -4,6 +4,14 @@ import { eq } from 'drizzle-orm';
 import { invoke } from '@tauri-apps/api/core';
 import { WorkflowStage, CategoryEntity, WorkflowLifecycleRole, SemanticClassification, CategoryOrigin } from '@/types/editorial';
 
+export interface GetWorkflowStagesResponse {
+  stages: any[];
+}
+
+export interface GetCategoriesResponse {
+  categories: any[];
+}
+
 export interface RawArticleData {
   article: DbArticle;
   checklists: DbChecklistItem[];
@@ -62,8 +70,8 @@ export const deleteRawArticle = async (id: string): Promise<void> => {
 
 export const fetchWorkflowStages = async (): Promise<WorkflowStage[]> => {
   try {
-    const response = await invoke<any[]>('get_workflow_stages');
-    return response.map(s => ({
+    const response = await invoke<GetWorkflowStagesResponse>('get_workflow_stages');
+    return response.stages.map(s => ({
       id: s.id,
       displayName: s.display_name,
       orderIndex: s.order_index,
@@ -80,8 +88,8 @@ export const fetchWorkflowStages = async (): Promise<WorkflowStage[]> => {
 
 export const fetchCategories = async (): Promise<CategoryEntity[]> => {
   try {
-    const response = await invoke<any[]>('get_categories');
-    return response.map(c => ({
+    const response = await invoke<GetCategoriesResponse>('get_categories');
+    return response.categories.map(c => ({
       id: c.id,
       name: c.name,
       origin: c.origin as CategoryOrigin,
@@ -95,9 +103,19 @@ export const fetchCategories = async (): Promise<CategoryEntity[]> => {
 };
 
 export const assignArticleStage = async (articleId: string, workflowStageId: string): Promise<void> => {
-  await invoke('assign_article_stage', { articleId, workflowStageId });
+  await invoke('assign_article_stage', {
+    request: {
+      article_id: articleId,
+      workflow_stage_id: workflowStageId,
+    }
+  });
 };
 
-export const assignArticleCategory = async (articleId: string, categoryId: string): Promise<void> => {
-  await invoke('assign_article_category', { articleId, categoryId });
-};
+export async function assignArticleCategory(articleId: string, categoryId: string): Promise<void> {
+  await invoke('assign_article_category', {
+    request: {
+      article_id: articleId,
+      category_id: categoryId
+    }
+  });
+}

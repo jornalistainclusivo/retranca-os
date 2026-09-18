@@ -209,7 +209,6 @@ export default function Home() {
     }
   };
 
-  // Handler for changing an article stage natively
   const handleUpdateStage = async (id: string, newStageId: string) => {
     const previous = articles.find((a) => a.id === id);
     if (!previous) return;
@@ -217,39 +216,18 @@ export default function Home() {
     const stage = workflowStages.find((s) => s.id === newStageId);
     if (!stage) return;
 
-    const isPublished =
-      stage.semanticClassification === "PUBLISHED" ||
-      stage.lifecycleRole === "PUBLICATION";
-    let changedArticle: Article | undefined;
-
-    const updated = articles.map((art) => {
-      if (art.id === id) {
-        changedArticle = {
-          ...art,
-          workflowStageId: newStageId,
-          completedAt: isPublished ? new Date().toISOString() : art.completedAt,
-          updatedAt: new Date().toISOString(),
-          history: [
-            {
-              id: `h_${Date.now()}`,
-              date: new Date().toISOString(),
-              action: `Movido para a etapa ${stage.displayName}`,
-            },
-            ...art.history,
-          ],
-        };
-        return changedArticle;
-      }
-      return art;
-    });
-
-    setArticles(updated);
+    const isPublished = stage.lifecycleRole === "PUBLICATION";
 
     if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
       await assignArticleStage(id, newStageId);
+      const rawData = await fetchAllRawArticles();
+      const adaptedArticles = rawData.map((raw) =>
+        toArticleProps(raw.article, raw.checklists, raw.history),
+      );
+      setArticles(adaptedArticles);
     } else {
       browserAssignArticleStage(id, newStageId);
-      saveArticles(updated);
+      setArticles(getStoredArticles());
     }
 
     if (previous.workflowStageId !== newStageId && isPublished) {
@@ -285,7 +263,6 @@ export default function Home() {
     }
   };
 
-  // Handler for saving an article from CMS modal
   const handleSaveArticle = async (savedArticle: Article) => {
     const previous = articles.find((a) => a.id === savedArticle.id);
     const exists = previous !== undefined;
@@ -293,28 +270,7 @@ export default function Home() {
     const stage = workflowStages.find(
       (s) => s.id === savedArticle.workflowStageId,
     );
-    const isPublished = stage
-      ? stage.semanticClassification === "PUBLISHED" ||
-        stage.lifecycleRole === "PUBLICATION"
-      : false;
-
-    if (
-      isPublished &&
-      previous &&
-      previous.workflowStageId !== savedArticle.workflowStageId
-    ) {
-      savedArticle.completedAt = new Date().toISOString();
-    }
-
-    let updated: Article[];
-    if (exists) {
-      updated = articles.map((a) =>
-        a.id === savedArticle.id ? savedArticle : a,
-      );
-    } else {
-      updated = [savedArticle, ...articles];
-    }
-    setArticles(updated);
+    const isPublished = stage ? stage.lifecycleRole === "PUBLICATION" : false;
 
     if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
       // Normal metadata save (native save protects domain fields)
@@ -336,8 +292,32 @@ export default function Home() {
       ) {
         await assignArticleCategory(savedArticle.id, savedArticle.categoryId);
       }
+
+      const rawData = await fetchAllRawArticles();
+      const adaptedArticles = rawData.map((raw) =>
+        toArticleProps(raw.article, raw.checklists, raw.history),
+      );
+      setArticles(adaptedArticles);
     } else {
       // Browser fallback transitions
+      const metadataArticle = { ...savedArticle };
+      if (previous) {
+        metadataArticle.workflowStageId = previous.workflowStageId;
+        metadataArticle.categoryId = previous.categoryId;
+        metadataArticle.completedAt = previous.completedAt;
+        metadataArticle.history = previous.history;
+      }
+
+      let updated: Article[];
+      if (exists) {
+        updated = articles.map((a) =>
+          a.id === metadataArticle.id ? metadataArticle : a,
+        );
+      } else {
+        updated = [metadataArticle, ...articles];
+      }
+      saveArticles(updated);
+
       if (
         previous &&
         previous.workflowStageId !== savedArticle.workflowStageId &&
@@ -355,7 +335,7 @@ export default function Home() {
       ) {
         browserAssignArticleCategory(savedArticle.id, savedArticle.categoryId);
       }
-      saveArticles(updated);
+      setArticles(getStoredArticles());
     }
 
     if (
@@ -378,15 +358,22 @@ export default function Home() {
 
   // Open New Article Modal
   const handleOpenNewArticleModal = () => {
+    const activeStages = workflowStages.filter((s) => s.isActive).sort((a, b) => a.orderIndex - b.orderIndex);
+    const activeCats = categories.filter((c) => c.isActive);
+
+    if (activeStages.length === 0 || activeCats.length === 0) {
+      alert("Não é possível criar a pauta: nenhuma etapa de fluxo ou categoria ativa encontrada.");
+      return;
+    }
+
     const todayStr = new Date().toISOString().slice(0, 10);
     const newArt: Article = {
       id: `art_${Date.now()}`,
       title: "",
       status: "ideia",
       categoryTag: "Acessibilidade",
-      workflowStageId:
-        workflowStages.length > 0 ? workflowStages[0].id : undefined,
-      categoryId: categories.length > 0 ? categories[0].id : undefined,
+      workflowStageId: activeStages[0].id,
+      categoryId: activeCats[0].id,
       tags: ["Acessibilidade", "Jornalismo"],
       publishDate: todayStr,
       summary: "",
