@@ -1,4 +1,5 @@
 import { CategoryEntity, WorkflowStage } from "@/types/editorial";
+import { EntitlementState } from "../contexts/EntitlementContext";
 
 export interface A11yValidationResult {
   isValid: boolean;
@@ -46,8 +47,8 @@ export const validateCategoryA11y = (name: string, currentCategories: CategoryEn
 };
 
 /**
- * Guard for PRO entitlement
+ * Guard for PRO entitlement using 5-state model
  */
-export const canExecuteProAction = (isPremium: boolean): boolean => {
-  return isPremium;
+export const canExecuteProAction = (state: EntitlementState): boolean => {
+  return state === 'ProActive' || state === 'ProTemporarilyUnverifiable';
 };

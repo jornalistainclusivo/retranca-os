@@ -5,14 +5,23 @@ import { invoke } from '@tauri-apps/api/core';
 
 export type EntitlementType = 'FREE' | 'DEVELOPER_PREMIUM';
 
+export type EntitlementState =
+  | 'Unknown'
+  | 'FreeConfirmed'
+  | 'ProActive'
+  | 'ProTemporarilyUnverifiable'
+  | 'ProUnavailable';
+
 export interface EntitlementStatus {
   type: EntitlementType;
   is_premium: boolean;
+  state: EntitlementState;
 }
 
 interface EntitlementContextState {
   type: EntitlementType;
   isPremium: boolean;
+  state: EntitlementState;
   refreshEntitlements: () => Promise<void>;
   setDeveloperPremium: (enabled: boolean) => Promise<void>;
   selectedModel: string | null;
@@ -22,7 +31,7 @@ interface EntitlementContextState {
 const EntitlementContext = createContext<EntitlementContextState | undefined>(undefined);
 
 export function EntitlementProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<EntitlementStatus>({ type: 'FREE', is_premium: false });
+  const [status, setStatus] = useState<EntitlementStatus>({ type: 'FREE', is_premium: false, state: 'FreeConfirmed' });
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const refreshEntitlements = async () => {
@@ -31,7 +40,7 @@ export function EntitlementProvider({ children }: { children: React.ReactNode })
       setStatus(data);
     } catch (e) {
       console.error('Failed to get entitlements', e);
-      setStatus({ type: 'FREE', is_premium: false });
+      setStatus({ type: 'FREE', is_premium: false, state: 'Unknown' });
     }
   };
 
@@ -50,11 +59,12 @@ export function EntitlementProvider({ children }: { children: React.ReactNode })
   };
 
   return (
-    <EntitlementContext.Provider 
-      value={{ 
-        type: status.type, 
-        isPremium: status.is_premium, 
-        refreshEntitlements, 
+    <EntitlementContext.Provider
+      value={{
+        type: status.type,
+        isPremium: status.is_premium,
+        state: status.state,
+        refreshEntitlements,
         setDeveloperPremium,
         selectedModel,
         setSelectedModel

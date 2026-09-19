@@ -196,9 +196,9 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
   });
 };
 
-export const reorderWorkflowStages = async (stageIds: string[]): Promise<void> => {
+export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex: number}[]): Promise<void> => {
   await invoke('reorder_workflow_stages', {
-    request: { stage_ids: stageIds }
+    request: { stage_orders: stageOrders.map(s => ({ id: s.id, order_index: s.orderIndex })) }
   });
 };
 
@@ -206,7 +206,7 @@ export const removeWorkflowStage = async (id: string, targetStageId: string): Pr
   await invoke('remove_workflow_stage', {
     request: {
       id,
-      target_stage_id: targetStageId
+      reassign_to_stage_id: targetStageId
     }
   });
 };
@@ -227,7 +227,7 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
   await invoke('remove_category', {
     request: {
       id,
-      target_category_id: targetCategoryId || null
+      reassign_to_category_id: targetCategoryId || null
     }
   });
 };
