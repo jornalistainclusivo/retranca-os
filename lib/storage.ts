@@ -12,6 +12,7 @@ import {
 const STORAGE_KEY = "jinc_editorial_os_articles_v1";
 const WORKFLOWS_STORAGE_KEY = "jinc_editorial_os_workflows_v1";
 const CATEGORIES_STORAGE_KEY = "jinc_editorial_os_categories_v1";
+const CHECKLIST_TEMPLATES_STORAGE_KEY = "jinc_editorial_os_checklist_templates_v1";
 
 const STATUS_TO_WORKFLOW_ID: Record<string, string> = {
   ideia: STANDARD_WORKFLOW_IDS.IDEIA,
@@ -97,6 +98,19 @@ export const getStoredCategories = (): CategoryEntity[] => {
   }
 };
 
+export const getStoredChecklistTemplates = (): any[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CHECKLIST_TEMPLATES_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    return [];
+  }
+};
+
 export const getStoredArticles = (): Article[] => {
   if (typeof window === "undefined") {
     return migrateArticles(ALL_INITIAL_ARTICLES);
@@ -140,6 +154,36 @@ export const saveArticles = (articles: Article[]): void => {
     window.dispatchEvent(new Event("jinc_storage_updated"));
   } catch (e) {
     console.error("Error saving articles to localStorage", e);
+  }
+};
+
+export const saveWorkflowStages = (stages: WorkflowStage[]): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(WORKFLOWS_STORAGE_KEY, JSON.stringify(stages));
+    window.dispatchEvent(new Event("jinc_storage_updated"));
+  } catch (e) {
+    console.error("Error saving workflow stages to localStorage", e);
+  }
+};
+
+export const saveCategories = (categories: CategoryEntity[]): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+    window.dispatchEvent(new Event("jinc_storage_updated"));
+  } catch (e) {
+    console.error("Error saving categories to localStorage", e);
+  }
+};
+
+export const saveChecklistTemplates = (templates: any[]): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CHECKLIST_TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+    window.dispatchEvent(new Event("jinc_storage_updated"));
+  } catch (e) {
+    console.error("Error saving checklist templates to localStorage", e);
   }
 };
 

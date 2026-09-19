@@ -16,7 +16,8 @@ import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter
 import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
 import React, { useState, useEffect } from 'react';
-import { Article, ArticleStatus, CategoryTag, ChecklistItem, WorkflowStage, CategoryEntity } from '@/types/editorial';
+import { Article, ArticleStatus, CategoryTag, ChecklistItem, WorkflowStage, CategoryEntity, ChecklistTemplate } from '@/types/editorial';
+import { fetchChecklistTemplates } from '@/lib/api/articles';
 import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
 import { 
   X, 
@@ -39,7 +40,8 @@ import {
   Maximize,
   Minimize,
   Copy,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 
 interface ArticleModalProps {
@@ -94,12 +96,21 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   });
 
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
   const [analysisContent, setAnalysisContent] = useState('');
   const [visualDescription, setVisualDescription] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const { state } = useEntitlement();
+
+  useEffect(() => {
+    fetchChecklistTemplates().then(setChecklistTemplates).catch(console.error);
+  }, []);
+
   const aiJobIdRef = React.useRef<string | null>(null);
   const aiJobActiveRef = React.useRef(false);
   const unlistenFnsRef = React.useRef<(() => void)[]>([]);
@@ -175,6 +186,25 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       checklists: [...prev.checklists, newItem],
     }));
     setNewChecklistLabel('');
+  };
+
+  const handleApplyTemplate = () => {
+    if (!selectedTemplateId) return;
+    const template = checklistTemplates.find(t => t.id === selectedTemplateId);
+    if (!template) return;
+
+    const newItems: ChecklistItem[] = template.items.map(item => ({
+      id: `ci_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      label: item.label,
+      completed: false,
+      category: 'editorial' as any
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      checklists: [...prev.checklists, ...newItems]
+    }));
+    setSelectedTemplateId('');
   };
 
   const handleDeleteChecklistItem = (id: string) => {
@@ -864,6 +894,31 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <span>Adicionar</span>
               </button>
             </div>
+
+            {/* Checklist Templates (Pro Feature) */}
+            {state === 'ProActive' || state === 'ProTemporarilyUnverifiable' ? (
+              <div className="flex items-center space-x-2 mt-4 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                >
+                  <option value="">Aplicar template PRO...</option>
+                  {checklistTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleApplyTemplate}
+                  disabled={!selectedTemplateId}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-black hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Aplicar
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {/* Section 5: History Log */}

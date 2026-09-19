@@ -1,9 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-export type EntitlementType = 'FREE' | 'DEVELOPER_PREMIUM';
+export type EntitlementType = 'FREE' | 'PRO' | 'DEVELOPER_PREMIUM';
 
 export type EntitlementState =
   | 'Unknown'

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type {
   SemanticClassification,
   WorkflowLifecycleRole,
@@ -201,6 +201,17 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 describe('Phase 6.4 IPC Contracts', () => {
+  beforeEach(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__TAURI_INTERNALS__ = true;
+    }
+  });
+
+  afterEach(() => {
+    if (typeof window !== 'undefined') {
+      delete (window as any).__TAURI_INTERNALS__;
+    }
+  });
   it('get_workflow_stages unwraps { stages } correctly', async () => {
     vi.mocked(invoke).mockResolvedValueOnce({ stages: [{ id: 's1', display_name: 'Stage 1' }] });
     const res = await fetchWorkflowStages();
