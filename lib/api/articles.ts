@@ -53,7 +53,7 @@ export interface RawArticleData {
 
 export const fetchAllRawArticles = async (): Promise<RawArticleData[]> => {
   const db = await getDb();
-  
+
   const allArticles = await db.select().from(articles);
   const allChecklists = await db.select().from(checklistItems);
   const allHistory = await db.select().from(historyEntries);
@@ -68,7 +68,7 @@ export const fetchAllRawArticles = async (): Promise<RawArticleData[]> => {
 export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
   const db = await getDb();
   const existing = await db.select().from(articles).where(eq(articles.id, raw.article.id));
-  
+
   if (existing.length > 0) {
     // PROTECT AUTHORITATIVE DOMAIN FIELDS FROM STALE FRONTEND OVERWRITE
     const current = existing[0];
@@ -79,7 +79,7 @@ export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
 
     await db.update(articles).set(updateData).where(eq(articles.id, raw.article.id));
     await db.delete(checklistItems).where(eq(checklistItems.articleId, raw.article.id));
-    
+
     // History is NOT deleted to prevent wiping out native transition history.
     // We only insert genuinely new history entries.
     if (raw.history.length > 0) {
@@ -96,7 +96,7 @@ export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
       await db.insert(historyEntries).values(raw.history);
     }
   }
-  
+
   if (raw.checklists.length > 0) {
     await db.insert(checklistItems).values(raw.checklists);
   }
@@ -210,15 +210,35 @@ export const createWorkflowStage = async (displayName: string, orderIndex: numbe
     if (stages.some(s => s.isActive && s.displayName.toLowerCase() === trimmedName.toLowerCase())) {
       throw new Error('Duplicate active stage name');
     }
+    const activeCount = stages.filter(s => s.isActive).length;
+    if (orderIndex < 0 || orderIndex > activeCount) {
+      throw new Error('ERR_INVALID_WORKFLOW');
+    }
+
+    stages.forEach(s => {
+      if (s.isActive && s.orderIndex >= orderIndex) {
+        s.orderIndex += 1;
+      }
+    });
+
     stages.push({
       id: crypto.randomUUID(),
       displayName: trimmedName,
-      orderIndex: stages.length, // Ensure contiguous
+      orderIndex: orderIndex,
       semanticClassification: semanticClassification as SemanticClassification || null,
       lifecycleRole: null,
       isActive: true,
       createdAt: new Date().toISOString()
     });
+
+    stages.sort((a, b) => a.orderIndex - b.orderIndex);
+    let activeIdx = 0;
+    stages.forEach(s => {
+      if (s.isActive) {
+        s.orderIndex = activeIdx++;
+      }
+    });
+
     saveWorkflowStages(stages);
     return;
   }
@@ -261,17 +281,17 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
 export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex: number}[]): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
-    
+
     const activeStages = stages.filter(s => s.isActive);
     if (stageOrders.length !== activeStages.length) throw new Error('Invalid workflow');
-    
+
     const providedIds = new Set(stageOrders.map(o => o.id));
     const providedOrders = new Set(stageOrders.map(o => o.orderIndex));
-    
+
     if (providedIds.size !== activeStages.length || providedOrders.size !== activeStages.length) throw new Error('Invalid workflow');
-    
-    const isValid = stageOrders.every(o => 
-      activeStages.some(s => s.id === o.id) && 
+
+    const isValid = stageOrders.every(o =>
+      activeStages.some(s => s.id === o.id) &&
       o.orderIndex >= 0 && o.orderIndex < activeStages.length
     );
     if (!isValid) throw new Error('Invalid workflow');
@@ -299,24 +319,31 @@ export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex
 export const removeWorkflowStage = async (id: string, targetStageId: string): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
-    if (stages.filter(s => s.isActive).length <= 1) {
-      throw new Error('Cannot remove the last active workflow stage');
-    }
     const idx = stages.findIndex(s => s.id === id);
-    if (idx !== -1) {
-      const targetIdx = stages.findIndex(s => s.id === targetStageId);
-      if (targetIdx === -1) throw new Error('Target stage not found');
+    if (idx === -1 || !stages[idx].isActive) return;
 
-      if (stages[idx].lifecycleRole === 'PUBLICATION') {
-        stages[targetIdx].lifecycleRole = 'PUBLICATION';
-      }
+    if (stages.filter(s => s.isActive).length <= 1) {
+      throw new Error('ERR_LAST_STAGE_REMOVAL');
+    }
+
+    if (id === targetStageId) throw new Error('ERR_INVALID_WORKFLOW');
+    const targetIdx = stages.findIndex(s => s.id === targetStageId);
+    if (targetIdx === -1 || !stages[targetIdx].isActive) throw new Error('ERR_INVALID_WORKFLOW');
+
+    if (stages[idx].lifecycleRole === 'PUBLICATION') {
+      stages[targetIdx].lifecycleRole = 'PUBLICATION';
       stages[idx].lifecycleRole = null;
-      stages[idx].isActive = false;
-      stages[idx].displayName = `__deleted__${stages[idx].id}`;
+    }
 
-      // Re-compact order
-      let activeIdx = 0;
-      stages.sort((a, b) => a.orderIndex - b.orderIndex).forEach(s => {
+    stages[idx].isActive = false;
+    stages[idx].displayName = `__deleted__${stages[idx].id}`;
+
+    const activePubs = stages.filter(s => s.isActive && s.lifecycleRole === 'PUBLICATION').length;
+    if (activePubs !== 1) throw new Error('ERR_INVALID_WORKFLOW');
+
+    // Re-compact order
+    let activeIdx = 0;
+    stages.sort((a, b) => a.orderIndex - b.orderIndex).forEach(s => {
         if (s.isActive) s.orderIndex = activeIdx++;
       });
 
@@ -331,7 +358,6 @@ export const removeWorkflowStage = async (id: string, targetStageId: string): Pr
         }
       });
       if (changed) saveArticles(articles);
-    }
     return;
   }
   await invoke('remove_workflow_stage', {
@@ -392,18 +418,24 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
   if (!isTauri()) {
     const cats = getStoredCategories();
     const idx = cats.findIndex(c => c.id === id);
-    if (idx !== -1) {
-      if (cats[idx].origin === 'standard') {
-        throw new Error('Cannot remove standard category');
-      }
+    if (idx === -1 || !cats[idx].isActive) return;
 
-      const articles = getStoredArticles();
-      const inUse = articles.some(a => a.categoryId === id);
-      if (inUse && !targetCategoryId) {
-        throw new Error('Must provide a target category id for reassignment');
-      }
+    if (cats[idx].origin === 'standard') {
+      throw new Error('ERR_INVALID_CATEGORY');
+    }
 
-      cats[idx].isActive = false;
+    const articles = getStoredArticles();
+    const inUse = articles.some(a => a.categoryId === id);
+
+    if (targetCategoryId) {
+      if (id === targetCategoryId) throw new Error('ERR_INVALID_CATEGORY');
+      const targetIdx = cats.findIndex(c => c.id === targetCategoryId);
+      if (targetIdx === -1 || !cats[targetIdx].isActive) throw new Error('ERR_INVALID_CATEGORY');
+    } else if (inUse) {
+      throw new Error('ERR_INVALID_CATEGORY');
+    }
+
+    cats[idx].isActive = false;
       cats[idx].name = `__deleted__${cats[idx].id}`;
       saveCategories(cats);
 
@@ -417,7 +449,6 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
         });
         if (changed) saveArticles(articles);
       }
-    }
     return;
   }
   await invoke('remove_category', {
