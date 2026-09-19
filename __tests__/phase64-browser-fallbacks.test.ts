@@ -74,9 +74,10 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       const stages = getStoredWorkflowStages();
       const newStage = stages.find(s => s.displayName === 'New Stage');
       expect(newStage).toBeDefined();
-      expect(newStage?.id).toMatch(/^ws_\d+$/);
+      expect(newStage?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       await expect(createWorkflowStage('new stage', 3)).rejects.toThrow('Duplicate active stage name');
+      await expect(createWorkflowStage('   ', 3)).rejects.toThrow('Invalid stage name');
     });
 
     it('complete contiguous ordering and minimum stage invariant', async () => {
@@ -108,9 +109,10 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       const cats = getStoredCategories();
       const newCat = cats.find(c => c.name === 'New Cat');
       expect(newCat).toBeDefined();
-      expect(newCat?.id).toMatch(/^cat_\d+$/);
+      expect(newCat?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       await expect(createCategory('new cat')).rejects.toThrow('Duplicate category name');
+      await expect(createCategory('   ')).rejects.toThrow('Invalid category name');
     });
 
     it('standard category protection', async () => {
@@ -137,9 +139,10 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       const tmpls = getStoredChecklistTemplates();
       const newTmpl = tmpls.find(t => t.name === 'New Tmpl');
       expect(newTmpl).toBeDefined();
-      expect(newTmpl?.id).toMatch(/^tmpl_\d+$/);
+      expect(newTmpl?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       await expect(createChecklistTemplate('new tmpl', [{label: 'x'}])).rejects.toThrow('Duplicate template name');
+      await expect(createChecklistTemplate('   ', [{label: 'x'}])).rejects.toThrow('Invalid template name');
     });
 
     it('applied copies receive fresh IDs and preserve isolation', async () => {
@@ -151,7 +154,7 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       const appliedItem = art?.checklists[0]!;
       expect(appliedItem.label).toBe('Task 1');
       expect(appliedItem.completed).toBe(false);
-      expect(appliedItem.id).toMatch(/^ci_\d+_[a-z0-9]+$/);
+      expect(appliedItem.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       // Editing template does not affect article
       await updateChecklistTemplate('tmpl_1', 'Edited', [{label: 'Edited Task'}]);

@@ -206,11 +206,12 @@ export const createWorkflowStage = async (displayName: string, orderIndex: numbe
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
     const trimmedName = displayName.trim();
+    if (!trimmedName) throw new Error('Invalid stage name');
     if (stages.some(s => s.isActive && s.displayName.toLowerCase() === trimmedName.toLowerCase())) {
       throw new Error('Duplicate active stage name');
     }
     stages.push({
-      id: `ws_${Date.now()}`,
+      id: crypto.randomUUID(),
       displayName: trimmedName,
       orderIndex: stages.length, // Ensure contiguous
       semanticClassification: semanticClassification as SemanticClassification || null,
@@ -235,8 +236,9 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
     const stages = getStoredWorkflowStages();
     const idx = stages.findIndex(s => s.id === id);
     if (idx !== -1) {
-      if (displayName) {
+      if (displayName !== undefined) {
         const trimmedName = displayName.trim();
+        if (!trimmedName) throw new Error('Invalid stage name');
         if (stages.some(s => s.isActive && s.id !== id && s.displayName.toLowerCase() === trimmedName.toLowerCase())) {
           throw new Error('Duplicate active stage name');
         }
@@ -259,6 +261,21 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
 export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex: number}[]): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
+    
+    const activeStages = stages.filter(s => s.isActive);
+    if (stageOrders.length !== activeStages.length) throw new Error('Invalid workflow');
+    
+    const providedIds = new Set(stageOrders.map(o => o.id));
+    const providedOrders = new Set(stageOrders.map(o => o.orderIndex));
+    
+    if (providedIds.size !== activeStages.length || providedOrders.size !== activeStages.length) throw new Error('Invalid workflow');
+    
+    const isValid = stageOrders.every(o => 
+      activeStages.some(s => s.id === o.id) && 
+      o.orderIndex >= 0 && o.orderIndex < activeStages.length
+    );
+    if (!isValid) throw new Error('Invalid workflow');
+
     stageOrders.forEach(o => {
       const stage = stages.find(s => s.id === o.id);
       if (stage) stage.orderIndex = o.orderIndex;
@@ -328,11 +345,12 @@ export const createCategory = async (name: string): Promise<void> => {
   if (!isTauri()) {
     const cats = getStoredCategories();
     const trimmedName = name.trim();
+    if (!trimmedName) throw new Error('Invalid category name');
     if (cats.some(c => c.isActive && c.name.toLowerCase() === trimmedName.toLowerCase())) {
       throw new Error('Duplicate category name');
     }
     cats.push({
-      id: `cat_${Date.now()}`,
+      id: crypto.randomUUID(),
       name: trimmedName,
       origin: 'custom',
       isActive: true,
@@ -355,6 +373,7 @@ export const renameCategory = async (id: string, name: string): Promise<void> =>
         throw new Error('Cannot rename standard category');
       }
       const trimmedName = name.trim();
+      if (!trimmedName) throw new Error('Invalid category name');
       if (cats.some(c => c.isActive && c.id !== id && c.name.toLowerCase() === trimmedName.toLowerCase())) {
         throw new Error('Duplicate category name');
       }
@@ -411,11 +430,12 @@ export const createChecklistTemplate = async (name: string, items: {label: strin
   if (!isTauri()) {
     const tmpls = getStoredChecklistTemplates();
     const trimmedName = name.trim();
+    if (!trimmedName) throw new Error('Invalid template name');
     if (tmpls.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
       throw new Error('Duplicate template name');
     }
     tmpls.push({
-      id: `tmpl_${Date.now()}`,
+      id: crypto.randomUUID(),
       name: trimmedName,
       items: items.map(i => ({ label: i.label })),
       createdAt: new Date().toISOString()
@@ -434,6 +454,7 @@ export const updateChecklistTemplate = async (id: string, name: string, items: {
     const idx = tmpls.findIndex(t => t.id === id);
     if (idx !== -1) {
       const trimmedName = name.trim();
+      if (!trimmedName) throw new Error('Invalid template name');
       if (tmpls.some(t => t.id !== id && t.name.toLowerCase() === trimmedName.toLowerCase())) {
         throw new Error('Duplicate template name');
       }
@@ -472,7 +493,7 @@ export const applyChecklistTemplate = async (articleId: string, templateId: stri
 
     template.items.forEach((item: any) => {
       article.checklists.push({
-        id: `ci_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: crypto.randomUUID(),
         label: item.label,
         completed: false,
         category: 'editorial'
