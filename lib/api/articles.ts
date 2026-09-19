@@ -2,7 +2,22 @@ import { getDb } from '@/db/client';
 import { articles, checklistItems, historyEntries, DbArticle, DbChecklistItem, DbHistoryEntry } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { invoke } from '@tauri-apps/api/core';
-import { WorkflowStage, CategoryEntity, WorkflowLifecycleRole, SemanticClassification, CategoryOrigin } from '@/types/editorial';
+import { WorkflowStage, CategoryEntity, WorkflowLifecycleRole, SemanticClassification, CategoryOrigin, ChecklistTemplate } from '@/types/editorial';
+
+export interface RawChecklistTemplateItem {
+  label: string;
+}
+
+export interface RawChecklistTemplate {
+  id: string;
+  name: string;
+  items: RawChecklistTemplateItem[];
+  created_at: string;
+}
+
+export interface GetChecklistTemplatesResponse {
+  templates: RawChecklistTemplate[];
+}
 
 export interface RawWorkflowStage {
   id: string;
@@ -145,3 +160,101 @@ export async function assignArticleCategory(articleId: string, categoryId: strin
     }
   });
 }
+
+export const fetchChecklistTemplates = async (): Promise<ChecklistTemplate[]> => {
+  try {
+    const response = await invoke<GetChecklistTemplatesResponse>('get_checklist_templates');
+    return response.templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      items: t.items.map(i => ({ label: i.label })),
+      createdAt: t.created_at,
+    }));
+  } catch (error) {
+    console.error('Error fetching checklist templates via IPC:', error);
+    throw error;
+  }
+};
+
+export const createWorkflowStage = async (displayName: string, orderIndex: number, semanticClassification?: string): Promise<void> => {
+  await invoke('create_workflow_stage', {
+    request: {
+      display_name: displayName,
+      order_index: orderIndex,
+      semantic_classification: semanticClassification || null
+    }
+  });
+};
+
+export const updateWorkflowStage = async (id: string, displayName?: string, semanticClassification?: string): Promise<void> => {
+  await invoke('update_workflow_stage', {
+    request: {
+      id,
+      display_name: displayName || null,
+      semantic_classification: semanticClassification || null
+    }
+  });
+};
+
+export const reorderWorkflowStages = async (stageIds: string[]): Promise<void> => {
+  await invoke('reorder_workflow_stages', {
+    request: { stage_ids: stageIds }
+  });
+};
+
+export const removeWorkflowStage = async (id: string, targetStageId: string): Promise<void> => {
+  await invoke('remove_workflow_stage', {
+    request: {
+      id,
+      target_stage_id: targetStageId
+    }
+  });
+};
+
+export const createCategory = async (name: string): Promise<void> => {
+  await invoke('create_category', {
+    request: { name }
+  });
+};
+
+export const renameCategory = async (id: string, name: string): Promise<void> => {
+  await invoke('rename_category', {
+    request: { id, name }
+  });
+};
+
+export const removeCategory = async (id: string, targetCategoryId?: string): Promise<void> => {
+  await invoke('remove_category', {
+    request: {
+      id,
+      target_category_id: targetCategoryId || null
+    }
+  });
+};
+
+export const createChecklistTemplate = async (name: string, items: {label: string}[]): Promise<void> => {
+  await invoke('create_checklist_template', {
+    request: { name, items }
+  });
+};
+
+export const updateChecklistTemplate = async (id: string, name: string, items: {label: string}[]): Promise<void> => {
+  await invoke('update_checklist_template', {
+    request: { id, name, items }
+  });
+};
+
+export const deleteChecklistTemplate = async (id: string): Promise<void> => {
+  await invoke('delete_checklist_template', {
+    request: { id }
+  });
+};
+
+export const applyChecklistTemplate = async (articleId: string, templateId: string): Promise<void> => {
+  await invoke('apply_checklist_template', {
+    request: {
+      article_id: articleId,
+      template_id: templateId
+    }
+  });
+};

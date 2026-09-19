@@ -4,7 +4,7 @@ export type CategoryTag = 'IA' | 'Acessibilidade' | 'Inclusão' | 'SEO' | 'Docs'
 
 export type TimeFilter = 'todas' | 'hoje' | 'semana' | 'mes' | 'atrasados';
 
-export type ActiveView = 'kanban' | 'lista' | 'calendario' | 'estatisticas' | 'documentos';
+export type ActiveView = 'kanban' | 'lista' | 'calendario' | 'estatisticas' | 'documentos' | 'configuracoes';
 
 // ──────────────────────────────────────────────────────
 // Phase 6.4: Domain Vocabulary

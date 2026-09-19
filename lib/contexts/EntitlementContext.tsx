@@ -60,12 +60,12 @@ export function EntitlementProvider({ children }: { children: React.ReactNode })
         setSelectedModel
       }}
     >
-      {children}
       {status.type === 'DEVELOPER_PREMIUM' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-amber-500 text-black text-center text-xs font-bold py-1 z-[9999] uppercase tracking-widest">
+        <div className="bg-amber-500 text-black text-center text-xs font-bold py-1 uppercase tracking-widest relative z-[9999]" role="status" aria-live="polite">
           Developer Mode - Premium Capabilities Unlocked
         </div>
       )}
+      {children}
     </EntitlementContext.Provider>
   );
 }

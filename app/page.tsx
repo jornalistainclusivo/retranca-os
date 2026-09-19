@@ -18,6 +18,7 @@ import { ListView } from "@/components/ListView";
 import { CalendarView } from "@/components/CalendarView";
 import { StatsView } from "@/components/StatsView";
 import { GovernanceView } from "@/components/GovernanceView";
+import { WorkflowEditor } from "@/components/WorkflowEditor";
 import { ArticleModal } from "@/components/ArticleModal";
 import { MotivationalModal } from "@/components/MotivationalModal";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
@@ -534,6 +535,21 @@ export default function Home() {
                 )}
 
                 {activeView === "documentos" && <GovernanceView />}
+
+                {activeView === "configuracoes" && (
+                  <WorkflowEditor
+                    workflowStages={workflowStages}
+                    categories={categories}
+                    onUpdateStages={async () => {
+                      const stages = await fetchWorkflowStages();
+                      setWorkflowStages(stages);
+                    }}
+                    onUpdateCategories={async () => {
+                      const cats = await fetchCategories();
+                      setCategories(cats);
+                    }}
+                  />
+                )}
               </>
             )}
           </div>
