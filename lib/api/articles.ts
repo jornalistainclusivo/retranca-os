@@ -205,10 +205,14 @@ export const fetchChecklistTemplates = async (): Promise<ChecklistTemplate[]> =>
 export const createWorkflowStage = async (displayName: string, orderIndex: number, semanticClassification?: string): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
+    const trimmedName = displayName.trim();
+    if (stages.some(s => s.isActive && s.displayName.toLowerCase() === trimmedName.toLowerCase())) {
+      throw new Error('Duplicate active stage name');
+    }
     stages.push({
       id: `ws_${Date.now()}`,
-      displayName,
-      orderIndex,
+      displayName: trimmedName,
+      orderIndex: stages.length, // Ensure contiguous
       semanticClassification: semanticClassification as SemanticClassification || null,
       lifecycleRole: null,
       isActive: true,
@@ -231,7 +235,13 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
     const stages = getStoredWorkflowStages();
     const idx = stages.findIndex(s => s.id === id);
     if (idx !== -1) {
-      if (displayName) stages[idx].displayName = displayName;
+      if (displayName) {
+        const trimmedName = displayName.trim();
+        if (stages.some(s => s.isActive && s.id !== id && s.displayName.toLowerCase() === trimmedName.toLowerCase())) {
+          throw new Error('Duplicate active stage name');
+        }
+        stages[idx].displayName = trimmedName;
+      }
       if (semanticClassification !== undefined) stages[idx].semanticClassification = semanticClassification as SemanticClassification || null;
       saveWorkflowStages(stages);
     }
@@ -253,6 +263,14 @@ export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex
       const stage = stages.find(s => s.id === o.id);
       if (stage) stage.orderIndex = o.orderIndex;
     });
+    // Ensure contiguous ordering
+    stages.sort((a, b) => a.orderIndex - b.orderIndex);
+    let activeIdx = 0;
+    stages.forEach(s => {
+      if (s.isActive) {
+        s.orderIndex = activeIdx++;
+      }
+    });
     saveWorkflowStages(stages);
     return;
   }
@@ -264,9 +282,26 @@ export const reorderWorkflowStages = async (stageOrders: {id: string, orderIndex
 export const removeWorkflowStage = async (id: string, targetStageId: string): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
+    if (stages.filter(s => s.isActive).length <= 1) {
+      throw new Error('Cannot remove the last active workflow stage');
+    }
     const idx = stages.findIndex(s => s.id === id);
     if (idx !== -1) {
+      const targetIdx = stages.findIndex(s => s.id === targetStageId);
+      if (targetIdx === -1) throw new Error('Target stage not found');
+
+      if (stages[idx].lifecycleRole === 'PUBLICATION') {
+        stages[targetIdx].lifecycleRole = 'PUBLICATION';
+      }
+      stages[idx].lifecycleRole = null;
       stages[idx].isActive = false;
+
+      // Re-compact order
+      let activeIdx = 0;
+      stages.sort((a, b) => a.orderIndex - b.orderIndex).forEach(s => {
+        if (s.isActive) s.orderIndex = activeIdx++;
+      });
+
       saveWorkflowStages(stages);
 
       const articles = getStoredArticles();
@@ -292,9 +327,13 @@ export const removeWorkflowStage = async (id: string, targetStageId: string): Pr
 export const createCategory = async (name: string): Promise<void> => {
   if (!isTauri()) {
     const cats = getStoredCategories();
+    const trimmedName = name.trim();
+    if (cats.some(c => c.isActive && c.name.toLowerCase() === trimmedName.toLowerCase())) {
+      throw new Error('Duplicate category name');
+    }
     cats.push({
       id: `cat_${Date.now()}`,
-      name,
+      name: trimmedName,
       origin: 'custom',
       isActive: true,
       createdAt: new Date().toISOString()
@@ -312,7 +351,14 @@ export const renameCategory = async (id: string, name: string): Promise<void> =>
     const cats = getStoredCategories();
     const idx = cats.findIndex(c => c.id === id);
     if (idx !== -1) {
-      cats[idx].name = name;
+      if (cats[idx].origin === 'standard') {
+        throw new Error('Cannot rename standard category');
+      }
+      const trimmedName = name.trim();
+      if (cats.some(c => c.isActive && c.id !== id && c.name.toLowerCase() === trimmedName.toLowerCase())) {
+        throw new Error('Duplicate category name');
+      }
+      cats[idx].name = trimmedName;
       saveCategories(cats);
     }
     return;
@@ -327,11 +373,20 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
     const cats = getStoredCategories();
     const idx = cats.findIndex(c => c.id === id);
     if (idx !== -1) {
+      if (cats[idx].origin === 'standard') {
+        throw new Error('Cannot remove standard category');
+      }
+
+      const articles = getStoredArticles();
+      const inUse = articles.some(a => a.categoryId === id);
+      if (inUse && !targetCategoryId) {
+        throw new Error('Must provide a target category id for reassignment');
+      }
+
       cats[idx].isActive = false;
       saveCategories(cats);
 
       if (targetCategoryId) {
-        const articles = getStoredArticles();
         let changed = false;
         articles.forEach(a => {
           if (a.categoryId === id) {
@@ -355,10 +410,14 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
 export const createChecklistTemplate = async (name: string, items: {label: string}[]): Promise<void> => {
   if (!isTauri()) {
     const tmpls = getStoredChecklistTemplates();
+    const trimmedName = name.trim();
+    if (tmpls.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
+      throw new Error('Duplicate template name');
+    }
     tmpls.push({
       id: `tmpl_${Date.now()}`,
-      name,
-      items,
+      name: trimmedName,
+      items: items.map(i => ({ label: i.label })),
       createdAt: new Date().toISOString()
     });
     saveChecklistTemplates(tmpls);
@@ -374,8 +433,12 @@ export const updateChecklistTemplate = async (id: string, name: string, items: {
     const tmpls = getStoredChecklistTemplates();
     const idx = tmpls.findIndex(t => t.id === id);
     if (idx !== -1) {
-      tmpls[idx].name = name;
-      tmpls[idx].items = items;
+      const trimmedName = name.trim();
+      if (tmpls.some(t => t.id !== id && t.name.toLowerCase() === trimmedName.toLowerCase())) {
+        throw new Error('Duplicate template name');
+      }
+      tmpls[idx].name = trimmedName;
+      tmpls[idx].items = items.map(i => ({ label: i.label }));
       saveChecklistTemplates(tmpls);
     }
     return;

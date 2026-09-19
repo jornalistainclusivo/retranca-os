@@ -895,16 +895,16 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </button>
             </div>
 
-            {/* Checklist Templates (Pro Feature) */}
-            {state === 'ProActive' || state === 'ProTemporarilyUnverifiable' ? (
-              <div className="flex items-center space-x-2 mt-4 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-                <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            {/* Checklist Templates (Available to all tiers per Slice 6 contract) */}
+            {checklistTemplates.length > 0 && (
+              <div className="flex items-center space-x-2 mt-4 bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+                <ShieldAlert className="w-4 h-4 text-sky-500 flex-shrink-0" />
                 <select
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
-                  <option value="">Aplicar template PRO...</option>
+                  <option value="">Aplicar template salvo...</option>
                   {checklistTemplates.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
@@ -913,12 +913,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   type="button"
                   onClick={handleApplyTemplate}
                   disabled={!selectedTemplateId}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-black hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-white hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Aplicar
                 </button>
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* Section 5: History Log */}
