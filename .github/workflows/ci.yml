@@ -43,11 +43,35 @@ jobs:
         run: npm run build
 
   rust:
-    name: rust
-    runs-on: windows-latest
+    name: rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config build-essential \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev \
+            libayatana-appindicator3-dev libssl-dev
+
+      # O `build.rs` do Tauri resolve `externalBin` acrescentando o target
+      # triple do runner. Apenas o artefato de Windows é versionado, portanto
+      # nas demais plataformas o mock do repositório supre o requisito de build.
+      - name: Provide sidecar artifact for the current target
+        if: runner.os != 'Windows'
+        run: |
+          cargo build --release --locked --manifest-path mock-sidecar/Cargo.toml
+          cp mock-sidecar/target/release/mock-sidecar \
+            "src-tauri/bin/llama-sidecar-$(rustc -vV | grep '^host: ' | cut -d' ' -f2)"
 
       - name: Check formatting
         working-directory: src-tauri
