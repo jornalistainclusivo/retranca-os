@@ -1063,7 +1063,9 @@ pub async fn remove_workflow_stage_internal(
     let source_order_index = source.get::<i64, _>("order_index");
 
     // deactivate source
-    sqlx::query("UPDATE workflow_stages SET is_active = 0, order_index = 9999 WHERE id = ?")
+    let new_name = format!("__deleted__{}", request.id);
+    sqlx::query("UPDATE workflow_stages SET is_active = 0, order_index = 9999, display_name = ? WHERE id = ?")
+        .bind(&new_name)
         .bind(&request.id)
         .execute(&mut *tx)
         .await
@@ -1432,7 +1434,9 @@ pub async fn remove_category_internal(
             })?;
     }
 
-    sqlx::query("UPDATE categories SET is_active = 0 WHERE id = ?")
+    let new_name = format!("__deleted__{}", request.id);
+    sqlx::query("UPDATE categories SET is_active = 0, name = ? WHERE id = ?")
+        .bind(&new_name)
         .bind(&request.id)
         .execute(&mut *tx)
         .await

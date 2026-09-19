@@ -101,6 +101,23 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       expect(ws2?.lifecycleRole).toBeNull();
       expect(ws2?.isActive).toBe(false);
     });
+
+    it('stage soft-delete name reuse', async () => {
+      await createWorkflowStage('To Delete', 2);
+      const stages1 = getStoredWorkflowStages();
+      const toDelete = stages1.find(s => s.displayName === 'To Delete')!;
+      
+      await removeWorkflowStage(toDelete.id, 'ws_1');
+      
+      const stages2 = getStoredWorkflowStages();
+      const deletedStage = stages2.find(s => s.id === toDelete.id);
+      expect(deletedStage?.isActive).toBe(false);
+      expect(deletedStage?.displayName).toBe(`__deleted__${toDelete.id}`);
+      
+      await createWorkflowStage('To Delete', 2);
+      const stages3 = getStoredWorkflowStages();
+      expect(stages3.filter(s => s.isActive && s.displayName === 'To Delete')).toHaveLength(1);
+    });
   });
 
   describe('CATEGORIES', () => {
@@ -130,6 +147,23 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       
       const articles = getStoredArticles();
       expect(articles[0].categoryId).toBe('cat_standard');
+    });
+
+    it('category soft-delete name reuse', async () => {
+      await createCategory('Cat To Delete');
+      const cats1 = getStoredCategories();
+      const catToDelete = cats1.find(c => c.name === 'Cat To Delete')!;
+      
+      await removeCategory(catToDelete.id, 'cat_standard');
+      
+      const cats2 = getStoredCategories();
+      const deletedCat = cats2.find(c => c.id === catToDelete.id);
+      expect(deletedCat?.isActive).toBe(false);
+      expect(deletedCat?.name).toBe(`__deleted__${catToDelete.id}`);
+      
+      await createCategory('Cat To Delete');
+      const cats3 = getStoredCategories();
+      expect(cats3.filter(c => c.isActive && c.name === 'Cat To Delete')).toHaveLength(1);
     });
   });
 

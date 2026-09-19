@@ -19,9 +19,10 @@ use app_lib::phase64::{
     assign_article_category, assign_article_stage, create_category_internal,
     create_checklist_template_internal, create_workflow_stage_internal,
     remove_workflow_stage_internal, reorder_workflow_stages_internal,
+    remove_category_internal,
     update_checklist_template_internal, AssignArticleCategoryRequest, AssignArticleStageRequest,
     CreateCategoryRequest, CreateChecklistTemplateRequest, CreateWorkflowStageRequest,
-    RemoveWorkflowStageRequest, ReorderWorkflowStagesRequest, StageOrder,
+    RemoveWorkflowStageRequest, RemoveCategoryRequest, ReorderWorkflowStagesRequest, StageOrder,
     UpdateChecklistTemplateRequest,
 };
 
@@ -518,6 +519,62 @@ fn test_wf_004_invalid_reorder_rejection() {
     });
 }
 
+#[test]
+fn test_wf_005_soft_delete_preserves_id_and_renames() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext {
+            instances,
+            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
+        };
+
+        create_workflow_stage_internal(
+            ctx.state_db(),
+            ctx.provider(),
+            CreateWorkflowStageRequest {
+                display_name: "To Delete".into(),
+                semantic_classification: None,
+                order_index: 0,
+            },
+        )
+        .await
+        .unwrap();
+
+        let id: (String,) = sqlx::query_as("SELECT id FROM workflow_stages WHERE display_name = 'To Delete'")
+            .fetch_one(&pool).await.unwrap();
+
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('ws_1', 'S1', 1, 'PUBLICATION', 1, 'time')").await.unwrap();
+
+        remove_workflow_stage_internal(
+            ctx.state_db(),
+            ctx.provider(),
+            RemoveWorkflowStageRequest {
+                id: id.0.clone(),
+                reassign_to_stage_id: Some("ws_1".to_string()),
+            },
+        ).await.unwrap();
+
+        let row: (i64, String) = sqlx::query_as("SELECT is_active, display_name FROM workflow_stages WHERE id = ?")
+            .bind(&id.0)
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(row.0, 0);
+        assert_eq!(row.1, format!("__deleted__{}", id.0));
+
+        let res = create_workflow_stage_internal(
+            ctx.state_db(),
+            ctx.provider(),
+            CreateWorkflowStageRequest {
+                display_name: "To Delete".into(),
+                semantic_classification: None,
+                order_index: 0,
+            },
+        ).await;
+        
+        assert!(res.is_ok());
+    });
+}
+
 // =====================================================================
 // ARTICLE ASSIGNMENT TESTS
 // =====================================================================
@@ -614,6 +671,45 @@ fn test_cat_001_category_reassignment_rollback() {
                 .await
                 .unwrap();
         assert_eq!(cat_id, "cat1");
+    });
+}
+
+#[test]
+fn test_cat_002_soft_delete_preserves_id_and_renames() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext {
+            instances,
+            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
+        };
+
+        let req = CreateCategoryRequest {
+            name: "Cat To Delete".into(),
+        };
+        let res = create_category_internal(ctx.state_db(), ctx.provider(), req).await.unwrap();
+
+        pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat_standard', 'Standard', 'standard', 1, 'time')").await.unwrap();
+
+        remove_category_internal(
+            ctx.state_db(),
+            ctx.provider(),
+            RemoveCategoryRequest {
+                id: res.id.clone(),
+                reassign_to_category_id: Some("cat_standard".to_string()),
+            },
+        ).await.unwrap();
+
+        let row: (i64, String) = sqlx::query_as("SELECT is_active, name FROM categories WHERE id = ?")
+            .bind(&res.id)
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(row.0, 0);
+        assert_eq!(row.1, format!("__deleted__{}", res.id));
+
+        let req2 = CreateCategoryRequest {
+            name: "Cat To Delete".into(),
+        };
+        assert!(create_category_internal(ctx.state_db(), ctx.provider(), req2).await.is_ok());
     });
 }
 

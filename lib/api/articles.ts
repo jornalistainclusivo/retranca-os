@@ -312,6 +312,7 @@ export const removeWorkflowStage = async (id: string, targetStageId: string): Pr
       }
       stages[idx].lifecycleRole = null;
       stages[idx].isActive = false;
+      stages[idx].displayName = `__deleted__${stages[idx].id}`;
 
       // Re-compact order
       let activeIdx = 0;
@@ -403,6 +404,7 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
       }
 
       cats[idx].isActive = false;
+      cats[idx].name = `__deleted__${cats[idx].id}`;
       saveCategories(cats);
 
       if (targetCategoryId) {
@@ -431,6 +433,7 @@ export const createChecklistTemplate = async (name: string, items: {label: strin
     const tmpls = getStoredChecklistTemplates();
     const trimmedName = name.trim();
     if (!trimmedName) throw new Error('Invalid template name');
+    if (items.some(i => !i.label.trim())) throw new Error('Invalid template item');
     if (tmpls.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
       throw new Error('Duplicate template name');
     }
@@ -455,6 +458,7 @@ export const updateChecklistTemplate = async (id: string, name: string, items: {
     if (idx !== -1) {
       const trimmedName = name.trim();
       if (!trimmedName) throw new Error('Invalid template name');
+      if (items.some(i => !i.label.trim())) throw new Error('Invalid template item');
       if (tmpls.some(t => t.id !== id && t.name.toLowerCase() === trimmedName.toLowerCase())) {
         throw new Error('Duplicate template name');
       }
