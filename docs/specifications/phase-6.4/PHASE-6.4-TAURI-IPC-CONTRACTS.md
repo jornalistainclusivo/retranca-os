@@ -194,6 +194,8 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 }
 ```
 *Note: `update_workflow_stage` DOES NOT accept or mutate `lifecycle_role`. It may update only its approved editable fields. Renaming or changing semantic classification never changes lifecycle role. Publication role movement occurs only through the approved safe-removal transfer contract in Phase 6.4.*
+
+For partial updates, an omitted `semantic_classification` preserves the current classification; an explicit JSON `null` clears it. A vocabulary value replaces it. All three cases preserve `lifecycle_role`.
 - **Success Response:** `{ "success": true }`
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 

@@ -23,7 +23,7 @@ export interface RawWorkflowStage {
   id: string;
   display_name: string;
   order_index: number;
-  semantic_classification: string;
+  semantic_classification: SemanticClassification | null;
   lifecycle_role: string | null;
   is_active: boolean;
   created_at: string;
@@ -251,7 +251,7 @@ export const createWorkflowStage = async (displayName: string, orderIndex: numbe
   });
 };
 
-export const updateWorkflowStage = async (id: string, displayName?: string, semanticClassification?: string): Promise<void> => {
+export const updateWorkflowStage = async (id: string, displayName?: string, semanticClassification?: SemanticClassification | null): Promise<void> => {
   if (!isTauri()) {
     const stages = getStoredWorkflowStages();
     const idx = stages.findIndex(s => s.id === id);
@@ -272,8 +272,8 @@ export const updateWorkflowStage = async (id: string, displayName?: string, sema
   await invoke('update_workflow_stage', {
     request: {
       id,
-      display_name: displayName || null,
-      semantic_classification: semanticClassification || null
+      ...(displayName !== undefined ? { display_name: displayName } : {}),
+      ...(semanticClassification !== undefined ? { semantic_classification: semanticClassification } : {})
     }
   });
 };

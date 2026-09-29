@@ -69,6 +69,17 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
   });
 
   describe('WORKFLOW', () => {
+    it('explicit null clears semantics while omitted updates preserve semantics and publication role', async () => {
+      await updateWorkflowStage('ws_2', undefined, 'PUBLISHED');
+      await updateWorkflowStage('ws_2', 'Publicação');
+      expect(getStoredWorkflowStages().find(s => s.id === 'ws_2')?.semanticClassification).toBe('PUBLISHED');
+      await updateWorkflowStage('ws_2', undefined, null);
+      const stage = getStoredWorkflowStages().find(s => s.id === 'ws_2');
+      expect(stage?.semanticClassification).toBeNull();
+      expect(stage?.lifecycleRole).toBe('PUBLICATION');
+      expect(stage?.displayName).toBe('Publicação');
+    });
+
     it('canonical stable IDs and unique active names', async () => {
       await createWorkflowStage(' New Stage ', 2);
       const stages = getStoredWorkflowStages();

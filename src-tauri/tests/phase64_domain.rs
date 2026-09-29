@@ -19,10 +19,11 @@ use app_lib::phase64::{
     assign_article_category, assign_article_stage, create_category_internal,
     create_checklist_template_internal, create_workflow_stage_internal, remove_category_internal,
     remove_workflow_stage_internal, reorder_workflow_stages_internal,
-    update_checklist_template_internal, AssignArticleCategoryRequest, AssignArticleStageRequest,
-    CreateCategoryRequest, CreateChecklistTemplateRequest, CreateWorkflowStageRequest,
-    RemoveCategoryRequest, RemoveWorkflowStageRequest, ReorderWorkflowStagesRequest, StageOrder,
-    UpdateChecklistTemplateRequest,
+    update_checklist_template_internal, update_workflow_stage_internal,
+    AssignArticleCategoryRequest, AssignArticleStageRequest, CreateCategoryRequest,
+    CreateChecklistTemplateRequest, CreateWorkflowStageRequest, RemoveCategoryRequest,
+    RemoveWorkflowStageRequest, ReorderWorkflowStagesRequest, StageOrder,
+    UpdateChecklistTemplateRequest, UpdateWorkflowStageRequest,
 };
 
 fn run_async<F: std::future::Future>(f: F) -> F::Output {
@@ -754,5 +755,103 @@ fn test_chk_001_invalid_template_items_fails_closed() {
         } else {
             panic!("Expected error but got success");
         }
+    });
+}
+
+#[test]
+fn test_stage_semantic_update_null_omitted_and_lifecycle_preservation() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext {
+            instances,
+            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
+        };
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, semantic_classification, lifecycle_role, is_active) VALUES ('publication', 'Publicado', 0, 'PUBLISHED', 'PUBLICATION', 1)")
+            .await.unwrap();
+
+        for (payload, expected) in [
+            (
+                serde_json::json!({"id": "publication", "display_name": "Pub"}),
+                Some("PUBLISHED"),
+            ),
+            (
+                serde_json::json!({"id": "publication", "semantic_classification": null}),
+                None,
+            ),
+            (
+                serde_json::json!({"id": "publication", "semantic_classification": "REVIEW"}),
+                Some("REVIEW"),
+            ),
+            (
+                serde_json::json!({"id": "publication", "display_name": "Publicação"}),
+                Some("REVIEW"),
+            ),
+        ] {
+            let request: UpdateWorkflowStageRequest = serde_json::from_value(payload).unwrap();
+            update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+                .await
+                .unwrap();
+            let (semantic, role): (Option<String>, Option<String>) = sqlx::query_as(
+                "SELECT semantic_classification, lifecycle_role FROM workflow_stages WHERE id = 'publication'"
+            ).fetch_one(&pool).await.unwrap();
+            assert_eq!(semantic.as_deref(), expected);
+            assert_eq!(role.as_deref(), Some("PUBLICATION"));
+        }
+
+        let request = serde_json::from_value(serde_json::json!({
+            "id": "publication", "display_name": "Must not persist", "semantic_classification": "INVALID"
+        })).unwrap();
+        let error = update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+            .await
+            .err()
+            .expect("Invalid semantic must fail closed");
+        assert_eq!(error.code, "ERR_INVALID_SEMANTIC_CLASSIFICATION");
+        let name: String =
+            sqlx::query_scalar("SELECT display_name FROM workflow_stages WHERE id = 'publication'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(name, "Publicação");
+
+        for state in [
+            EntitlementState::Unknown,
+            EntitlementState::FreeConfirmed,
+            EntitlementState::ProUnavailable,
+        ] {
+            ctx.provider.set_test_state(state);
+            let request = serde_json::from_value(
+                serde_json::json!({"id": "publication", "semantic_classification": null}),
+            )
+            .unwrap();
+            assert!(
+                update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+                    .await
+                    .is_err()
+            );
+            let semantic: Option<String> = sqlx::query_scalar(
+                "SELECT semantic_classification FROM workflow_stages WHERE id = 'publication'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(semantic.as_deref(), Some("REVIEW"));
+        }
+
+        ctx.provider
+            .set_test_state(EntitlementState::ProTemporarilyUnverifiable);
+        let request = serde_json::from_value(
+            serde_json::json!({"id": "publication", "semantic_classification": null}),
+        )
+        .unwrap();
+        update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+            .await
+            .unwrap();
+        let semantic: Option<String> = sqlx::query_scalar(
+            "SELECT semantic_classification FROM workflow_stages WHERE id = 'publication'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(semantic, None);
     });
 }

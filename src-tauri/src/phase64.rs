@@ -629,7 +629,16 @@ pub async fn create_workflow_stage_internal(
 pub struct UpdateWorkflowStageRequest {
     pub id: String,
     pub display_name: Option<String>,
-    pub semantic_classification: Option<String>,
+    // Missing means preserve; explicit null means clear the classification.
+    #[serde(default, deserialize_with = "deserialize_semantic_update")]
+    pub semantic_classification: Option<Option<String>>,
+}
+
+fn deserialize_semantic_update<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer).map(Some)
 }
 
 #[tauri::command]
@@ -650,19 +659,13 @@ pub async fn update_workflow_stage_internal(
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
-    let _sem_class = match request.semantic_classification {
-        Some(ref val) => {
-            let sc = validate_semantic_classification(Some(val.as_str())).map_err(|_| {
-                CanonicalError {
-                    code: "ERR_INVALID_WORKFLOW".into(),
-                    retryable: false,
-                    details: serde_json::json!({}),
-                }
-            })?;
-            Some(sc)
-        }
-        None => None,
-    };
+    if let Some(value) = &request.semantic_classification {
+        validate_semantic_classification(value.as_deref()).map_err(|_| CanonicalError {
+            code: "ERR_INVALID_SEMANTIC_CLASSIFICATION".into(),
+            retryable: false,
+            details: serde_json::json!({}),
+        })?;
+    }
 
     let mut tx = pool.begin().await.map_err(|_| CanonicalError {
         code: "ERR_DATABASE_FAILURE".into(),
@@ -729,11 +732,7 @@ pub async fn update_workflow_stage_internal(
     } else {
         current_name
     };
-    let new_class = if request.semantic_classification.is_some() {
-        request.semantic_classification
-    } else {
-        current_class
-    };
+    let new_class = request.semantic_classification.unwrap_or(current_class);
 
     sqlx::query(
         "UPDATE workflow_stages SET display_name = ?, semantic_classification = ? WHERE id = ?",

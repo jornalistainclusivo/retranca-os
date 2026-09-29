@@ -14,8 +14,6 @@ export const validateStageA11y = (name: string, currentStages: WorkflowStage[]):
 
   if (!name.trim()) {
     errors.push('O nome do estágio não pode estar vazio');
-  } else if (name.trim().length < 3) {
-    errors.push('O nome do estágio deve ter no mínimo 3 caracteres para clareza');
   }
 
   const isDuplicate = currentStages.some(s => s.displayName.toLowerCase() === name.trim().toLowerCase());
@@ -34,8 +32,6 @@ export const validateCategoryA11y = (name: string, currentCategories: CategoryEn
 
   if (!name.trim()) {
     errors.push('O nome da categoria não pode estar vazio');
-  } else if (name.trim().length < 3) {
-    errors.push('O nome da categoria deve ter no mínimo 3 caracteres');
   }
 
   const isDuplicate = currentCategories.some(c => c.name.toLowerCase() === name.trim().toLowerCase());

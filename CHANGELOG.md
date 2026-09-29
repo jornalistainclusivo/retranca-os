@@ -18,6 +18,7 @@ and this project adheres to Semantic Versioning.
 - **Phase 5.3 - Frontend State Machine & IPC Adapter:** Criação de `types/ai.ts` (6 estados Model + 8 estados Generation), `lib/adapters/localAiAdapter.ts` (SSR-safe Tauri IPC bridge) e 11 testes Vitest para validação de tipos e isolamento de Jobs.
 
 ### Changed
+- **Phase 6.4 — Slice 6 corrective:** Workflow customization now distinguishes an omitted semantic classification from explicit `null`, offers all five approved classifications, accepts short non-empty names, and preserves publication lifecycle roles. Configuration UI adds accessible feedback, keyboard tab navigation, focus restoration, and protected template controls during entitlement changes. Regression coverage exercises real component rendering, IPC serialization, browser persistence, and native SQLite updates.
 - **Ollama Gateway:** Evolução da detecção/inventário e acesso ao runtime local para desenvolvimento.
 - **AiAssistantModal:** Removida a chamada `fetch('/api/gemini/editorial')` e substituída por streaming local via Tauri IPC com typewriter effect (requestAnimationFrame) e botão de cancelamento.
 - **ArticleModal:** Mesma migração de Gemini para IPC local nas Quick AI Actions.
