@@ -92,3 +92,19 @@ jobs:
       - name: Test (release)
         working-directory: src-tauri
         run: cargo test --release --locked
+
+  rust-required:
+    name: rust
+    needs: rust
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all Rust matrix jobs to succeed
+        shell: bash
+        env:
+          RUST_RESULT: ${{ needs.rust.result }}
+        run: |
+          if [ "$RUST_RESULT" != "success" ]; then
+            echo "Rust matrix did not succeed: $RUST_RESULT"
+            exit 1
+          fi
