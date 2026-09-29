@@ -65,12 +65,46 @@ O stack moderno do Retranca OS baseia-se em tecnologias focadas em performance e
 - Rust / Cargo
 - Variáveis de ambiente secretas **não** são necessárias (`GEMINI_API_KEY` etc., não são requisitos para rodar localmente na arquitetura atual).
 
+**System dependencies (Linux / Debian & Ubuntu):**
+
+O Tauri v2 exige as bibliotecas nativas do WebKitGTK, que não acompanham uma instalação padrão:
+
+```bash
+sudo apt install -y pkg-config build-essential curl wget file \
+  libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev \
+  libayatana-appindicator3-dev libssl-dev
+```
+
+(Nota: Ubuntu 22.04 LTS e posteriores já trazem `libwebkit2gtk-4.1-dev` nos repositórios oficiais; não é necessário adicionar PPA. Verificação rápida: `pkg-config --modversion webkit2gtk-4.1`).
+
 ## 10. Development commands
 
 ```bash
 # Inicializar ambiente de desenvolvimento de desktop:
 npm run dev:desktop
 ```
+
+**Sidecar binary (required by the build):**
+
+O `tauri.conf.json` declara `externalBin: ["bin/llama-sidecar"]`, e o Tauri resolve essa entrada acrescentando o *target triple* da máquina. Se o artefato correspondente não existir, o build script aborta antes de a janela ser criada:
+
+```
+resource path `bin/llama-sidecar-<target-triple>` doesn't exist
+```
+
+O repositório versiona apenas o artefato de Windows. Em outras plataformas, compile o `mock-sidecar/` incluído no projeto:
+
+```bash
+cargo build --release --manifest-path mock-sidecar/Cargo.toml
+cp mock-sidecar/target/release/mock-sidecar \
+   "src-tauri/bin/llama-sidecar-$(rustc -vV | grep '^host: ' | cut -d' ' -f2)"
+```
+
+(Nota: o mock emite tokens fixos via stdout e serve apenas para satisfazer o build e exercitar o streaming. Ele não executa inferência real — para isso, utilize o provider Ollama conforme a seção 6).
+
+**Local state:**
+
+O banco SQLite reside em `<app_config_dir>/retranca.db` — em Linux, `~/.config/com.jornalistainclusivo.retranca/`. Remover esse arquivo reinicializa o estado local e força uma nova semeadura.
 
 ## 11. Validation commands
 
