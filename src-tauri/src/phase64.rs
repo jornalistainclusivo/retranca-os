@@ -1,10 +1,8 @@
-use crate::entitlements::EntitlementDecisionProvider;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Row, Sqlite};
 use tauri::State;
 use tauri_plugin_sql::{DbInstances, DbPool};
 
-use crate::entitlements::EntitlementError;
 use crate::models::workflow::{
     new_domain_id, validate_lifecycle_role, validate_semantic_classification, Category,
     CategoryOrigin, ChecklistTemplate, ChecklistTemplateItem, WorkflowStage,
@@ -66,46 +64,6 @@ pub async fn verify_user_version(pool: &Pool<Sqlite>) -> Result<(), CanonicalErr
         });
     }
     Ok(())
-}
-
-pub async fn authorize_protected(
-    provider: &impl EntitlementDecisionProvider,
-) -> Result<(), CanonicalError> {
-    let state = provider.check_entitlement().await.map_err(|e| match e {
-        crate::entitlements::EntitlementError::EntitlementStateUnknown => CanonicalError {
-            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-        _ => CanonicalError {
-            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-    })?;
-
-    crate::entitlements::authorize_mutation(&state).map_err(|e| match e {
-        EntitlementError::ConfirmedFreeProtectedMutationDenied => CanonicalError {
-            code: "ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-        EntitlementError::EntitlementStateUnknown => CanonicalError {
-            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-        EntitlementError::EntitlementUnavailable => CanonicalError {
-            code: "ERR_ENTITLEMENT_UNAVAILABLE".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-        _ => CanonicalError {
-            code: "ERR_ENTITLEMENT_STATE_UNKNOWN".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        },
-    })
 }
 
 #[derive(Serialize)]
@@ -507,18 +465,15 @@ pub struct CreateWorkflowStageRequest {
 #[tauri::command]
 pub async fn create_workflow_stage(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateWorkflowStageRequest,
 ) -> Result<WorkflowStage, CanonicalError> {
-    create_workflow_stage_internal(instances, &*provider, request).await
+    create_workflow_stage_internal(instances, request).await
 }
 
 pub async fn create_workflow_stage_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: CreateWorkflowStageRequest,
 ) -> Result<WorkflowStage, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -644,18 +599,15 @@ where
 #[tauri::command]
 pub async fn update_workflow_stage(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    update_workflow_stage_internal(instances, &*provider, request).await
+    update_workflow_stage_internal(instances, request).await
 }
 
 pub async fn update_workflow_stage_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: UpdateWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -771,18 +723,15 @@ pub struct ReorderWorkflowStagesRequest {
 #[tauri::command]
 pub async fn reorder_workflow_stages(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: ReorderWorkflowStagesRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    reorder_workflow_stages_internal(instances, &*provider, request).await
+    reorder_workflow_stages_internal(instances, request).await
 }
 
 pub async fn reorder_workflow_stages_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: ReorderWorkflowStagesRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -870,18 +819,15 @@ pub struct RemoveWorkflowStageRequest {
 #[tauri::command]
 pub async fn remove_workflow_stage(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    remove_workflow_stage_internal(instances, &*provider, request).await
+    remove_workflow_stage_internal(instances, request).await
 }
 
 pub async fn remove_workflow_stage_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: RemoveWorkflowStageRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1123,18 +1069,15 @@ pub struct CreateCategoryRequest {
 #[tauri::command]
 pub async fn create_category(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateCategoryRequest,
 ) -> Result<Category, CanonicalError> {
-    create_category_internal(instances, &*provider, request).await
+    create_category_internal(instances, request).await
 }
 
 pub async fn create_category_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: CreateCategoryRequest,
 ) -> Result<Category, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1213,18 +1156,15 @@ pub struct RenameCategoryRequest {
 #[tauri::command]
 pub async fn rename_category(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RenameCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    rename_category_internal(instances, &*provider, request).await
+    rename_category_internal(instances, request).await
 }
 
 pub async fn rename_category_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: RenameCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1316,18 +1256,15 @@ pub struct RemoveCategoryRequest {
 #[tauri::command]
 pub async fn remove_category(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: RemoveCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    remove_category_internal(instances, &*provider, request).await
+    remove_category_internal(instances, request).await
 }
 
 pub async fn remove_category_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: RemoveCategoryRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1463,18 +1400,15 @@ pub struct CreateChecklistTemplateRequest {
 #[tauri::command]
 pub async fn create_checklist_template(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: CreateChecklistTemplateRequest,
 ) -> Result<ChecklistTemplate, CanonicalError> {
-    create_checklist_template_internal(instances, &*provider, request).await
+    create_checklist_template_internal(instances, request).await
 }
 
 pub async fn create_checklist_template_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: CreateChecklistTemplateRequest,
 ) -> Result<ChecklistTemplate, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1575,18 +1509,15 @@ pub struct UpdateChecklistTemplateRequest {
 #[tauri::command]
 pub async fn update_checklist_template(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: UpdateChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    update_checklist_template_internal(instances, &*provider, request).await
+    update_checklist_template_internal(instances, request).await
 }
 
 pub async fn update_checklist_template_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: UpdateChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 
@@ -1687,18 +1618,15 @@ pub struct DeleteChecklistTemplateRequest {
 #[tauri::command]
 pub async fn delete_checklist_template(
     instances: State<'_, DbInstances>,
-    provider: State<'_, crate::entitlements::AppEntitlementProvider>,
     request: DeleteChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    delete_checklist_template_internal(instances, &*provider, request).await
+    delete_checklist_template_internal(instances, request).await
 }
 
 pub async fn delete_checklist_template_internal(
     instances: State<'_, DbInstances>,
-    provider: &impl EntitlementDecisionProvider,
     request: DeleteChecklistTemplateRequest,
 ) -> Result<SuccessResponse, CanonicalError> {
-    authorize_protected(provider).await?;
     let pool = get_pool(&instances).await?;
     verify_user_version(&pool).await?;
 

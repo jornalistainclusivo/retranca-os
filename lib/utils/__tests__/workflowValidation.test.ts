@@ -1,30 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { validateStageA11y, validateCategoryA11y, canExecuteProAction } from '../workflowValidation';
+import { validateStageA11y, validateCategoryA11y } from '../workflowValidation';
 import { WorkflowStage, CategoryEntity } from '@/types/editorial';
 
-describe('Phase 6.4 - PRO Customization UX Validation', () => {
-  describe('Authorization States (5-state model)', () => {
-    it('blocks PRO actions for Unknown', () => {
-      expect(canExecuteProAction('Unknown')).toBe(false);
-    });
-
-    it('blocks PRO actions for FreeConfirmed', () => {
-      expect(canExecuteProAction('FreeConfirmed')).toBe(false);
-    });
-
-    it('allows PRO actions for ProActive', () => {
-      expect(canExecuteProAction('ProActive')).toBe(true);
-    });
-
-    it('allows PRO actions for ProTemporarilyUnverifiable', () => {
-      expect(canExecuteProAction('ProTemporarilyUnverifiable')).toBe(true);
-    });
-
-    it('blocks PRO actions for ProUnavailable', () => {
-      expect(canExecuteProAction('ProUnavailable')).toBe(false);
-    });
-  });
-
+describe('Phase 6.4 - Open Customization UX Validation', () => {
   describe('Workflow Operations & A11y', () => {
     const mockStages: WorkflowStage[] = [
       { id: '1', displayName: 'Pauta', orderIndex: 0, semanticClassification: 'IDEA', lifecycleRole: null, isActive: true },

@@ -1,8 +1,11 @@
 # ADR 011: PRO Entitlement Enforcement Boundary
 
+> **2026-09-30 amendment — open single edition:** [ADR-013](ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
+
 ## Status
 
-Accepted — Human Architecture Decision
+Superseded by ADR-013 — 2026-09-30 (original decision retained below)
 
 ## Context
 

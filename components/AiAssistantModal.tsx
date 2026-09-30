@@ -5,7 +5,7 @@ import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paper
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AiAction, GenerationState, AiOrchestrationRequest } from '@/types/ai';
-import { useEntitlement } from '@/lib/contexts/EntitlementContext';
+import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 import {
   onStreamToken,
   onStreamDone,
@@ -40,7 +40,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
+  const { selectedModel } = useAiRuntime();
 
   // Streaming result stored in a ref to avoid re-renders per token,
   // and flushed to state on a 60fps animation frame for the typewriter effect.
@@ -341,9 +341,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setAction('check_accessibility')}
+              onClick={() => setAction('plain_language')}
               className={`p-2.5 rounded-lg border text-xs font-semibold flex flex-col items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
-                action === 'check_accessibility'
+                action === 'plain_language'
                   ? 'bg-blue-50 dark:bg-blue-950/80 border-blue-400 text-blue-800 dark:text-blue-300'
                   : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
               }`}
@@ -409,7 +409,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                 ? 'Contexto Adicional (Opcional)'
                 : action === 'generate_seo'
                 ? 'Informe o Tema ou Texto da Pauta'
-                : (action === 'check_accessibility' || action === 'validate_inclusivity')
+                : (action === 'plain_language' || action === 'validate_inclusivity')
                 ? 'Cole o Rascunho do Texto para Análise'
                 : 'Tema ou Ideia Central da Matéria'}
             </label>
@@ -475,15 +475,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                   )}
                   <button
                     type="submit"
-                    disabled={isLoading || !isPremiumMode}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      isPremiumMode
-                        ? "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-                        : "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                    }`}
-                    aria-disabled={!isPremiumMode || isLoading}
-                    tabIndex={isPremiumMode ? 0 : -1}
-                    title={isPremiumMode ? "Gerar com IA Local" : "Gerar com IA (Recurso Premium)"}
+                    disabled={isLoading}
+                    className="px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all motion-reduce:transition-none flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    title="Gerar com IA Local"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{isLoading ? 'Processando...' : 'Gerar com IA'}</span>

@@ -31,7 +31,7 @@ export const OllamaProvider: AiProvider = {
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
     if (!request.model) {
-      throw new Error("Phase 6.2: Seleção explícita de modelo pendente. Selecione um modelo Ollama em Developer Tools.");
+      throw new Error("Selecione um modelo Ollama em IA local antes de iniciar a geração.");
     }
 
     request.provider = 'OLLAMA';

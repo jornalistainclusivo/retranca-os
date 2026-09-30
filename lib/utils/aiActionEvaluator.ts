@@ -1,4 +1,5 @@
 import { AiAction } from '@/types/ai';
+import type { SemanticClassification } from '@/types/editorial';
 
 export type ActionState = 'RECOMMENDED' | 'AVAILABLE' | 'UNAVAILABLE';
 
@@ -8,7 +9,7 @@ export interface ActionEvaluation {
 }
 
 export interface EvaluationContext {
-  status: string;
+  semanticClassification: SemanticClassification | null;
   title?: string;
   objective?: string;
   summary?: string;
@@ -31,32 +32,32 @@ export function evaluateAiAction(action: AiAction, context: EvaluationContext): 
   switch (action) {
     case 'research_gaps':
       available = !!context.title?.trim() || hasObjective;
-      recommended = context.status === 'ideia' || context.status === 'pesquisa';
+      recommended = context.semanticClassification === 'IDEA' || context.semanticClassification === 'RESEARCH';
       missing = 'Título/Objetivo';
       break;
     case 'plain_language':
       available = hasContent || hasSummary;
-      recommended = context.status === 'escrita' || context.status === 'revisao';
+      recommended = context.semanticClassification === 'DRAFTING' || context.semanticClassification === 'REVIEW';
       missing = 'Resumo/Conteúdo';
       break;
     case 'validate_inclusivity':
       available = hasContent || hasSummary;
-      recommended = context.status === 'escrita' || context.status === 'revisao';
+      recommended = context.semanticClassification === 'DRAFTING' || context.semanticClassification === 'REVIEW';
       missing = 'Resumo/Conteúdo';
       break;
     case 'generate_alt_text':
       available = hasVisual;
-      recommended = context.status === 'escrita' || context.status === 'revisao';
+      recommended = context.semanticClassification === 'DRAFTING' || context.semanticClassification === 'REVIEW';
       missing = 'Descrição Visual';
       break;
     case 'generate_seo':
       available = hasKeyword && (hasContent || hasSummary);
-      recommended = context.status === 'revisao';
+      recommended = context.semanticClassification === 'REVIEW';
       missing = !hasKeyword ? 'Keyword SEO' : 'Resumo/Conteúdo';
       break;
     case 'editorial_review':
       available = hasContent && hasObjective;
-      recommended = context.status === 'revisao';
+      recommended = context.semanticClassification === 'REVIEW';
       missing = !hasContent ? 'Conteúdo' : 'Objetivo';
       break;
     default:

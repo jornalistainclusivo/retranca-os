@@ -1,15 +1,18 @@
 ---
-jinc-spec-version: 1.0.1
+jinc-spec-version: 1.1.0
 project-name: Retranca OS
 status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-last-updated: 2026-09-15
+last-updated: 2026-09-30
 authors: Retranca OS Core Team
 ---
 
 # Phase 6.4 Tauri IPC Contracts
+
+> **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
 
 **PHASE 6.4 — TECHNICAL SPECIFICATION — RE-APPROVED BY HUMAN SPEC GATE**
 
@@ -18,10 +21,10 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
 
-## 1. IPC Security and Authorization Classes
+## 1. IPC Access and Native Validation (ADR-013)
 
-- **Auth Class: Free** (Ordinary Editorial): Read configuration or perform standard editorial operations on articles. Free commands do not require PRO entitlement, but remain subject to normal domain validation and persistence success.
-- **Auth Class: Protected** (Configuration Mutation): Modifies structural configuration (Stages, Categories, Templates). MUST pass the Native `EntitlementDecisionProvider` check before execution. Direct IPC invocations undergo identical native authorization checks.
+- **Access: Open** (Ordinary Editorial and Configuration Mutation): All reads, article operations, and structural mutations are available without entitlement state, account, subscription, or activation. Direct IPC invocations undergo the same native schema/domain validation and transactions as UI invocations.
+- The former Free/Protected commercial classes are retired. `get_entitlements` and `set_developer_premium` are removed. Existing domain request/response shapes remain unchanged; protected command wrappers no longer require managed entitlement state.
 
 ## 2. Canonical IPC Error Envelope
 
@@ -34,11 +37,11 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 }
 ```
 
-## 3. READ / ORDINARY EDITORIAL (Auth Class: Free)
+## 3. READ / ORDINARY EDITORIAL (Access: Open)
 
 ### 3.1 Read Workflow
 - **Command:** `get_workflow_stages`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** Yes (Read-only)
 - **Transaction:** Read
 - **Request:** `{}`
@@ -61,7 +64,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 3.2 Read Categories
 - **Command:** `get_categories`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** Yes (Read-only)
 - **Transaction:** Read
 - **Request:** `{}`
@@ -82,7 +85,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 3.3 Read Templates
 - **Command:** `get_checklist_templates`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** Yes (Read-only)
 - **Transaction:** Read
 - **Request:** `{}`
@@ -105,7 +108,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 3.4 Move Article to Stage
 - **Command:** `assign_article_stage`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** Yes (Repeated calls for the same article/stage are a no-op).
 - **Transaction:** Atomic update.
   - **Case A (source is NOT publication role, target IS publication role):** set `workflow_stage_id`; set `completedAt` = now; set `updatedAt` = now; append transition history; preserve `publishDate`.
@@ -124,7 +127,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 3.5 Assign Existing Category
 - **Command:** `assign_article_category`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** Yes (Repeated calls are a no-op).
 - **Transaction:** Atomic update.
 - **Request:**
@@ -139,7 +142,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 3.6 Apply Existing Checklist Template
 - **Command:** `apply_checklist_template`
-- **Auth Class:** Free
+- **Access:** Open
 - **Idempotency:** No (Appends items. Repeated calls create duplicate copies).
 - **Transaction:** Atomic insertion of multiple item records.
 - **Request:**
@@ -154,7 +157,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ---
 
-## 4. PROTECTED CONFIGURATION MUTATIONS (Auth Class: Protected)
+## 4. CONFIGURATION MUTATIONS (Access: Open)
 
 *All commands below execute within a single SQLite transaction and MUST return `ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED`, `ERR_ENTITLEMENT_STATE_UNKNOWN`, or `ERR_ENTITLEMENT_UNAVAILABLE` if authorization fails.*
 
@@ -165,7 +168,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 4.1 Create Stage
 - **Command:** `create_workflow_stage`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** No (Duplicate request returns `ERR_INVALID_WORKFLOW` due to normalized name collision).
 - **Transaction:** Atomic insert.
 - **Request:**
@@ -182,7 +185,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 
 ### 4.2 Rename/Update Stage
 - **Command:** `update_workflow_stage`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes (Subsequent updates with identical data are no-ops).
 - **Transaction:** Atomic update.
 - **Request:**
@@ -201,7 +204,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.3 Reorder Stages
 - **Command:** `reorder_workflow_stages`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes
 - **Transaction:** Atomic normalization (multiple updates within one transaction).
 - **Request:**
@@ -218,7 +221,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.4 Safely Remove Stage
 - **Command:** `remove_workflow_stage`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes (If already inactive/missing, returns success without DB mutation).
 - **Transaction:** When source owns PUBLICATION, `reassign_to_stage_id` is mandatory even if source has zero articles. Validate in the SAME transaction: target exists; target is active; target != source. Then atomically: 1. authorize protected mutation; 2. re-check source references; 3. reassign source articles to target if any; 4. preserve `completedAt` for those articles; 5. clear `PUBLICATION` from source; 6. assign `PUBLICATION` to target; 7. deactivate source; 8. normalize ordering; 9. verify exactly one ACTIVE PUBLICATION role; 10. commit. Any failure: ROLLBACK ALL. There is NO automatic fallback.
 - **Request:**
@@ -233,7 +236,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.5 Create Custom Category
 - **Command:** `create_category`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** No (Duplicate returns `ERR_INVALID_CATEGORY`).
 - **Transaction:** Atomic insert.
 - **Request:**
@@ -247,7 +250,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.6 Rename Custom Category
 - **Command:** `rename_category`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes
 - **Transaction:** Atomic update.
 - **Request:**
@@ -262,7 +265,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.7 Safely Remove Custom Category
 - **Command:** `remove_category`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes (If already inactive/missing, returns success).
 - **Transaction:** Atomic reassignment exactly as stage removal. Explicit target required.
 - **Request:**
@@ -277,7 +280,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.8 Create Checklist Template
 - **Command:** `create_checklist_template`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** No (Duplicate returns `ERR_INVALID_CHECKLIST_TEMPLATE` for uniqueness failure).
 - **Transaction:** Atomic insert.
 - **Request:**
@@ -294,7 +297,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.9 Update/Reorder Template
 - **Command:** `update_checklist_template`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes
 - **Transaction:** Atomic update of template contents (supports rename and item mutations).
 - **Request:**
@@ -312,7 +315,7 @@ For partial updates, an omitted `semantic_classification` preserves the current 
 
 ### 4.10 Delete Template
 - **Command:** `delete_checklist_template`
-- **Auth Class:** Protected
+- **Access:** Open
 - **Idempotency:** Yes (If missing, returns success).
 - **Transaction:** Atomic delete.
 - **Request:**

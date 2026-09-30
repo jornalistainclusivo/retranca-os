@@ -1,15 +1,26 @@
 ---
-jinc-spec-version: 1.0.1
+jinc-spec-version: 1.1.0
 project-name: Retranca OS
 status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
-last-updated: 2026-09-15
+last-updated: 2026-09-30
 authors: Retranca OS Core Team
 ---
 
 # Phase 6.4 Test Specification
+
+## Current acceptance delta — ADR-013
+
+Commercial entitlement transition/authorization-denial tests, confirmed-downgrade restrictions, and developer-premium release authority tests are retired. They MUST NOT block or count as current open-edition acceptance coverage.
+
+Replace them with TEST-OPEN-001/002/003 from ADR-013: direct native access to all ten structural commands without an entitlement provider; open UI/AI/runtime-setting entry points in normal builds; and unchanged schema, domain, reference, publication, rollback, and template-copy guarantees. TEST-AI-001/002 and all unchanged persistence/migration/lifecycle tests still apply. Runtime/provider prerequisites remain mandatory.
+
+Current evidence: [Slice 7 / open-edition validation](../../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The original suite below is retained for traceability, subject to this explicit replacement of commercial criteria.
+
+> **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
 
 **PHASE 6.4 — TECHNICAL SPECIFICATION — RE-APPROVED BY HUMAN SPEC GATE**
 

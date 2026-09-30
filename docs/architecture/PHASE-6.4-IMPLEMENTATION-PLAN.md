@@ -1,14 +1,17 @@
 ---
-jinc-spec-version: 1.0.1
+jinc-spec-version: 1.1.0
 project-name: Retranca OS
 status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-updated-at: 2026-09-16
+updated-at: 2026-09-30
 ---
 
 # Phase 6.4 Implementation Plan
+
+> **2026-09-30 amendment — open single edition:** [ADR-013](../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
 
 **PHASE 6.4 — IMPLEMENTATION PLAN — APPROVED BY HUMAN IMPLEMENTATION GATE**
 
@@ -16,10 +19,16 @@ HUMAN IMPLEMENTATION GATE A APPROVED.
 PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
-Implement dynamic workflow stages and commercial entitlement states following the Phase 6.4 architecture's five-state application entitlement model, cleanly separating semantic recommendation from the structural publication lifecycle role, without selecting a concrete commercial adapter.
+
+### Current execution amendment (2026-09-30)
+
+The current implementation follows ADR-013: one open edition, with no commercial gates. Slice 3's entitlement core is retired; Slice 4 retains native domain enforcement without commercial authorization; Slice 6 exposes customization to everyone; Slice 7 uses dynamic recommendation semantics and preserves native evidence/runtime requirements. The legacy feature branch name is retained. No new dependency, migration, CI change, commercial adapter, or authentication integration is required.
+
+See [current validation and next work](../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). Slice 8 and Gates B/C/D remain pending. The earlier ordered plan below records the original implementation sequence; its commercial criteria have been superseded.
+Original objective (historical, commercial portion superseded): implement dynamic workflow stages and commercial entitlement states following the Phase 6.4 architecture's five-state application entitlement model, cleanly separating semantic recommendation from the structural publication lifecycle role, without selecting a concrete commercial adapter.
 
 ## Approved baseline / source of truth
-- ADR-009, ADR-010, ADR-011, ADR-012
+- ADR-008, ADR-009, ADR-010, ADR-013 (current); ADR-011/012 remain historical, superseded commercial decisions.
 - Phase 6.4 Software Design Document (SDD)
 - Phase 6.4 Technical Specification (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
 - Phase 6.4 Tauri IPC Contracts (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)

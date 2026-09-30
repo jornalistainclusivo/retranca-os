@@ -1,8 +1,8 @@
 /**
- * Phase 5.4 — UI/UX & Freemium Locks Tests
+ * Phase 5.4 — UI/UX Runtime Tests
  *
  * Validates the ModelDownloadModal state rendering, ARIA compliance,
- * and freemium lock behavior for premium-gated AI features.
+ * and runtime state definitions. Commercial locks were retired by ADR-013.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -29,37 +29,6 @@ describe('ModelDownloadModal state coverage', () => {
     expect(allStates).toContain('READY');
     expect(allStates).toContain('INCOMPATIBLE');
     expect(allStates).toContain('FAILED');
-  });
-});
-
-// ─── Freemium Lock Logic ────────────────────────────────────────────────────
-
-describe('Freemium lock enforcement', () => {
-  it('non-premium user has aria-disabled=true and tabIndex=-1', () => {
-    const isPremiumMode = false;
-
-    const ariaDisabled = !isPremiumMode;
-    const tabIndex = isPremiumMode ? 0 : -1;
-
-    expect(ariaDisabled).toBe(true);
-    expect(tabIndex).toBe(-1);
-  });
-
-  it('premium user has aria-disabled=false and tabIndex=0', () => {
-    const isPremiumMode = true;
-
-    const ariaDisabled = !isPremiumMode;
-    const tabIndex = isPremiumMode ? 0 : -1;
-
-    expect(ariaDisabled).toBe(false);
-    expect(tabIndex).toBe(0);
-  });
-
-  it('click handler is undefined for non-premium users', () => {
-    const isPremiumMode = false;
-    const handler = isPremiumMode ? () => 'action' : undefined;
-
-    expect(handler).toBeUndefined();
   });
 });
 

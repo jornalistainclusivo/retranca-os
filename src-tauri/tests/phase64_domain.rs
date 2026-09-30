@@ -2,7 +2,7 @@
 //
 // SCOPE: This test validates the entire native domain logic (Slice 4)
 // to prove fail-closed behaviors, atomic operations, normalization,
-// authorization, and strict re-ordering rules.
+// open access, and strict re-ordering rules.
 #![allow(unused_imports)]
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -13,8 +13,8 @@ use tauri::State;
 use tauri_plugin_sql::{DbInstances, DbPool};
 use tokio::sync::RwLock;
 
-use app_lib::entitlements::{EntitlementDecisionProvider, EntitlementError, EntitlementState};
 use app_lib::models::workflow::ChecklistTemplateItem;
+use app_lib::phase64 as domain;
 use app_lib::phase64::{
     assign_article_category, assign_article_stage, create_category_internal,
     create_checklist_template_internal, create_workflow_stage_internal, remove_category_internal,
@@ -34,28 +34,105 @@ fn run_async<F: std::future::Future>(f: F) -> F::Output {
     rt.block_on(f)
 }
 
-struct TestEntitlementProvider {
-    state: std::sync::RwLock<EntitlementState>,
-}
+#[test]
+fn test_open_003_all_structural_ipc_commands_without_entitlement_state() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext { instances };
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active) VALUES ('pub', 'Publicação', 0, 'PUBLICATION', 1)").await.unwrap();
+        pool.execute("INSERT INTO categories (id, name, origin, is_active) VALUES ('standard', 'Standard', 'standard', 1)").await.unwrap();
+        pool.execute("INSERT INTO articles (id, title, status, categoryTag, tags, publishDate, createdAt, updatedAt, workflow_stage_id, category_id) VALUES ('article', 'Test', 'publicado', 'Blog', '[]', '2026-09-30', 'time', 'time', 'pub', 'standard')").await.unwrap();
 
-impl TestEntitlementProvider {
-    fn new(state: EntitlementState) -> Self {
-        Self {
-            state: std::sync::RwLock::new(state),
+        macro_rules! req {
+            ($($value:tt)*) => {
+                serde_json::from_value(serde_json::json!($($value)*)).unwrap()
+            };
         }
-    }
-    fn set_test_state(&self, state: EntitlementState) {
-        *self.state.write().unwrap() = state;
-    }
+
+        let stage = domain::create_workflow_stage(
+            ctx.state_db(),
+            req!({
+                "display_name": "Apuração", "order_index": 1, "semantic_classification": null
+            }),
+        )
+        .await
+        .unwrap();
+        domain::update_workflow_stage(ctx.state_db(), req!({
+            "id": stage.id, "display_name": "Apuração especial", "semantic_classification": "RESEARCH"
+        })).await.unwrap();
+        domain::reorder_workflow_stages(
+            ctx.state_db(),
+            req!({"stage_orders": [
+                {"id": stage.id, "order_index": 0}, {"id": "pub", "order_index": 1}
+            ]}),
+        )
+        .await
+        .unwrap();
+        domain::remove_workflow_stage(
+            ctx.state_db(),
+            req!({
+                "id": stage.id, "reassign_to_stage_id": "pub"
+            }),
+        )
+        .await
+        .unwrap();
+
+        let category = domain::create_category(ctx.state_db(), req!({"name": "Custom"}))
+            .await
+            .unwrap();
+        domain::rename_category(ctx.state_db(), req!({"id": category.id, "name": "Renamed"}))
+            .await
+            .unwrap();
+        domain::remove_category(ctx.state_db(), req!({"id": category.id}))
+            .await
+            .unwrap();
+
+        let template = domain::create_checklist_template(
+            ctx.state_db(),
+            req!({
+                "name": "Editorial", "items": [{"label": "Verify source"}]
+            }),
+        )
+        .await
+        .unwrap();
+        domain::apply_checklist_template(
+            ctx.state_db(),
+            req!({
+                "article_id": "article", "template_id": template.id
+            }),
+        )
+        .await
+        .unwrap();
+        domain::update_checklist_template(
+            ctx.state_db(),
+            req!({
+                "id": template.id, "name": "Updated", "items": [{"label": "Changed template"}]
+            }),
+        )
+        .await
+        .unwrap();
+        domain::delete_checklist_template(ctx.state_db(), req!({"id": template.id}))
+            .await
+            .unwrap();
+
+        let labels: Vec<String> =
+            sqlx::query_scalar("SELECT label FROM checklist_items WHERE articleId = 'article'")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(labels, vec!["Verify source"]);
+        let publication_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE is_active = 1 AND lifecycle_role = 'PUBLICATION'").fetch_one(&pool).await.unwrap();
+        assert_eq!(publication_count, 1);
+        let active_custom_categories: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM categories WHERE origin = 'custom' AND is_active = 1",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(active_custom_categories, 0);
+    });
 }
 
-impl EntitlementDecisionProvider for TestEntitlementProvider {
-    async fn check_entitlement(&self) -> Result<EntitlementState, EntitlementError> {
-        Ok(*self.state.read().unwrap())
-    }
-}
-
-// Setup a full memory database matching the production schema for Phase 6.4 tests
 async fn setup_db() -> (DbInstances, sqlx::Pool<sqlx::Sqlite>) {
     let mut options = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
     options = options.pragma("foreign_keys", "ON");
@@ -143,7 +220,6 @@ async fn setup_db() -> (DbInstances, sqlx::Pool<sqlx::Sqlite>) {
 #[allow(dead_code)]
 struct TestContext {
     instances: DbInstances,
-    provider: TestEntitlementProvider,
 }
 
 #[allow(dead_code)]
@@ -151,60 +227,54 @@ impl TestContext {
     fn state_db(&self) -> State<'_, DbInstances> {
         unsafe { std::mem::transmute(&self.instances) }
     }
-    fn provider(&self) -> &TestEntitlementProvider {
-        &self.provider
-    }
 }
 
 // =====================================================================
-// AUTHORIZATION TESTS
+// OPEN ACCESS TESTS
 // =====================================================================
 
 #[test]
-fn test_ent_005_006_protected_authorization_matrix() {
+fn test_open_001_customization_requires_no_entitlement_but_checks_schema() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::FreeConfirmed),
-        };
-
-        // 1. FREE TIER - Rejected before schema check
-        let req = CreateWorkflowStageRequest {
-            display_name: "Test".to_string(),
-            semantic_classification: None,
-            order_index: 0,
-        };
-        let res = create_workflow_stage_internal(ctx.state_db(), ctx.provider(), req).await;
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().code,
-            "ERR_CONFIRMED_FREE_PRO_MUTATION_DENIED"
-        ); // FreeConfirmed doesn't map correctly, but Unknown maps to this
-
-        // 2. PRO TIER - Allowed, fails schema check if we drop user_version to 0
-        ctx.provider.set_test_state(EntitlementState::ProActive);
+        let ctx = TestContext { instances };
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active) VALUES ('pub', 'Publicação', 0, 'PUBLICATION', 1)").await.unwrap();
+        let created = create_workflow_stage_internal(
+            ctx.state_db(),
+            CreateWorkflowStageRequest {
+                display_name: "Custom".into(),
+                semantic_classification: None,
+                order_index: 1,
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(created.display_name, "Custom");
         pool.execute("PRAGMA user_version = 0;").await.unwrap();
-
-        let req = CreateWorkflowStageRequest {
-            display_name: "Test".to_string(),
-            semantic_classification: None,
-            order_index: 0,
-        };
-        let res = create_workflow_stage_internal(ctx.state_db(), ctx.provider(), req).await;
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().code, "ERR_DATABASE_FAILURE");
+        let error = create_workflow_stage_internal(
+            ctx.state_db(),
+            CreateWorkflowStageRequest {
+                display_name: "Blocked by schema".into(),
+                semantic_classification: None,
+                order_index: 2,
+            },
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error.code, "ERR_DATABASE_FAILURE");
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 2);
     });
 }
 
 #[test]
-fn test_free_001_operations_remain_free() {
+fn test_open_002_ordinary_operations_remain_available() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::FreeConfirmed),
-        };
+        let ctx = TestContext { instances };
 
         // Insert mock stage & article directly
         pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('stage1', 'Stage 1', 0, 'DRAFT', 1, 'time')").await.unwrap();
@@ -231,15 +301,11 @@ fn test_free_001_operations_remain_free() {
 fn test_wf_001_normalized_duplicate_rejection_and_reuse() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         // 1. Create a stage
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "  Draft  ".to_string(),
                 semantic_classification: None,
@@ -252,7 +318,6 @@ fn test_wf_001_normalized_duplicate_rejection_and_reuse() {
         // 2. Reject Case-Insensitive Duplicate
         let res = create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "draft".to_string(),
                 semantic_classification: None,
@@ -270,7 +335,6 @@ fn test_wf_001_normalized_duplicate_rejection_and_reuse() {
         // 4. Inactive Name Reuse is Allowed
         let res2 = create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "draft".to_string(),
                 semantic_classification: None,
@@ -286,15 +350,11 @@ fn test_wf_001_normalized_duplicate_rejection_and_reuse() {
 fn test_wf_002_create_insertion_order_compaction() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         // Create initial
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "Stage 1".into(),
                 semantic_classification: None,
@@ -305,7 +365,6 @@ fn test_wf_002_create_insertion_order_compaction() {
         .unwrap();
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "Stage 2".into(),
                 semantic_classification: None,
@@ -318,7 +377,6 @@ fn test_wf_002_create_insertion_order_compaction() {
         // Insert at 0, should shift Stage 1 to 1 and Stage 2 to 2
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "New First".into(),
                 semantic_classification: None,
@@ -342,15 +400,11 @@ fn test_wf_002_create_insertion_order_compaction() {
 fn test_wf_003_removal_order_compaction_and_last_stage_rejection() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         // Create 2 stages
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "Stage 1".into(),
                 semantic_classification: None,
@@ -361,7 +415,6 @@ fn test_wf_003_removal_order_compaction_and_last_stage_rejection() {
         .unwrap();
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "Stage 2".into(),
                 semantic_classification: None,
@@ -388,7 +441,6 @@ fn test_wf_003_removal_order_compaction_and_last_stage_rejection() {
         // Remove Stage 1, Stage 2 shifts to 0
         remove_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             RemoveWorkflowStageRequest {
                 id: id1.0,
                 reassign_to_stage_id: None,
@@ -404,7 +456,6 @@ fn test_wf_003_removal_order_compaction_and_last_stage_rejection() {
         // Try removing the LAST active stage -> should fail with ERR_LAST_STAGE_REMOVAL
         let res = remove_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             RemoveWorkflowStageRequest {
                 id: id2.0,
                 reassign_to_stage_id: None,
@@ -423,14 +474,10 @@ fn test_wf_003_removal_order_compaction_and_last_stage_rejection() {
 fn test_wf_004_invalid_reorder_rejection() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "S1".into(),
                 semantic_classification: None,
@@ -441,7 +488,6 @@ fn test_wf_004_invalid_reorder_rejection() {
         .unwrap();
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "S2".into(),
                 semantic_classification: None,
@@ -464,7 +510,7 @@ fn test_wf_004_invalid_reorder_rejection() {
                 order_index: 0,
             }],
         };
-        let res1 = reorder_workflow_stages_internal(ctx.state_db(), ctx.provider(), req1).await;
+        let res1 = reorder_workflow_stages_internal(ctx.state_db(), req1).await;
         if let Err(e) = res1 {
             assert_eq!(e.code, "ERR_INVALID_WORKFLOW");
         } else {
@@ -490,7 +536,7 @@ fn test_wf_004_invalid_reorder_rejection() {
                 },
             ],
         };
-        let res2 = reorder_workflow_stages_internal(ctx.state_db(), ctx.provider(), req2).await;
+        let res2 = reorder_workflow_stages_internal(ctx.state_db(), req2).await;
         if let Err(e) = res2 {
             assert_eq!(e.code, "ERR_INVALID_WORKFLOW");
         } else {
@@ -510,7 +556,7 @@ fn test_wf_004_invalid_reorder_rejection() {
                 },
             ],
         };
-        let res3 = reorder_workflow_stages_internal(ctx.state_db(), ctx.provider(), req3).await;
+        let res3 = reorder_workflow_stages_internal(ctx.state_db(), req3).await;
         if let Err(e) = res3 {
             assert_eq!(e.code, "ERR_INVALID_WORKFLOW");
         } else {
@@ -523,14 +569,10 @@ fn test_wf_004_invalid_reorder_rejection() {
 fn test_wf_005_soft_delete_preserves_id_and_renames() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "To Delete".into(),
                 semantic_classification: None,
@@ -550,7 +592,6 @@ fn test_wf_005_soft_delete_preserves_id_and_renames() {
 
         remove_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             RemoveWorkflowStageRequest {
                 id: id.0.clone(),
                 reassign_to_stage_id: Some("ws_1".to_string()),
@@ -571,7 +612,6 @@ fn test_wf_005_soft_delete_preserves_id_and_renames() {
 
         let res = create_workflow_stage_internal(
             ctx.state_db(),
-            ctx.provider(),
             CreateWorkflowStageRequest {
                 display_name: "To Delete".into(),
                 semantic_classification: None,
@@ -592,10 +632,7 @@ fn test_wf_005_soft_delete_preserves_id_and_renames() {
 fn test_pub_001_publication_transfer_atomicity_and_preservation() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat1', 'Cat', 'standard', 1, 'time')").await.unwrap();
         pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('s1', 'S1', 0, 'DRAFT', 1, 'time')").await.unwrap();
@@ -626,10 +663,7 @@ fn test_pub_001_publication_transfer_atomicity_and_preservation() {
 fn test_pub_002_same_stage_strict_noop() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat1', 'Cat', 'standard', 1, 'time')").await.unwrap();
         pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('s1', 'S1', 0, 'DRAFT', 1, 'time')").await.unwrap();
@@ -652,10 +686,7 @@ fn test_pub_002_same_stage_strict_noop() {
 fn test_cat_001_category_reassignment_rollback() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat1', 'C1', 'standard', 1, 'time')").await.unwrap();
         pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat2', 'C2', 'standard', 0, 'time')").await.unwrap();
@@ -687,23 +718,17 @@ fn test_cat_001_category_reassignment_rollback() {
 fn test_cat_002_soft_delete_preserves_id_and_renames() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         let req = CreateCategoryRequest {
             name: "Cat To Delete".into(),
         };
-        let res = create_category_internal(ctx.state_db(), ctx.provider(), req)
-            .await
-            .unwrap();
+        let res = create_category_internal(ctx.state_db(), req).await.unwrap();
 
         pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('cat_standard', 'Standard', 'standard', 1, 'time')").await.unwrap();
 
         remove_category_internal(
             ctx.state_db(),
-            ctx.provider(),
             RemoveCategoryRequest {
                 id: res.id.clone(),
                 reassign_to_category_id: Some("cat_standard".to_string()),
@@ -725,11 +750,7 @@ fn test_cat_002_soft_delete_preserves_id_and_renames() {
         let req2 = CreateCategoryRequest {
             name: "Cat To Delete".into(),
         };
-        assert!(
-            create_category_internal(ctx.state_db(), ctx.provider(), req2)
-                .await
-                .is_ok()
-        );
+        assert!(create_category_internal(ctx.state_db(), req2).await.is_ok());
     });
 }
 
@@ -737,10 +758,7 @@ fn test_cat_002_soft_delete_preserves_id_and_renames() {
 fn test_chk_001_invalid_template_items_fails_closed() {
     run_async(async {
         let (instances, _pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
 
         let req = CreateChecklistTemplateRequest {
             name: "Template".into(),
@@ -749,7 +767,7 @@ fn test_chk_001_invalid_template_items_fails_closed() {
             }],
         };
 
-        let res = create_checklist_template_internal(ctx.state_db(), ctx.provider(), req).await;
+        let res = create_checklist_template_internal(ctx.state_db(), req).await;
         if let Err(e) = res {
             assert_eq!(e.code, "ERR_INVALID_CHECKLIST_TEMPLATE");
         } else {
@@ -762,10 +780,7 @@ fn test_chk_001_invalid_template_items_fails_closed() {
 fn test_stage_semantic_update_null_omitted_and_lifecycle_preservation() {
     run_async(async {
         let (instances, pool) = setup_db().await;
-        let ctx = TestContext {
-            instances,
-            provider: TestEntitlementProvider::new(EntitlementState::ProActive),
-        };
+        let ctx = TestContext { instances };
         pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, semantic_classification, lifecycle_role, is_active) VALUES ('publication', 'Publicado', 0, 'PUBLISHED', 'PUBLICATION', 1)")
             .await.unwrap();
 
@@ -788,7 +803,7 @@ fn test_stage_semantic_update_null_omitted_and_lifecycle_preservation() {
             ),
         ] {
             let request: UpdateWorkflowStageRequest = serde_json::from_value(payload).unwrap();
-            update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+            update_workflow_stage_internal(ctx.state_db(), request)
                 .await
                 .unwrap();
             let (semantic, role): (Option<String>, Option<String>) = sqlx::query_as(
@@ -801,7 +816,7 @@ fn test_stage_semantic_update_null_omitted_and_lifecycle_preservation() {
         let request = serde_json::from_value(serde_json::json!({
             "id": "publication", "display_name": "Must not persist", "semantic_classification": "INVALID"
         })).unwrap();
-        let error = update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+        let error = update_workflow_stage_internal(ctx.state_db(), request)
             .await
             .err()
             .expect("Invalid semantic must fail closed");
@@ -813,37 +828,11 @@ fn test_stage_semantic_update_null_omitted_and_lifecycle_preservation() {
                 .unwrap();
         assert_eq!(name, "Publicação");
 
-        for state in [
-            EntitlementState::Unknown,
-            EntitlementState::FreeConfirmed,
-            EntitlementState::ProUnavailable,
-        ] {
-            ctx.provider.set_test_state(state);
-            let request = serde_json::from_value(
-                serde_json::json!({"id": "publication", "semantic_classification": null}),
-            )
-            .unwrap();
-            assert!(
-                update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
-                    .await
-                    .is_err()
-            );
-            let semantic: Option<String> = sqlx::query_scalar(
-                "SELECT semantic_classification FROM workflow_stages WHERE id = 'publication'",
-            )
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-            assert_eq!(semantic.as_deref(), Some("REVIEW"));
-        }
-
-        ctx.provider
-            .set_test_state(EntitlementState::ProTemporarilyUnverifiable);
         let request = serde_json::from_value(
             serde_json::json!({"id": "publication", "semantic_classification": null}),
         )
         .unwrap();
-        update_workflow_stage_internal(ctx.state_db(), ctx.provider(), request)
+        update_workflow_stage_internal(ctx.state_db(), request)
             .await
             .unwrap();
         let semantic: Option<String> = sqlx::query_scalar(

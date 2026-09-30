@@ -1,5 +1,8 @@
 # Phase 6.4 PRO Workflow Customization PRD
 
+> **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
+
 ## 1. Status
 PHASE 6.4 — PRODUCT REQUIREMENTS — APPROVED BY HUMAN PRODUCT OWNER
 

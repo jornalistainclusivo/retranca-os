@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useId, useCallback } from "react";
 import { WorkflowStage, CategoryEntity, ChecklistTemplate, SemanticClassification } from "@/types/editorial";
-import { useEntitlement } from "@/lib/contexts/EntitlementContext";
 import {
   createWorkflowStage,
   updateWorkflowStage,
@@ -17,8 +16,8 @@ import {
   deleteChecklistTemplate,
   applyChecklistTemplate
 } from "@/lib/api/articles";
-import { canExecuteProAction, validateStageA11y, validateCategoryA11y } from "@/lib/utils/workflowValidation";
-import { ShieldAlert, Plus, Edit2, Trash2, Check, X, ArrowUp, ArrowDown } from "lucide-react";
+import { validateStageA11y, validateCategoryA11y } from "@/lib/utils/workflowValidation";
+import { Plus, Edit2, Trash2, Check, X, ArrowUp, ArrowDown } from "lucide-react";
 
 interface WorkflowEditorProps {
   workflowStages: WorkflowStage[];
@@ -35,8 +34,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   onUpdateCategories,
   currentArticleId
 }) => {
-  const { state } = useEntitlement();
-  const canMutate = canExecuteProAction(state);
   const panelId = useId();
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const notify = useCallback((text: string, error = false) => setFeedback({ text, error }), []);
@@ -108,7 +105,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   const handleCreateStage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canMutate) return;
     const a11yCheck = validateStageA11y(newStageName, workflowStages);
     if (!a11yCheck.isValid) { notify(a11yCheck.errors.join(" "), true); return; }
     try {
@@ -121,7 +117,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const handleUpdateStage = async () => {
-    if (!canMutate || !editingStage) return;
+    if (!editingStage) return;
     const a11yCheck = validateStageA11y(editStageName, workflowStages.filter(s => s.id !== editingStage));
     if (!a11yCheck.isValid) { notify(a11yCheck.errors.join(" "), true); return; }
     try {
@@ -133,7 +129,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const handleMoveStage = async (index: number, direction: 'up' | 'down') => {
-    if (!canMutate) return;
     const activeStages = workflowStages.filter(s => s.isActive).sort((a, b) => a.orderIndex - b.orderIndex);
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === activeStages.length - 1) return;
@@ -154,7 +149,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const confirmDeleteStage = async () => {
-    if (!canMutate || !deletingStage || !reassignStageTarget) return;
+    if (!deletingStage || !reassignStageTarget) return;
     try {
       await removeWorkflowStage(deletingStage, reassignStageTarget);
       setDeletingStage(null);
@@ -166,7 +161,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canMutate) return;
     const a11yCheck = validateCategoryA11y(newCategoryName, categories);
     if (!a11yCheck.isValid) { notify(a11yCheck.errors.join(" "), true); return; }
     try {
@@ -178,7 +172,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const handleUpdateCategory = async () => {
-    if (!canMutate || !editingCategory) return;
+    if (!editingCategory) return;
     const a11yCheck = validateCategoryA11y(editCategoryName, categories.filter(c => c.id !== editingCategory));
     if (!a11yCheck.isValid) { notify(a11yCheck.errors.join(" "), true); return; }
     try {
@@ -190,7 +184,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const confirmDeleteCategory = async () => {
-    if (!canMutate || !deletingCategory || !reassignCategoryTarget) return;
+    if (!deletingCategory || !reassignCategoryTarget) return;
     try {
       await removeCategory(deletingCategory, reassignCategoryTarget);
       setDeletingCategory(null);
@@ -202,7 +196,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canMutate) return;
     if (!newTemplateName.trim() || !newTemplateItems.length || newTemplateItems.some(i => !i.label.trim())) {
       notify("Preencha o nome do template e todos os itens.", true);
       return;
@@ -217,7 +210,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const handleUpdateTemplate = async () => {
-    if (!canMutate || !editingTemplate) return;
+    if (!editingTemplate) return;
     if (!editTemplateName.trim() || !editTemplateItems.length || editTemplateItems.some(i => !i.label.trim())) {
       notify("Preencha o nome do template e todos os itens.", true);
       return;
@@ -231,7 +224,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!canMutate) return;
     if (confirm("Excluir template? (Isso não afeta pautas existentes)")) {
       try {
         await deleteChecklistTemplate(id);
@@ -243,7 +235,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const moveTemplateItem = (index: number, direction: 'up' | 'down') => {
-    if (!canMutate) return;
     const newItems = [...editTemplateItems];
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= newItems.length) return;
@@ -313,12 +304,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             Personalize fluxos de trabalho, categorias e checklists editoriais.
           </p>
         </div>
-        {!canMutate && (
-          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-4 py-2 rounded-lg border border-amber-200 dark:border-amber-800/50">
-            <ShieldAlert className="w-5 h-5" />
-            <span className="text-sm font-semibold">{state === 'FreeConfirmed' ? "Alterações requerem PRO. Consulta liberada." : "Acesso PRO não confirmado. Configurações preservadas para consulta."}</span>
-          </div>
-        )}
       </div>
 
       <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 mt-2" role="tablist">
@@ -340,8 +325,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                 <div key={stage.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   {editingStage === stage.id ? (
                     <div className="flex gap-2 items-center">
-                      <input ref={focusRef} type="text" value={editStageName} onChange={e => setEditStageName(e.target.value)} className="flex-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Nome da etapa" disabled={!canMutate}/>
-                      <select value={editStageClass} onChange={e => setEditStageClass(e.target.value as SemanticClassification)} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Classe semântica" disabled={!canMutate}>
+                      <input ref={focusRef} type="text" value={editStageName} onChange={e => setEditStageName(e.target.value)} className="flex-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Nome da etapa"/>
+                      <select value={editStageClass} onChange={e => setEditStageClass(e.target.value as SemanticClassification)} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Classe semântica">
                         <option value="">Sem classificação</option>
                         <option value="IDEA">Ideia (Backlog)</option>
                         <option value="RESEARCH">Pesquisa</option>
@@ -349,7 +334,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                         <option value="REVIEW">Revisão</option>
                         <option value="PUBLISHED">Publicado (recomendação de IA)</option>
                       </select>
-                      <button onClick={handleUpdateStage} disabled={!canMutate} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50" aria-label="Salvar">Salvar</button>
+                      <button onClick={handleUpdateStage} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50" aria-label="Salvar">Salvar</button>
                       <button onClick={() => setEditingStage(null)} className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold" aria-label="Cancelar">Cancelar</button>
                     </div>
                   ) : deletingStage === stage.id ? (
@@ -358,21 +343,21 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                         <p className="w-full text-sm" id={`${panelId}-publication-transfer`}>O destino receberá a função de publicação. Pautas já publicadas mantêm a data de conclusão; pautas que já estiverem no destino também passam a ser consideradas publicadas.</p>
                       )}
                       <span className="text-sm font-semibold text-red-600 dark:text-red-400">Reatribuir artigos para:</span>
-                      <select ref={targetRef} value={reassignStageTarget} onChange={e => setReassignStageTarget(e.target.value)} disabled={!canMutate} aria-describedby={stage.lifecycleRole === "PUBLICATION" ? `${panelId}-publication-transfer` : undefined} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none flex-1 text-sm" aria-label="Selecione a etapa de destino">
+                      <select ref={targetRef} value={reassignStageTarget} onChange={e => setReassignStageTarget(e.target.value)} aria-describedby={stage.lifecycleRole === "PUBLICATION" ? `${panelId}-publication-transfer` : undefined} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none flex-1 text-sm" aria-label="Selecione a etapa de destino">
                         <option value="" disabled>Selecione...</option>
                         {activeStages.filter(s => s.id !== stage.id).map(s => (
                           <option key={s.id} value={s.id}>{s.displayName}</option>
                         ))}
                       </select>
-                      <button onClick={confirmDeleteStage} disabled={!reassignStageTarget || !canMutate} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">Confirmar Exclusão</button>
+                      <button onClick={confirmDeleteStage} disabled={!reassignStageTarget} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">Confirmar Exclusão</button>
                       <button onClick={() => setDeletingStage(null)} className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold">Cancelar</button>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col gap-1">
-                          <button disabled={i === 0 || !canMutate} onClick={() => handleMoveStage(i, 'up')} aria-label={`Mover etapa ${stage.displayName} para cima`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowUp className="w-4 h-4" /></button>
-                          <button disabled={i === activeStages.length - 1 || !canMutate} onClick={() => handleMoveStage(i, 'down')} aria-label={`Mover etapa ${stage.displayName} para baixo`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowDown className="w-4 h-4" /></button>
+                          <button disabled={i === 0} onClick={() => handleMoveStage(i, 'up')} aria-label={`Mover etapa ${stage.displayName} para cima`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowUp className="w-4 h-4" /></button>
+                          <button disabled={i === activeStages.length - 1} onClick={() => handleMoveStage(i, 'down')} aria-label={`Mover etapa ${stage.displayName} para baixo`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowDown className="w-4 h-4" /></button>
                         </div>
                         <div>
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100">{stage.displayName}</h3>
@@ -383,8 +368,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => { rememberFocus(); setEditingStage(stage.id); setEditStageName(stage.displayName); setEditStageClass(stage.semanticClassification || ""); }} disabled={!canMutate} aria-label={`Editar etapa ${stage.displayName}`} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => { rememberFocus(); setDeletingStage(stage.id); }} disabled={activeStages.length <= 1 || !canMutate} aria-label={`Excluir etapa ${stage.displayName}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => { rememberFocus(); setEditingStage(stage.id); setEditStageName(stage.displayName); setEditStageClass(stage.semanticClassification || ""); }} aria-label={`Editar etapa ${stage.displayName}`} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => { rememberFocus(); setDeletingStage(stage.id); }} disabled={activeStages.length <= 1} aria-label={`Excluir etapa ${stage.displayName}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   )}
@@ -392,7 +377,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               ))}
             </div>
 
-            {canMutate && (
+            {(
               <div className="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Adicionar Nova Etapa</h3>
                 <form onSubmit={handleCreateStage} className="flex gap-3">
@@ -426,13 +411,13 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   ) : deletingCategory === cat.id ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-sm font-semibold text-red-600 dark:text-red-400">Reatribuir para:</span>
-                      <select ref={targetRef} disabled={!canMutate} value={reassignCategoryTarget} onChange={e => setReassignCategoryTarget(e.target.value)} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none flex-1 text-sm" aria-label="Categoria de destino">
+                      <select ref={targetRef} value={reassignCategoryTarget} onChange={e => setReassignCategoryTarget(e.target.value)} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none flex-1 text-sm" aria-label="Categoria de destino">
                         <option value="" disabled>Selecione...</option>
                         {activeCategories.filter(c => c.id !== cat.id).map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </select>
-                      <button onClick={confirmDeleteCategory} disabled={!reassignCategoryTarget || !canMutate} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">Confirmar Exclusão</button>
+                      <button onClick={confirmDeleteCategory} disabled={!reassignCategoryTarget} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">Confirmar Exclusão</button>
                       <button onClick={() => setDeletingCategory(null)} className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold">Cancelar</button>
                     </div>
                   ) : (
@@ -443,8 +428,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                       </div>
                       {cat.origin === 'custom' && (
                         <div className="flex gap-2">
-                          <button onClick={() => { rememberFocus(); setEditingCategory(cat.id); setEditCategoryName(cat.name); }} disabled={!canMutate} aria-label={`Editar categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => { rememberFocus(); setDeletingCategory(cat.id); }} disabled={!canMutate} aria-label={`Excluir categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => { rememberFocus(); setEditingCategory(cat.id); setEditCategoryName(cat.name); }} aria-label={`Editar categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => { rememberFocus(); setDeletingCategory(cat.id); }} aria-label={`Excluir categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       )}
                     </div>
@@ -453,7 +438,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               ))}
             </div>
 
-            {canMutate && (
+            {(
               <div className="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Adicionar Categoria</h3>
                 <form onSubmit={handleCreateCategory} className="flex gap-3">
@@ -475,22 +460,22 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   <div key={tpl.id} className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     {editingTemplate === tpl.id ? (
                       <div className="space-y-4">
-                        <input ref={focusRef} disabled={!canMutate} type="text" value={editTemplateName} onChange={e => setEditTemplateName(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-blue-500" aria-label="Nome do template" />
+                        <input ref={focusRef} type="text" value={editTemplateName} onChange={e => setEditTemplateName(e.target.value)} className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-blue-500" aria-label="Nome do template" />
                         <div className="space-y-2">
                           {editTemplateItems.map((item, idx) => (
                             <div key={idx} className="flex gap-2 items-center">
                               <div className="flex flex-col gap-1">
-                                <button disabled={idx === 0 || !canMutate} onClick={() => moveTemplateItem(idx, 'up')} type="button" aria-label={`Mover item ${idx + 1} para cima`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowUp className="w-3 h-3" /></button>
-                                <button disabled={idx === editTemplateItems.length - 1 || !canMutate} onClick={() => moveTemplateItem(idx, 'down')} type="button" aria-label={`Mover item ${idx + 1} para baixo`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowDown className="w-3 h-3" /></button>
+                                <button disabled={idx === 0} onClick={() => moveTemplateItem(idx, 'up')} type="button" aria-label={`Mover item ${idx + 1} para cima`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowUp className="w-3 h-3" /></button>
+                                <button disabled={idx === editTemplateItems.length - 1} onClick={() => moveTemplateItem(idx, 'down')} type="button" aria-label={`Mover item ${idx + 1} para baixo`} className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-1"><ArrowDown className="w-3 h-3" /></button>
                               </div>
-                              <input type="text" required disabled={!canMutate} value={item.label} onChange={e => setEditTemplateItems(editTemplateItems.map((it, i) => i === idx ? { label: e.target.value } : it))} className="flex-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm focus:ring-2 focus:ring-blue-500" aria-label={`Item ${idx+1}`} />
-                              <button type="button" onClick={() => setEditTemplateItems(editTemplateItems.filter((_, i) => i !== idx))} disabled={editTemplateItems.length <= 1 || !canMutate} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50" aria-label={`Remover item ${idx + 1}`}><Trash2 className="w-4 h-4" /></button>
+                              <input type="text" required value={item.label} onChange={e => setEditTemplateItems(editTemplateItems.map((it, i) => i === idx ? { label: e.target.value } : it))} className="flex-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm focus:ring-2 focus:ring-blue-500" aria-label={`Item ${idx+1}`} />
+                              <button type="button" onClick={() => setEditTemplateItems(editTemplateItems.filter((_, i) => i !== idx))} disabled={editTemplateItems.length <= 1} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50" aria-label={`Remover item ${idx + 1}`}><Trash2 className="w-4 h-4" /></button>
                             </div>
                           ))}
                         </div>
-                        <button type="button" disabled={!canMutate} onClick={() => setEditTemplateItems([...editTemplateItems, {label:""}])} className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"><Plus className="w-4 h-4" />Adicionar item</button>
+                        <button type="button" onClick={() => setEditTemplateItems([...editTemplateItems, {label:""}])} className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"><Plus className="w-4 h-4" />Adicionar item</button>
                         <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
-                          <button onClick={handleUpdateTemplate} disabled={!canMutate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Salvar Alterações</button>
+                          <button onClick={handleUpdateTemplate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Salvar Alterações</button>
                           <button onClick={() => setEditingTemplate(null)} className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-semibold">Cancelar</button>
                         </div>
                       </div>
@@ -502,8 +487,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                             {currentArticleId && (
                               <button onClick={() => applyTemplate(tpl.id)} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 px-3 py-1 rounded-lg text-sm font-semibold transition-colors" aria-label={`Aplicar template ${tpl.name}`}>Aplicar no Artigo</button>
                             )}
-                            <button onClick={() => { rememberFocus(); setEditingTemplate(tpl.id); setEditTemplateName(tpl.name); setEditTemplateItems(tpl.items.map(item => ({ ...item }))); }} disabled={!canMutate} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" aria-label={`Editar template ${tpl.name}`}><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDeleteTemplate(tpl.id)} disabled={!canMutate} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50" aria-label={`Excluir template ${tpl.name}`}><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => { rememberFocus(); setEditingTemplate(tpl.id); setEditTemplateName(tpl.name); setEditTemplateItems(tpl.items.map(item => ({ ...item }))); }} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" aria-label={`Editar template ${tpl.name}`}><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteTemplate(tpl.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50" aria-label={`Excluir template ${tpl.name}`}><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </div>
                         <ul className="space-y-2">
@@ -525,7 +510,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               </div>
             )}
 
-            {canMutate && (
+            {(
               <div className="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-800 mt-8">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Criar Novo Template</h3>
                 <form onSubmit={handleCreateTemplate} className="space-y-4">

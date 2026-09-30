@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WorkflowEditor } from '@/components/WorkflowEditor';
-import { useEntitlement, EntitlementState } from '@/lib/contexts/EntitlementContext';
 import { WorkflowStage } from '@/types/editorial';
 
-vi.mock('@/lib/contexts/EntitlementContext', () => ({ useEntitlement: vi.fn() }));
 vi.mock('@/lib/api/articles', () => ({ fetchChecklistTemplates: vi.fn() }));
 
 const stages: WorkflowStage[] = [
@@ -13,8 +11,7 @@ const stages: WorkflowStage[] = [
   { id: 'publication', displayName: 'No Ar', orderIndex: 0, semanticClassification: null, lifecycleRole: 'PUBLICATION', isActive: true },
 ];
 
-function render(state: EntitlementState) {
-  vi.mocked(useEntitlement).mockReturnValue({ state } as ReturnType<typeof useEntitlement>);
+function render() {
   return renderToStaticMarkup(React.createElement(WorkflowEditor, {
     workflowStages: stages, categories: [], onUpdateStages: vi.fn(), onUpdateCategories: vi.fn(),
   }));
@@ -29,18 +26,8 @@ function button(html: string, label: string) {
 describe('WorkflowEditor real rendering', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it.each(['Unknown', 'FreeConfirmed', 'ProUnavailable'] as const)('preserves existing stages and denies structural controls in %s', state => {
-    const html = render(state);
-    expect(html).toContain('Revisão Jurídica');
-    expect(html).toContain('No Ar');
-    expect(button(html, 'Editar etapa No Ar')).toContain('disabled=""');
-    expect(button(html, 'Excluir etapa Revisão Jurídica')).toContain('disabled=""');
-    expect(button(html, 'Mover etapa No Ar para baixo')).toContain('disabled=""');
-    expect(html).not.toContain('Nome da nova etapa');
-  });
-
-  it.each(['ProActive', 'ProTemporarilyUnverifiable'] as const)('enables customization and exposes the full semantic vocabulary in %s', state => {
-    const html = render(state);
+  it('enables customization without an entitlement provider and exposes the full semantic vocabulary', () => {
+    const html = render();
     expect(button(html, 'Editar etapa No Ar')).not.toContain('disabled=""');
     expect(button(html, 'Mover etapa No Ar para baixo')).not.toContain('disabled=""');
     expect(html).toContain('Nome da nova etapa');
@@ -51,7 +38,7 @@ describe('WorkflowEditor real rendering', () => {
   });
 
   it('renders contiguous visual ordering and accessible tab/panel relationships', () => {
-    const html = render('ProActive');
+    const html = render();
     expect(html.indexOf('<h3 class="font-semibold text-slate-900 dark:text-slate-100">No Ar')).toBeLessThan(html.indexOf('<h3 class="font-semibold text-slate-900 dark:text-slate-100">Revisão Jurídica'));
     expect(html).toContain('role="tablist"');
     expect(html.match(/role="tab"/g)).toHaveLength(3);
@@ -63,9 +50,8 @@ describe('WorkflowEditor real rendering', () => {
     expect(html).toContain('role="status" aria-atomic="true"');
   });
 
-  it('distinguishes unconfirmed access from a confirmed downgrade', () => {
-    expect(render('Unknown')).toContain('Acesso PRO não confirmado');
-    expect(render('ProUnavailable')).toContain('Acesso PRO não confirmado');
-    expect(render('FreeConfirmed')).toContain('Alterações requerem PRO');
+  it('does not display commercial locks', () => {
+    expect(render()).not.toContain('PRO');
+    expect(render()).not.toContain('Premium');
   });
 });

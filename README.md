@@ -8,6 +8,10 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
+A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [registro de validação atual](docs/testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). Slice 8, revisão independente e autorização de merge/release continuam pendentes.
+
+Baseline já integrado na `main`:
+
 A versão atual reflete a estabilização da Fase 6.3 no baseline principal (`main`).
 **Phase 6.3 integrated into main**
 **tag:** `v0.1.0-phase-6.3-editorial-ai-orchestration`
@@ -80,9 +84,13 @@ sudo apt install -y pkg-config build-essential curl wget file \
 ## 10. Development commands
 
 ```bash
-# Inicializar ambiente de desenvolvimento de desktop:
-npm run dev:desktop
+# Inicializar o desktop com os arquivos locais atuais:
+npx tauri dev
 ```
+
+O Tauri inicia o frontend automaticamente. Para IA real, mantenha o Ollama em execução, confira os modelos instalados com `ollama list` e selecione um deles no controle **IA local**. A seleção é válida durante a sessão; ao reiniciar o aplicativo, selecione novamente. Não é necessário fazer commit para visualizar alterações locais.
+
+`npm run dev:desktop` também inicia `scripts/dev/model-fixture-server.mjs`, um servidor de fixtures de provisionamento para desenvolvimento. Para verificar um modelo real já instalado no Ollama, use `npx tauri dev`. `npm run dev` isoladamente abre apenas o frontend web, sem o runtime nativo de inferência.
 
 **Sidecar binary (required by the build):**
 
@@ -136,7 +144,7 @@ O diretório `/docs` é a espinha dorsal de conhecimento arquitetural do projeto
 
 ## 13. Immediate roadmap
 
-- **Phase 6.4:** Identity, Authentication & Entitlements Foundation
+- **Phase 6.4:** Dynamic workflow, categories, checklist templates and AI recommendation semantics in one open edition (ADR-013); remaining integration/security review in Slice 8.
 - **Phase 6.5:** Production Provider & Model Experience
 
 ## 14. Governance

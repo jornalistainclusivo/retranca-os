@@ -42,18 +42,18 @@ describe('Phase 6.3 - ArticleModal AI Actions', () => {
   // ─── Alt Text Availability / Contract ───────────────────────────────────────
   it('validates Alt Text availability and contract based on visual description', () => {
     // Missing evidence -> UNAVAILABLE
-    let context: EvaluationContext = { status: 'escrita' };
+    let context: EvaluationContext = { semanticClassification: 'DRAFTING' };
     let result = evaluateAiAction('generate_alt_text', context);
     expect(result.state).toBe('UNAVAILABLE');
     expect(result.missing).toBeDefined();
 
     // With evidence & recommended status -> RECOMMENDED
-    context = { status: 'escrita', visualDescription: 'A photo of a dog' };
+    context = { semanticClassification: 'DRAFTING', visualDescription: 'A photo of a dog' };
     result = evaluateAiAction('generate_alt_text', context);
     expect(result.state).toBe('RECOMMENDED');
     
     // With evidence & not recommended status -> AVAILABLE
-    context = { status: 'ideia', visualDescription: 'A photo of a dog' };
+    context = { semanticClassification: 'IDEA', visualDescription: 'A photo of a dog' };
     result = evaluateAiAction('generate_alt_text', context);
     expect(result.state).toBe('AVAILABLE');
   });
@@ -61,22 +61,22 @@ describe('Phase 6.3 - ArticleModal AI Actions', () => {
   // ─── SEO Contract ──────────────────────────────────────────────────────────
   it('validates SEO contract based on keyword and content', () => {
     // Missing keyword/content -> UNAVAILABLE
-    let context: EvaluationContext = { status: 'revisao', content: 'content' };
+    let context: EvaluationContext = { semanticClassification: 'REVIEW', content: 'content' };
     let result = evaluateAiAction('generate_seo', context);
     expect(result.state).toBe('UNAVAILABLE');
 
     // Missing content -> UNAVAILABLE
-    context = { status: 'revisao', keyword: 'keyword' };
+    context = { semanticClassification: 'REVIEW', keyword: 'keyword' };
     result = evaluateAiAction('generate_seo', context);
     expect(result.state).toBe('UNAVAILABLE');
 
     // With both in revisao -> RECOMMENDED
-    context = { status: 'revisao', keyword: 'keyword', content: 'content' };
+    context = { semanticClassification: 'REVIEW', keyword: 'keyword', content: 'content' };
     result = evaluateAiAction('generate_seo', context);
     expect(result.state).toBe('RECOMMENDED');
     
     // With both in non-revisao -> AVAILABLE
-    context = { status: 'escrita', keyword: 'keyword', content: 'content' };
+    context = { semanticClassification: 'DRAFTING', keyword: 'keyword', content: 'content' };
     result = evaluateAiAction('generate_seo', context);
     expect(result.state).toBe('AVAILABLE');
   });
@@ -125,26 +125,4 @@ describe('Phase 6.3 - ArticleModal AI Actions', () => {
     expect(secondCall).toBe(false);
   });
   
-  // ─── True Disabled State ───────────────────────────────────────────────────
-  it('enforces disabled state formula: !isPremiumMode || actionCheck.state === "UNAVAILABLE" || aiLoading', () => {
-    const getDisabledState = (isPremiumMode: boolean, actionState: string, aiLoading: boolean) => {
-      return !isPremiumMode || actionState === 'UNAVAILABLE' || aiLoading;
-    };
-    
-    // All perfect
-    expect(getDisabledState(true, 'RECOMMENDED', false)).toBe(false);
-    expect(getDisabledState(true, 'AVAILABLE', false)).toBe(false);
-    
-    // Missing Premium
-    expect(getDisabledState(false, 'RECOMMENDED', false)).toBe(true);
-    
-    // Unavailable state
-    expect(getDisabledState(true, 'UNAVAILABLE', false)).toBe(true);
-    
-    // AI Loading
-    expect(getDisabledState(true, 'RECOMMENDED', true)).toBe(true);
-    
-    // Multiple fail conditions
-    expect(getDisabledState(false, 'UNAVAILABLE', true)).toBe(true);
-  });
 });

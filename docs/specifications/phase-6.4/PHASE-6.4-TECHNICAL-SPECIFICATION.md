@@ -1,15 +1,18 @@
 ---
-jinc-spec-version: 1.0.1
+jinc-spec-version: 1.1.0
 project-name: Retranca OS
 status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: SQLite, React, TypeScript, Tauri, Rust
 created-at: 2026-09-15
-last-updated: 2026-09-15
+last-updated: 2026-09-30
 authors: Retranca OS Core Team
 ---
 
 # Phase 6.4 Technical Specification
+
+> **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
 
 **PHASE 6.4 — TECHNICAL SPECIFICATION — RE-APPROVED BY HUMAN SPEC GATE**
 
@@ -17,6 +20,15 @@ SPEC APPROVAL DOES NOT BY ITSELF AUTHORIZE IMPLEMENTATION.
 IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 ## 1. Requirement Coverage Matrix
+
+### Current open-edition rules (ADR-013)
+
+- **BR-OPEN-001:** Every implemented editorial and structural capability is available without commercial entitlement, account, subscription, or activation. This replaces the commercial authorization clauses in sections 13-15, 18-19, and 21; they remain historical design records only.
+- **BR-OPEN-002:** Native schema/domain validation and transaction semantics are mandatory for every mutation, including direct IPC. Publication-role, reference-resolution, name/order, and template-copy invariants remain unchanged.
+- **BR-OPEN-003:** AI requires valid evidence and an available supported local runtime/model. Native evidence validation, projection, escaping, and budget remain authoritative. Model selection is a runtime setting available to everyone, independent of entitlement.
+- The commercial state/error vocabulary is retired. Existing domain error envelopes and domain IPC payloads remain stable. Historical downgrade preservation is now unconditional preservation of existing data/configuration; it does not imply any access denial.
+
+Trace these rules to TEST-OPEN-001/002/003 in ADR-013 and the current validation report. The older matrix below retains original identifiers for the unchanged domain requirements and historical commercial requirements.
 
 | Requirement | Description (PRD Exact) | Specified In |
 | --- | --- | --- |

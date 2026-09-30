@@ -1,5 +1,8 @@
 # Phase 6.4 Product Access & Monetization Discovery
 
+> **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
+
 ## 1. Executive Summary
 This document explores the product strategy and commercial model for Retranca OS Phase 6.4. The central hypothesis is that the Free tier provides a complete, standardized editorial experience, while the PRO tier delivers value through deep **editorial workflow customization**. This document identifies candidate PRO capabilities, establishes guarantees for the Free baseline, and explores the role of identity and entitlement without dictating technical enforcement.
 
