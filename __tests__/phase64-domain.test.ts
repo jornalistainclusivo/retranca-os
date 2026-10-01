@@ -396,6 +396,7 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
       publishDate: '2020',
       summary: '',
       objective: '',
+      analysisContent: '',
       keyword: '',
       persona: '',
       cta: '',
@@ -598,4 +599,3 @@ describe('Phase 6.4 Article Creation and Browser History Merge', () => {
     expect(merged).toEqual(saved);
   });
 });
-

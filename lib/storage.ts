@@ -154,6 +154,7 @@ export const saveArticles = (articles: Article[]): void => {
     window.dispatchEvent(new Event("jinc_storage_updated"));
   } catch (e) {
     console.error("Error saving articles to localStorage", e);
+    throw e;
   }
 };
 
@@ -276,6 +277,9 @@ export const importArticlesJSON = (file: File): Promise<Article[]> => {
         const content = event.target?.result as string;
         const parsed = JSON.parse(content);
         if (Array.isArray(parsed)) {
+          if (parsed.some(article => article?.analysisContent != null && typeof article.analysisContent !== 'string')) {
+            throw new Error('Conteúdo para análise inválido: o campo deve conter texto.');
+          }
           const migrated = migrateArticles(parsed);
           saveArticles(migrated);
           resolve(migrated);
@@ -315,6 +319,7 @@ export const createNewArticle = (workflowStages: WorkflowStage[], categories: Ca
     publishDate: todayStr,
     summary: "",
     objective: "",
+    analysisContent: "",
     keyword: "",
     persona: "Leitores do Jornalista Inclusivo",
     cta: "Saiba mais no nosso portal",

@@ -203,10 +203,16 @@ describe("Phase 6.4 Migration Orchestration", () => {
   });
 
   it("K. unexpected user_version fails closed", async () => {
-    const { db, executed } = createMockDb({ userVersion: 2 });
+    const { db, executed } = createMockDb({ userVersion: 3 });
     await expect(runPhase64Migration(db)).rejects.toThrow(
-      "Unsupported user_version 2",
+      "Unsupported user_version 3",
     );
+    expect(executed).toEqual([]);
+  });
+
+  it('skips the completed workflow migration for the article-content schema', async () => {
+    const { db, executed } = createMockDb({ userVersion: 2 });
+    await runPhase64Migration(db);
     expect(executed).toEqual([]);
   });
 

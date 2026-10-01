@@ -21,6 +21,7 @@ import React, { useState, useEffect } from 'react';
 import { Article, ArticleStatus, CategoryTag, ChecklistItem, WorkflowStage, CategoryEntity, ChecklistTemplate } from '@/types/editorial';
 import { fetchChecklistTemplates } from '@/lib/api/articles';
 import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
+import { runArticleSave } from '@/lib/utils/articleSave';
 import { 
   X, 
   Save, 
@@ -52,7 +53,7 @@ interface ArticleModalProps {
   categories: CategoryEntity[];
   isOpen: boolean;
   onClose: () => void;
-  onSave: (article: Article) => void;
+  onSave: (article: Article) => void | Promise<void>;
   onDelete: (id: string) => void;
   isFocusMode: boolean;
   setIsFocusMode: (focus: boolean) => void;
@@ -73,7 +74,6 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 }) => {
   const fieldId = React.useId();
   const dialogRef = useModalDialog(isOpen && !!article, onClose);
-  const [prevArticleId, setPrevArticleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Article>(() => article || {
     id: '',
     title: '',
@@ -108,8 +108,11 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [aiCancelError, setAiCancelError] = useState<string | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
-  const [analysisContent, setAnalysisContent] = useState('');
-  const [visualDescription, setVisualDescription] = useState('');
+  const analysisContent = typeof formData.analysisContent === 'string' ? formData.analysisContent : '';
+  const [visualDescriptions, setVisualDescriptions] = useState(() => new Map<string, string>());
+  const visualDescription = article ? visualDescriptions.get(article.id) ?? '' : '';
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { selectedModel } = useAiRuntime();
@@ -123,6 +126,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const sessionRef = React.useRef<AiJobSession | null>(null);
   const cancelHadFocusRef = React.useRef(false);
   const sessionKey = isOpen && article ? article.id : null;
+  const saveSessionRef = React.useRef<AbortController | null>(null);
   const [previousSessionKey, setPreviousSessionKey] = useState(sessionKey);
   const cleanupListeners = React.useCallback(() => {
     restoreAiCancelFocus(dialogRef.current, cancelHadFocusRef.current);
@@ -134,7 +138,10 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   
   useEffect(() => {
     if (sessionKey === null) return;
+    const saveSession = new AbortController();
+    saveSessionRef.current = saveSession;
     return () => {
+      saveSession.abort();
       sessionRef.current?.dispose();
       cleanupListeners();
       aiJobActiveRef.current = false;
@@ -147,14 +154,14 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     setAiCancelling(false);
     setAiStatus('');
     setAiCancelError(null);
-  }
-
-  if (article && article.id !== prevArticleId) {
-    setPrevArticleId(article.id);
-    setFormData({ ...article });
-    setAiResponse(null);
-    setContextNotices([]);
-    setCopied(false);
+    setSaveError(null);
+    setSaving(false);
+    if (article && sessionKey !== null) {
+      setFormData({ ...article });
+      setAiResponse(null);
+      setContextNotices([]);
+      setCopied(false);
+    }
   }
 
   const handleCopy = () => {
@@ -237,8 +244,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const saveSession = saveSessionRef.current;
+    if (saving || !saveSession || saveSession.signal.aborted) return;
+    setSaving(true);
+    setSaveError(null);
     // Add history log entry
     const newHistory = [
       {
@@ -249,11 +260,11 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
       ...formData.history,
     ];
 
-    onSave({
-      ...formData,
-      history: newHistory,
+    await runArticleSave(() => onSave({ ...formData, analysisContent, history: newHistory }), saveSession.signal, {
+      onSaved: onClose,
+      onError: () => setSaveError('Não foi possível salvar a pauta. Seu texto continua aqui; tente novamente.'),
+      onSettled: () => setSaving(false),
     });
-    onClose();
   };
 
   // Quick AI Assistant action call via local Tauri IPC
@@ -470,7 +481,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form id={`${fieldId}-form`} onSubmit={handleSubmit} aria-busy={saving} className="flex-1 overflow-y-auto p-6">
+          <fieldset disabled={saving} className="min-w-0 space-y-6">
           
           {/* Section 1: Core Fields (Title, Status, Category, Date) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -587,10 +599,14 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   id={`${fieldId}-content`}
                   data-ai-retry
                   value={analysisContent}
-                  onChange={(e) => setAnalysisContent(e.target.value)}
+                  onChange={(e) => handleChange('analysisContent', e.target.value)}
+                  aria-describedby={`${fieldId}-analysis-help`}
                   placeholder="Cole o texto da matéria para validação (opcional)..."
                   className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                <p id={`${fieldId}-analysis-help`} className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Texto desta pauta. Para mantê-lo ao reabrir o aplicativo, selecione Salvar Pauta no CMS.
+                </p>
               </div>
 
               <div>
@@ -601,7 +617,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   rows={2}
                   id={`${fieldId}-visual`}
                   value={visualDescription}
-                  onChange={(e) => setVisualDescription(e.target.value)}
+                  onChange={(e) => setVisualDescriptions(previous => new Map(previous).set(article.id, e.target.value))}
                   placeholder="Descreva a imagem (cores, objetos, pessoas, contexto) para gerar o Alt Text..."
                   className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
@@ -985,9 +1001,11 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
           )}
 
+          </fieldset>
         </form>
 
         {/* Footer */}
+        {saveError && <p role="alert" className="px-6 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</p>}
         <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between">
           <button
             type="button"
@@ -998,11 +1016,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           </button>
 
           <button
-            onClick={handleSubmit}
+            type="submit"
+            form={`${fieldId}-form`}
+            disabled={saving}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/30 transition-all flex items-center gap-2 active:scale-95"
           >
             <Save className="w-4 h-4" />
-            <span>Salvar Pauta no CMS</span>
+            <span>{saving ? 'Salvando pauta...' : 'Salvar Pauta no CMS'}</span>
           </button>
         </div>
 

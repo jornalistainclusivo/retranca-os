@@ -80,6 +80,7 @@ export interface Article {
   // Editorial OS Details
   summary: string; // Resumo
   objective: string; // Objetivo
+  analysisContent?: string;
   keyword: string; // Palavra-chave
   persona: string; // Persona
   cta: string; // Call to Action

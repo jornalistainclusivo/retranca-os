@@ -42,7 +42,7 @@ export const runPhase64Migration = async (sqlite: Database) => {
   const res = await sqlite.select<{ user_version: number }[]>('PRAGMA user_version;');
   const currentVersion = res[0]?.user_version;
   
-  if (currentVersion === 1) {
+  if (currentVersion === 1 || currentVersion === 2) {
     return;
   } else if (currentVersion !== 0) {
     throw new Error(`ERR_MIGRATION_FAILED: Unsupported user_version ${currentVersion}`);

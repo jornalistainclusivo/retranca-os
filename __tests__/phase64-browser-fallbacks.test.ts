@@ -17,6 +17,7 @@ import {
   getStoredCategories,
   getStoredChecklistTemplates,
   getStoredArticles,
+  importArticlesJSON,
   saveArticles,
   saveChecklistTemplates,
   saveCategories,
@@ -69,6 +70,57 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
   });
 
   describe('WORKFLOW', () => {
+    function importData(data: unknown) {
+      vi.stubGlobal('FileReader', class {
+        onload?: (event: { target: { result: string } }) => void;
+        readAsText() { this.onload?.({ target: { result: JSON.stringify(data) } }); }
+      });
+      return importArticlesJSON({} as File).finally(() => vi.unstubAllGlobals());
+    }
+
+    it.each([12, true, { text: 'Malformed' }, ['Malformed']])('rejects imported content %j before replacing existing articles', async analysisContent => {
+      const before = getStoredArticles();
+      await expect(importData([{ ...before[0], analysisContent }])).rejects.toThrow('o campo deve conter texto');
+      expect(getStoredArticles()).toEqual(before);
+    });
+
+    it('imports legacy missing content and distinct text without changing valid article IDs', async () => {
+      const first = getStoredArticles()[0];
+      const imported = await importData([
+        { ...first, id: 'constructor', analysisContent: 'Only A\nInclusão.' },
+        { ...first, id: '__proto__' },
+      ]);
+      expect(imported[0].analysisContent).toBe('Only A\nInclusão.');
+      expect(imported[1].analysisContent).toBeUndefined();
+      expect(getStoredArticles()).toEqual(imported);
+    });
+
+    it('saves and reloads distinct content for each article without sharing or replacing it during migration', () => {
+      const first = getStoredArticles()[0];
+      saveArticles([
+        { ...first, id: 'article-a', analysisContent: 'Only A\nInclusão.' },
+        { ...first, id: 'article-b', analysisContent: 'Only B' },
+        { ...first, id: 'article-c', analysisContent: undefined },
+      ]);
+      const reloaded = getStoredArticles();
+      expect(reloaded.find(item => item.id === 'article-a')?.analysisContent).toBe('Only A\nInclusão.');
+      expect(reloaded.find(item => item.id === 'article-b')?.analysisContent).toBe('Only B');
+      expect(reloaded.find(item => item.id === 'article-c')?.analysisContent ?? '').toBe('');
+    });
+
+    it('reports a failed content save without replacing the previously stored articles', () => {
+      const before = getStoredArticles();
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const write = vi.spyOn(localStorageMock, 'setItem').mockImplementationOnce(() => {
+        throw new Error('Storage quota exceeded');
+      });
+      expect(() => saveArticles([{ ...before[0], analysisContent: 'Unsaved text' }]))
+        .toThrow('Storage quota exceeded');
+      write.mockRestore();
+      expect(getStoredArticles()).toEqual(before);
+      log.mockRestore();
+    });
+
     it('rejects invalid semantics and missing update targets without changing stored state', async () => {
       const before = getStoredWorkflowStages();
       await expect(createWorkflowStage('Invalid', 0, 'REVIEW_NOW')).rejects.toThrow('ERR_INVALID_SEMANTIC_CLASSIFICATION');

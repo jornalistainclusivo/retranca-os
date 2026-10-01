@@ -21,6 +21,16 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
 
+### Article CMS content migration amendment — ADR-014, 2026-10-01
+
+- **Command:** `migrate_article_content`, registered in debug and release. No arguments or client-supplied paths. Success: `{ "success": true }`. Schema/backup/transaction errors: the canonical envelope with `code: "ERR_MIGRATION_FAILED"`, `retryable: false`, and diagnostic details. Managed-pool acquisition retains its existing database-error envelope.
+- **Access:** Open, with native schema validation. Called after the existing workflow migration and before returning the initialized Drizzle client. Applying it to the owner's database still requires the separately requested human migration confirmation.
+- **Version 1:** Require the content column to be absent. Resolve the main database path from the managed connection, create a unique `VACUUM INTO` backup beside it, then add `articles.analysisContent TEXT NOT NULL DEFAULT ''` and set `user_version = 2` in one SQLx transaction. No schema change if the backup fails; transaction failure rolls back.
+- **Version 2:** Require the expected TEXT/non-null/empty-default column and succeed without another backup or rewrite. Partial schemas, unsupported versions and an unresolvable backup path fail closed. Serialize simultaneous native calls; frontend initialization also shares one promise.
+- Native workflow commands accept compatible versions 1 and 2; they continue rejecting future unknown versions. The article's existing metadata save carries `analysisContent`; this is not a new inference command or binary-file contract. Saved content remains untrusted evidence under ADR-008.
+
+Decision, recovery rules and executed checks: [ADR-014](../../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) and [article content validation](../../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Historical schema-1-only statements below are amended by this compatible extension.
+
 ### Slice 8 local AI cancellation amendment — 2026-10-01
 
 - **Command:** `cancel_ollama_inference` (debug and release), arguments `{ jobId: string }`, response `void` on success. This is runtime cancellation, not domain mutation or entitlement authorization. AI runtime commands retain their existing string-error convention; the canonical domain envelope below applies to domain operations.

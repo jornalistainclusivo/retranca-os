@@ -64,6 +64,32 @@ describe('Phase 6.4 AI controls in real modal markup', () => {
     expect(html).not.toContain('Premium');
   });
 
+  it('loads the opened article\'s saved content as its own AI evidence', () => {
+    const first = renderArticle({}, { ...article, analysisContent: 'Only article A' });
+    const second = renderArticle({}, { ...article, id: 'other', analysisContent: 'Only article B' });
+    const empty = renderArticle({}, { ...article, id: 'empty', analysisContent: '' });
+    expect(first).toContain('Only article A');
+    expect(first).not.toContain('Only article B');
+    expect(second).toContain('Only article B');
+    expect(second).not.toContain('Only article A');
+    expect(empty).not.toContain('Only article A');
+    expect(button(first, 'Revisão Editorial').attributes).not.toContain('disabled=""');
+    expect(button(empty, 'Revisão Editorial').attributes).toContain('disabled=""');
+    expect(first).toContain('Para mantê-lo ao reabrir o aplicativo');
+  });
+
+  it.each(['constructor', 'toString', '__proto__'])('opens imported article ID %s without inheriting a visual draft', id => {
+    const html = renderArticle({}, { ...article, id });
+    expect(button(html, 'Alt Text WCAG').attributes).toContain('disabled=""');
+    expect(button(html, 'Simplificar Linguagem').attributes).not.toContain('disabled=""');
+  });
+
+  it.each([12, true, { text: 'Malformed' }])('keeps legacy malformed content %j from crashing the modal', analysisContent => {
+    const html = renderArticle({}, { ...article, analysisContent } as unknown as Article);
+    expect(button(html, 'Revisão Editorial').attributes).toContain('disabled=""');
+    expect(button(html, 'Simplificar Linguagem').attributes).not.toContain('disabled=""');
+  });
+
   it('recommends from current classification despite stale legacy status and publication role', () => {
     const data = { ...article, status: 'ideia' as const };
     const html = renderArticle({ semanticClassification: 'REVIEW' }, data);

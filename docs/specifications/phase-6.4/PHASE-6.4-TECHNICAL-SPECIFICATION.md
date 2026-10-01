@@ -21,6 +21,20 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 ## 1. Requirement Coverage Matrix
 
+### Article CMS content amendment — ADR-014, 2026-10-01
+
+The owner approved saving full analysis text with each article. [ADR-014](../../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) amends the earlier Phase 6.3 body-persistence deferral; applying the migration to the owner's database requires separate confirmation.
+
+- **BR-CONTENT-001:** `Article.analysisContent` belongs to one article ID. Opening/reopening loads that article's saved data; missing legacy content is empty. Unsaved edits are discarded on close. Visual descriptions remain session-only and article-scoped.
+- **BR-CONTENT-002:** Explicit CMS save preserves raw content through the existing adapter, SQLite and browser fallback. Failed storage/SQL writes propagate; the modal awaits success and announces save errors while retaining the edit. Saving does not invoke AI.
+- **BR-CONTENT-MIG-001:** Add `analysisContent TEXT NOT NULL DEFAULT ''` and upgrade schema 1 to 2 in a native SQLx transaction, after a uniquely named backup beside the managed database. Validate repeated schema-2 calls without rewriting; reject partial/unknown schemas and backup failures. Share frontend initialization and serialize native migration calls.
+- **BR-CONTENT-MIG-002:** Preserve article IDs/metadata, workflow/category references, checklist/history rows and empty legacy defaults. Do not backfill unowned shared session text. Native workflow operations accept compatible versions 1/2; higher unknown versions fail closed. Recovery after upgrade requires separately authorized preservation/restore, not source rollback alone.
+- **BR-CONTENT-AI-001:** Saved text remains untrusted evidence under ADR-008. Native prerequisites, projection, escaping and context budgets stay mandatory. Image attachments and multimodal inference are not introduced.
+- **BR-CONTENT-INPUT-001:** Reject imported nonstring analysis content before replacing existing browser articles; missing/null legacy content remains empty. Existing malformed runtime content must not crash the modal. Per-article visual draft lookups must not resolve inherited object properties.
+- **BR-CONTENT-SAVE-001:** Save-result UI callbacks apply only to their active dialog session. Closing/switching suppresses stale callbacks without claiming rollback of an in-flight write. Disable form editing while awaiting that session's save.
+
+Coverage and owner-reported acceptance: [article content validation](../../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md), TEST-CONTENT-001/002/003/004/005 below in the test specification. Header JSON import carries the field in browser/UI data but does not persist the imported collection into desktop SQLite; native restore remains outside this corrective. Historical schema-1-only clauses are superseded only by this compatible extension.
+
 ### Current open-edition rules (ADR-013)
 
 - **BR-OPEN-001:** Every implemented editorial and structural capability is available without commercial entitlement, account, subscription, or activation. This replaces the commercial authorization clauses in sections 13-15, 18-19, and 21; they remain historical design records only.

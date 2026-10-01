@@ -50,6 +50,7 @@ export const articles = sqliteTable('articles', {
   publishDate: text('publishDate').notNull(),
   summary: text('summary'),
   objective: text('objective'),
+  analysisContent: text('analysisContent').notNull().default(''),
   keyword: text('keyword'),
   persona: text('persona'),
   cta: text('cta'),

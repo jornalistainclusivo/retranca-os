@@ -1,4 +1,5 @@
 pub mod ai_supervisor;
+pub mod article_content;
 pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
@@ -35,6 +36,7 @@ pub fn run() {
             download_model,
             cancel_download,
             get_ollama_models,
+            article_content::migrate_article_content,
             orchestrator::start_orchestrated_inference,
             phase64::get_workflow_stages,
             phase64::get_categories,

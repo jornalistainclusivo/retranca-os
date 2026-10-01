@@ -56,7 +56,7 @@ pub async fn verify_user_version(pool: &Pool<Sqlite>) -> Result<(), CanonicalErr
             details: serde_json::json!({ "error": e.to_string() }),
         })?;
 
-    if version != 1 {
+    if version != 1 && version != 2 {
         return Err(CanonicalError {
             code: "ERR_DATABASE_FAILURE".into(),
             retryable: false,

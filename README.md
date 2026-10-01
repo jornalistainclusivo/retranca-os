@@ -10,7 +10,9 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [checkpoint do Slice 8](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md). Os testes automatizados locais passaram; fechamento de acessibilidade/runtime, Gate B e autorização de merge/release continuam pendentes.
 
-Em 01/10/2026, o checkpoint foi salvo localmente em `ac453e8`. A rodada seguinte implementa cancelamento nativo Ollama e foco dos diálogos; consulte o [relatório e os três testes no AntiGravity](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). O responsável pelo produto confirmou os três testes desktop como aprovados (`1 ok; 2 ok; 3 ok`) e autorizou sua consolidação em commit local. O push exige uma confirmação separada. Os testes de transporte não garantem interrupção do processamento no servidor Ollama.
+Em 01/10/2026, o checkpoint foi salvo em `ac453e8` e a rodada de cancelamento nativo Ollama/foco em `8e22c18`. O responsável pelo produto confirmou os três testes desktop daquela rodada (`1 ok; 2 ok; 3 ok`), autorizou os pushes e o CI manual; Windows/Linux/frontend passaram no código de `8e22c18`. A documentação foi publicada em `543d033`. Consulte o [relatório de cancelamento/foco](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). Os testes de transporte não garantem interrupção do processamento no servidor Ollama.
+
+A correção seguinte separa **Conteúdo para análise (Texto completo)** por pauta e inclui seu salvamento após reiniciar, conforme o [ADR-014](docs/decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md). A implementação foi validada localmente e o responsável informou os três testes como aprovados (`1 OK; 2 OK; 3 OK`, 01/10/2026), autorizando continuar o desenvolvimento. A revisão acrescentou proteção contra dados JSON inválidos e salvamentos de sessões antigas; 236 testes de frontend, lint, tipos e build passaram. O agente não executou a migração nem inspecionou o banco/backup editorial; consolidação e Gate B completo continuam pendentes. Consulte o [relatório e roteiro no AntiGravity](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md) e o [resultado da revisão, correções e limites](docs/testing/PHASE-6.4-ARTICLE-CONTENT-REVIEW.md). A importação JSON atualiza o estado visual/armazenamento do navegador, mas não restaura o conjunto no SQLite desktop. Anexos de imagens/textos/documentos estão em [levantamento de escopo](docs/specifications/ARTICLE-ATTACHMENTS-DISCOVERY.md), sem implementação nesta rodada.
 
 Baseline já integrado na `main`:
 
@@ -27,6 +29,8 @@ O fluxo de trabalho foi desenhado para maximizar a ergonomia cognitiva e a aten�
 ## 4. Local-first persistence
 
 O projeto opera sob o princípio local-first. O armazenamento de artigos, rascunhos e configurações ocorre primariamente no dispositivo do jornalista. A camada de persistência utiliza um banco de dados SQLite local, orquestrado e gerenciado por Drizzle ORM integrado nativamente através do Tauri SQL Plugin.
+
+Na implementação do ADR-014, **Salvar Pauta no CMS** inclui o texto completo daquela pauta. A atualização do SQLite para schema 2 cria um backup junto ao banco antes de acrescentar o campo; dados antigos começam com texto completo vazio. A aplicação dessa migração ao banco editorial exige confirmação separada antes de iniciar a nova versão. Fechar sem salvar descarta a edição do texto; a descrição visual continua temporária e vinculada à sua pauta.
 
 ## 5. Editorial AI
 

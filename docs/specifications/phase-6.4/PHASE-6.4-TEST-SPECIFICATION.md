@@ -11,6 +11,22 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
+## Article CMS content acceptance delta — ADR-014
+
+The owner's decision to save full text with each article adds the following criteria. The initial application-close response only unblocked compilation. The owner later reported the three supplied checks as passing (`1 OK; 2 OK; 3 OK`, 2026-10-01) and authorized continued development. Record functional acceptance as owner-reported evidence; actual database/backup files were not inspected by the agent. Additional migrations and commit/push require separate authorization.
+
+| ID | Criterion | Current evidence / remaining work |
+| --- | --- | --- |
+| **TEST-CONTENT-001** | Two article IDs retain distinct full texts; another article with missing/empty content remains empty. Own content drives AI prerequisites. | Adapter, real modal markup and browser storage tests; implementer isolated-browser A/B save/reload observations. Owner check 1 reported as passing. |
+| **TEST-CONTENT-002** | Explicit save persists raw text; reopening the same article discards unsaved edits. Clearing and saving one article cannot clear another. Visual descriptions remain article-scoped/session-only. | Implementer browser isolation/reload observations; owner checks 2/3 reported as passing. |
+| **TEST-CONTENT-003** | File-backed native migration creates a readable version-1 backup, preserves metadata/checklist/history, defaults legacy text empty, reopens distinct Unicode/multiline texts and is idempotent under concurrent calls. | Four native integration tests in debug/release, including two simultaneous migration callers and one backup. Owner restart check passed as reported; actual schema/backup not inspected. |
+| **TEST-CONTENT-004** | Partial/future schemas and backup failures cannot rewrite content or perform the content-schema upgrade. Workflow validation rejects unknown versions. | Native temporary-database rejection tests; frontend workflow migration accepts known version 2 and rejects version 3. |
+| **TEST-CONTENT-005** | Initialization is shared; a migration failure rejects and permits retry. SQL/storage write failures propagate instead of claiming success. The dialog retains edits and presents an accessible save error. | Driver mocks and browser quota regression tests pass. Actual desktop error announcements/NVDA remain pending. |
+| **TEST-CONTENT-006** | Reserved article IDs cannot select inherited visual drafts. Nonstring imported content rejects before replacing existing storage; malformed existing runtime content cannot crash the modal. Missing legacy and valid string content remain usable. | Six real-modal markup regressions, four invalid-import storage regressions and valid/legacy import coverage pass. JSON collection import into desktop SQLite remains outside this corrective. |
+| **TEST-CONTENT-007** | A closed/replaced save session cannot close another dialog or publish stale error/loading callbacks. Form editing is disabled while saving; closing does not promise rollback of an existing write. | Six deferred-write callback tests pass. Actual desktop driver-delay/error-announcement observations remain pending. |
+
+Executed results, recovery limits and the three owner checks: [article content validation](../../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). [ADR-014](../../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) amends the schema-1-only/body-persistence deferral; existing AI safety/domain criteria remain active.
+
 ## Current acceptance delta — ADR-013
 
 Commercial entitlement transition/authorization-denial tests, confirmed-downgrade restrictions, and developer-premium release authority tests are retired. They MUST NOT block or count as current open-edition acceptance coverage.
