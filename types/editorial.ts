@@ -16,7 +16,7 @@ export type SemanticClassification = 'IDEA' | 'RESEARCH' | 'DRAFTING' | 'REVIEW'
 /** Phase 6.4 lifecycle role. Independent of semantic classification. */
 export type WorkflowLifecycleRole = 'PUBLICATION';
 
-/** Category provenance — 'standard' for Free baseline, 'custom' for Pro. */
+/** Category provenance — built-in or user-created; both belong to the open edition. */
 export type CategoryOrigin = 'standard' | 'custom';
 
 // ──────────────────────────────────────────────────────

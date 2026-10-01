@@ -202,8 +202,16 @@ export const fetchChecklistTemplates = async (): Promise<ChecklistTemplate[]> =>
   }
 };
 
-export const createWorkflowStage = async (displayName: string, orderIndex: number, semanticClassification?: string): Promise<void> => {
+function validateWorkflowSemantics(value: string | null | undefined): void {
+  if (value == null || value === '') return;
+  if (!['IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED'].includes(value)) {
+    throw new Error('ERR_INVALID_SEMANTIC_CLASSIFICATION');
+  }
+}
+
+export const createWorkflowStage = async (displayName: string, orderIndex: number, semanticClassification?: string | null): Promise<void> => {
   if (!isTauri()) {
+    validateWorkflowSemantics(semanticClassification);
     const stages = getStoredWorkflowStages();
     const trimmedName = displayName.trim();
     if (!trimmedName) throw new Error('Invalid stage name');
@@ -211,7 +219,7 @@ export const createWorkflowStage = async (displayName: string, orderIndex: numbe
       throw new Error('Duplicate active stage name');
     }
     const activeCount = stages.filter(s => s.isActive).length;
-    if (orderIndex < 0 || orderIndex > activeCount) {
+    if (!Number.isInteger(orderIndex) || orderIndex < 0 || orderIndex > activeCount) {
       throw new Error('ERR_INVALID_WORKFLOW');
     }
 
@@ -253,8 +261,10 @@ export const createWorkflowStage = async (displayName: string, orderIndex: numbe
 
 export const updateWorkflowStage = async (id: string, displayName?: string, semanticClassification?: SemanticClassification | null): Promise<void> => {
   if (!isTauri()) {
+    validateWorkflowSemantics(semanticClassification);
     const stages = getStoredWorkflowStages();
     const idx = stages.findIndex(s => s.id === id);
+    if (idx === -1) throw new Error('ERR_INVALID_WORKFLOW');
     if (idx !== -1) {
       if (displayName !== undefined) {
         const trimmedName = displayName.trim();

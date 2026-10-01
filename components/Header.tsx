@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Article } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
 import { exportArticlesJSON, importArticlesJSON, resetToSeedData } from '@/lib/storage';
 import { 
   Search, 
@@ -21,6 +21,7 @@ import {
 
 interface HeaderProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   darkMode: boolean;
@@ -34,6 +35,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   articles,
+  workflowStages,
   searchTerm,
   setSearchTerm,
   darkMode,
@@ -48,7 +50,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Calculate overall metrics
   const total = articles.length;
-  const publishedCount = articles.filter(a => a.status === 'publicado').length;
+  const publishedCount = articles.filter(a =>
+    workflowStages.find(stage => stage.id === a.workflowStageId)?.lifecycleRole === 'PUBLICATION'
+  ).length;
   const overallPercentage = total > 0 ? Math.round((publishedCount / total) * 100) : 0;
 
   const handleImportClick = () => {

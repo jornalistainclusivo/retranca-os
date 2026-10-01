@@ -8,7 +8,7 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [registro de validação atual](docs/testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). Slice 8, revisão independente e autorização de merge/release continuam pendentes.
+A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [checkpoint do Slice 8](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md). Os testes automatizados locais passaram; fechamento de acessibilidade/runtime, Gate B e autorização de merge/release continuam pendentes.
 
 Baseline já integrado na `main`:
 

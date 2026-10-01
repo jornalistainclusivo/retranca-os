@@ -455,6 +455,7 @@ export default function Home() {
       {/* Header */}
       <Header
         articles={articles}
+        workflowStages={workflowStages}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         darkMode={darkMode}

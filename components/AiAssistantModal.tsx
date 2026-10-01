@@ -2,8 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paperclip, FileImage, StopCircle, AlertTriangle } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AiTextMarkdown } from '@/components/AiTextMarkdown';
 import type { AiAction, GenerationState, AiOrchestrationRequest } from '@/types/ai';
 import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 import {
@@ -289,6 +288,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
           <button
             onClick={onClose}
+            type="button"
+            aria-label="Fechar assistente de IA"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -538,9 +539,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               </div>
 
               <div className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-blue max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-blue-600 hover:prose-a:text-blue-500">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <AiTextMarkdown>
                   {displayResult}
-                </ReactMarkdown>
+                </AiTextMarkdown>
               </div>
             </div>
           )}

@@ -177,7 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="flex items-center gap-2">
               <Settings className="w-4 h-4 text-slate-700 dark:text-slate-300" />
               <span className="flex-1 text-left">
-                Configurações PRO
+                Configurações Editoriais
               </span>
             </span>
           </button>

@@ -17,7 +17,14 @@ Commercial entitlement transition/authorization-denial tests, confirmed-downgrad
 
 Replace them with TEST-OPEN-001/002/003 from ADR-013: direct native access to all ten structural commands without an entitlement provider; open UI/AI/runtime-setting entry points in normal builds; and unchanged schema, domain, reference, publication, rollback, and template-copy guarantees. TEST-AI-001/002 and all unchanged persistence/migration/lifecycle tests still apply. Runtime/provider prerequisites remain mandatory.
 
-Current evidence: [Slice 7 / open-edition validation](../../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The original suite below is retained for traceability, subject to this explicit replacement of commercial criteria.
+Current evidence: [Slice 8 integration/hardening checkpoint](../../testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md); saved baseline: [Slice 7 / open-edition validation](../../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The original suite below is retained for traceability, subject to this explicit replacement of commercial criteria.
+
+### Slice 8 regression checks
+
+- **TEST-INT-HEADER-001:** Publication metrics follow the current stage lifecycle role, regardless of legacy status, stage name/order, or `PUBLISHED` semantic classification. Unresolved stage IDs do not grant publication.
+- **TEST-INT-SEMANTIC-001:** Native creation and browser create/update reject values outside the five-value semantic vocabulary with `ERR_INVALID_SEMANTIC_CLASSIFICATION`, preserving prior state. Null remains valid; omitted updates preserve classification.
+- **TEST-INT-NAME-001:** UI validation rejects duplicate active names but permits reuse of inactive stage/category names.
+- **TEST-AI-RENDER-001:** Both AI result consumers use the shared text renderer. Inline, reference, and relative Markdown images preserve description text without image/preload elements; raw HTML and unsafe link schemes remain inactive. Explicit safe links remain available. This is rendering coverage, not proof of live-model prompt-injection resistance or observed exfiltration.
 
 > **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
 

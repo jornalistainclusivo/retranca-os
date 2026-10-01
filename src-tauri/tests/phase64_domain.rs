@@ -234,6 +234,62 @@ impl TestContext {
 // =====================================================================
 
 #[test]
+fn test_stage_creation_semantic_vocabulary_and_atomic_rejection() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext { instances };
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active) VALUES ('pub', 'Publicação', 0, 'PUBLICATION', 1)").await.unwrap();
+        for invalid in ["REVIEW_NOW", "review", " "] {
+            let error = domain::create_workflow_stage(
+                ctx.state_db(),
+                CreateWorkflowStageRequest {
+                    display_name: "Invalid".into(),
+                    order_index: 0,
+                    semantic_classification: Some(invalid.into()),
+                },
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.code, "ERR_INVALID_SEMANTIC_CLASSIFICATION");
+            assert!(!error.retryable);
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let position: i64 =
+                sqlx::query_scalar("SELECT order_index FROM workflow_stages WHERE id = 'pub'")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(count, 1);
+            assert_eq!(position, 0);
+        }
+        for (index, classification) in ["IDEA", "RESEARCH", "DRAFTING", "REVIEW", "PUBLISHED"]
+            .iter()
+            .enumerate()
+        {
+            let stage = domain::create_workflow_stage(
+                ctx.state_db(),
+                CreateWorkflowStageRequest {
+                    display_name: classification.to_string(),
+                    order_index: index as i64 + 1,
+                    semantic_classification: Some(classification.to_string()),
+                },
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                stage.semantic_classification.unwrap().as_str(),
+                *classification
+            );
+            assert!(stage.lifecycle_role.is_none());
+        }
+        let publication_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workflow_stages WHERE lifecycle_role = 'PUBLICATION' AND is_active = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(publication_count, 1);
+    });
+}
+
+#[test]
 fn test_open_001_customization_requires_no_entitlement_but_checks_schema() {
     run_async(async {
         let (instances, pool) = setup_db().await;

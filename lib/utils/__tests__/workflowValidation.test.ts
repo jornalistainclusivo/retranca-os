@@ -31,6 +31,11 @@ describe('Phase 6.4 - Open Customization UX Validation', () => {
       expect(validateStageA11y(' IA ', mockStages).isValid).toBe(true);
       expect(validateStageA11y('X', mockStages).isValid).toBe(true);
     });
+
+    it('allows reuse of inactive stage names without allowing active duplicates', () => {
+      expect(validateStageA11y(' PAUTA ', [{ ...mockStages[0], isActive: false }]).isValid).toBe(true);
+      expect(validateStageA11y(' PAUTA ', mockStages).isValid).toBe(false);
+    });
   });
 
   describe('Category A11y Validations', () => {
@@ -55,6 +60,11 @@ describe('Phase 6.4 - Open Customization UX Validation', () => {
 
     it('rejects whitespace-only category names', () => {
       expect(validateCategoryA11y('   ', mockCategories).isValid).toBe(false);
+    });
+
+    it('allows reuse of inactive category names without allowing active duplicates', () => {
+      expect(validateCategoryA11y(' ESPORTES ', [{ ...mockCategories[0], isActive: false }]).isValid).toBe(true);
+      expect(validateCategoryA11y(' ESPORTES ', mockCategories).isValid).toBe(false);
     });
   });
 });

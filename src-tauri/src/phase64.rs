@@ -480,7 +480,7 @@ pub async fn create_workflow_stage_internal(
     // validate
     let sem_class = validate_semantic_classification(request.semantic_classification.as_deref())
         .map_err(|_| CanonicalError {
-            code: "ERR_INVALID_WORKFLOW".into(),
+            code: "ERR_INVALID_SEMANTIC_CLASSIFICATION".into(),
             retryable: false,
             details: serde_json::json!({}),
         })?;

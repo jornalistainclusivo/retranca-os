@@ -15,7 +15,7 @@ export const validateStageA11y = (name: string, currentStages: WorkflowStage[]):
     errors.push('O nome do estágio não pode estar vazio');
   }
 
-  const isDuplicate = currentStages.some(s => s.displayName.toLowerCase() === name.trim().toLowerCase());
+  const isDuplicate = currentStages.some(s => s.isActive && s.displayName.toLowerCase() === name.trim().toLowerCase());
   if (isDuplicate) {
     errors.push('Estágio duplicado pode causar confusão cognitiva (A11y)');
   }
@@ -33,7 +33,7 @@ export const validateCategoryA11y = (name: string, currentCategories: CategoryEn
     errors.push('O nome da categoria não pode estar vazio');
   }
 
-  const isDuplicate = currentCategories.some(c => c.name.toLowerCase() === name.trim().toLowerCase());
+  const isDuplicate = currentCategories.some(c => c.isActive && c.name.toLowerCase() === name.trim().toLowerCase());
   if (isDuplicate) {
     errors.push('Categoria duplicada detectada');
   }

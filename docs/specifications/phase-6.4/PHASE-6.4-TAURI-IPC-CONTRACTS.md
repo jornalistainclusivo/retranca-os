@@ -180,6 +180,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 }
 ```
 *Note: `create_workflow_stage` does not accept `lifecycle_role`; new stage receives `lifecycle_role = null`; client cannot assign `PUBLICATION` through create.*
+- **Semantic validation:** Only the five approved vocabulary values or an unclassified value (null/empty) are accepted. Invalid semantic vocabulary returns `ERR_INVALID_SEMANTIC_CLASSIFICATION`, with `retryable: false`, before any stage insertion or order change. Other invalid workflow inputs retain `ERR_INVALID_WORKFLOW`.
 - **Success Response:** Returns created `WorkflowStage` object.
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 
@@ -199,6 +200,7 @@ All IPC commands MUST return semantic failures through this exact canonical erro
 *Note: `update_workflow_stage` DOES NOT accept or mutate `lifecycle_role`. It may update only its approved editable fields. Renaming or changing semantic classification never changes lifecycle role. Publication role movement occurs only through the approved safe-removal transfer contract in Phase 6.4.*
 
 For partial updates, an omitted `semantic_classification` preserves the current classification; an explicit JSON `null` clears it. A vocabulary value replaces it. All three cases preserve `lifecycle_role`.
+- Invalid semantic vocabulary returns `ERR_INVALID_SEMANTIC_CLASSIFICATION`, with `retryable: false`; an unknown stage ID returns `ERR_INVALID_WORKFLOW`. Neither failure may alter stored stages.
 - **Success Response:** `{ "success": true }`
 - **Error Response:** `{ "code": "ERR_INVALID_WORKFLOW", "retryable": false, "details": {} }`
 

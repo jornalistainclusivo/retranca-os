@@ -69,6 +69,28 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
   });
 
   describe('WORKFLOW', () => {
+    it('rejects invalid semantics and missing update targets without changing stored state', async () => {
+      const before = getStoredWorkflowStages();
+      await expect(createWorkflowStage('Invalid', 0, 'REVIEW_NOW')).rejects.toThrow('ERR_INVALID_SEMANTIC_CLASSIFICATION');
+      await expect(updateWorkflowStage('ws_1', 'Changed', 'REVIEW_NOW' as any)).rejects.toThrow('ERR_INVALID_SEMANTIC_CLASSIFICATION');
+      await expect(updateWorkflowStage('missing', 'Changed')).rejects.toThrow('ERR_INVALID_WORKFLOW');
+      expect(getStoredWorkflowStages()).toEqual(before);
+    });
+
+    it('accepts the complete semantic vocabulary and rejects non-integer ordering atomically', async () => {
+      const before = getStoredWorkflowStages();
+      for (const index of [0.5, NaN, Infinity]) {
+        await expect(createWorkflowStage('Invalid index', index)).rejects.toThrow('ERR_INVALID_WORKFLOW');
+        expect(getStoredWorkflowStages()).toEqual(before);
+      }
+      for (const classification of ['IDEA', 'RESEARCH', 'DRAFTING', 'REVIEW', 'PUBLISHED'] as const) {
+        await createWorkflowStage(classification, getStoredWorkflowStages().filter(s => s.isActive).length, classification);
+        expect(getStoredWorkflowStages().find(s => s.displayName === classification)?.semanticClassification).toBe(classification);
+      }
+      await createWorkflowStage('Unclassified', getStoredWorkflowStages().filter(s => s.isActive).length, null);
+      expect(getStoredWorkflowStages().find(s => s.displayName === 'Unclassified')?.semanticClassification).toBeNull();
+    });
+
     it('explicit null clears semantics while omitted updates preserve semantics and publication role', async () => {
       await updateWorkflowStage('ws_2', undefined, 'PUBLISHED');
       await updateWorkflowStage('ws_2', 'Publicação');

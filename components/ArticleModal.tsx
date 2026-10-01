@@ -1,7 +1,6 @@
 'use client';
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AiTextMarkdown } from '@/components/AiTextMarkdown';
 
 import type { AiAction } from '@/types/ai';
 
@@ -412,6 +411,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              type="button"
+              aria-label="Fechar pauta"
               className="p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -835,9 +836,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   </button>
                 </div>
                 <div className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-indigo max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-indigo-600 hover:prose-a:text-indigo-500">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <AiTextMarkdown>
                     {aiResponse}
-                  </ReactMarkdown>
+                  </AiTextMarkdown>
                 </div>
               </div>
             )}

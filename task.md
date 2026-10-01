@@ -6,12 +6,15 @@
 - [x] Current validation recorded: frontend 192, Rust debug/release 96, lint/build/security registration checks passed.
 - [x] User-reported Windows desktop development smoke check (`npx tauri dev`) documented.
 - [x] Local consolidation authorized by the product owner on 2026-09-30; review and contributor handoff recorded with this checkpoint.
-- [ ] Slice 8: phase-wide integration/security hardening.
+- [x] Slice 8 automated checkpoint: publication metrics, semantic error parity, active-name validation, and AI Markdown resource hardening.
+- [x] Current working-tree validation: frontend 201, Rust debug/release 97, lint/build/security registration checks passed.
+- [x] Slice 8 manual smoke script approved by the product owner: stage creation/duplicate rejection, real local Linguagem Simples inference, and keyboard article close (`1 OK; 2 OK; 3 OK`, 2026-09-30).
+- [ ] Slice 8 acceptance closure: real-runtime/cancellation, manual accessibility, packaged runtime, and exact-commit remote CI evidence.
 - [ ] Independent technical/security review (Gate B).
 - [ ] Human merge authorization (Gate C).
 - [ ] Human release/tag authorization (Gate D).
 
-See [current validation and contributor handoff](docs/testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The product owner explicitly authorized review and a local commit for this round. Push, merge, tag, and release require separate authorization; this checklist does not grant them.
+See the [Slice 8 checkpoint and contributor handoff](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md) and the [saved Slice 7 validation](docs/testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The product owner authorized the local Slice 8 consolidation and continued implementation on 2026-10-01. Ask again before each subsequent commit or push, and before merge, tag, or release; implementation authorization does not grant those actions.
 
 ## Historical Phase 5 checklist
 
