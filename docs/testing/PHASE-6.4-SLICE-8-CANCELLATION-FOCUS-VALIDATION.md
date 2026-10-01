@@ -14,7 +14,7 @@ The prior [Slice 8 checkpoint](PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md) was co
 - The NDJSON parser preserves UTF-8 split across HTTP chunks. Malformed JSON, provider error records, broken transport and a missing completion marker become errors. A final record without a newline is accepted when it contains `done: true`.
 - Article and assistant use native `<dialog>` with `showModal()`, a title association, initial heading focus, Escape synchronized with React, and focus restoration to the invoker. The browser supplies background inertness and the modal top layer. Removing a focused AI cancel button restores focus to the analysis input; the owner reported the desktop checks below as passing. Assistant inputs now have associated labels.
 
-No production dependency, lockfile, schema migration, CI configuration, authentication, commercial gate, prompt/action policy or model choice was changed. Raw inference IPC remains debug-only. No push, PR, merge, tag or release was performed. This round is not a complete Slice 8 closure or Gate B approval.
+No production dependency, lockfile, schema migration, CI configuration, authentication, commercial gate, prompt/action policy or model choice was changed. Raw inference IPC remains debug-only. No push was performed during the initial implementation checkpoint; the subsequently authorized publication and CI are recorded below. No PR, merge, tag or release was performed. This round is not a complete Slice 8 closure or Gate B approval.
 
 The local Next development server also generated root `AGENTS.md` and `CLAUDE.md` automatically (`node_modules/next/dist/server/lib/generate-agent-files.js`). Their contents were reviewed: the managed Next guidance and its Claude include, without a manual governance-policy change. The owner authorized their inclusion with this round's code, tests and documentation in the 20-file consolidation. Existing project/user authorization rules still apply.
 
@@ -89,3 +89,26 @@ The exact model tag, generated text, timing, individual focus trace and native e
 Cancellation interrupts the client's registered HTTP task. It does not promise to stop Ollama server/GPU computation, unload a model or shut down the daemon. A completion event can legitimately win a click race. Close/unmount cancellation is best effort if native IPC fails; transport failure is not reported as successful cancellation while the dialog remains open.
 
 The desktop smoke scenarios are accepted by owner report. The owner subsequently stated **“Sim, autorizo criar o comitê local desta rodada. Podemos seguir. Você está autorizado.”** on 2026-10-01. This explicitly authorizes `fix(phase-6.4): cancel Ollama jobs and manage dialog focus`, covering this round's code, tests, documentation and the reviewed Next-generated guidance files (20 files). It does not authorize a push or another commit. Publishing requires a separate push confirmation and exact-commit Windows/Linux CI evidence. Gate B still needs independent technical/security acceptance; all six actual actions, packaged runtime/model provisioning and broader accessibility remain separate acceptance work. The historical security scan and prior CI evidence do not validate this subsequent patch.
+
+## Subsequent authorized publication and remote CI — 2026-10-01
+
+The owner separately authorized pushing the three local commits (`9fd6960`, `ac453e8`, `8e22c18`), followed by **“Sim, autorizo iniciar manualmente o CI desta branch.”** The feature branch was published at `8e22c18f37648322187727c0d5c56e7b1e734213`, verified against the GitHub branch reference. These authorizations do not grant another commit/push, PR readiness, merge, or release.
+
+The [published workflow](https://github.com/jornalistainclusivo/retranca-os/blob/8e22c18f37648322187727c0d5c56e7b1e734213/.github/workflows/ci.yml) automatically triggers on pushes to `main` and pull requests targeting `main`; a feature-branch push alone does not trigger it. Its existing `workflow_dispatch` entry was used without modifying CI configuration.
+
+- Workflow: `CI`, ID `358180210`.
+- [Run `36892534647`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647), event `workflow_dispatch`, created `2026-10-01T16:30:38Z`.
+- Branch: `feat/phase-6.4-pro-workflow-customization`.
+- Verified `head_sha`: `8e22c18f37648322187727c0d5c56e7b1e734213`.
+- Overall result: **completed / success**, verified through the GitHub run and job APIs; run `updated_at` is `2026-10-01T16:48:22Z`. All four jobs concluded successfully on the same published SHA.
+
+| Job | Observed result | Coverage |
+| --- | --- | --- |
+| [`frontend`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647/job/110471424546) | success | Dependency installation, lint, Vitest and frontend production build. |
+| [`rust (ubuntu-latest)`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647/job/110471425026) | success | Formatting, debug/release compilation and debug/release tests; CI supplies the repository mock sidecar for the Linux build. |
+| [`rust (windows-latest)`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647/job/110471426309) | success | Formatting, debug/release compilation and debug/release tests. |
+| [`rust`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647/job/110478689748) | success | Required fail-closed aggregate confirmed both Rust matrix jobs succeeded. |
+
+The owner subsequently authorized this documentation-only local consolidation on 2026-10-01: **“Sim, autorizo o comitê local dessa documentação. Pode prosseguir.”** This authorizes `docs(phase-6.4): record successful cross-platform CI`, covering this report and `task.md`. Publishing this documentation commit or creating another commit requires separate confirmation.
+
+Remote CI does not establish real model inference on Linux, packaged installation/model provisioning, complete accessibility or Gate B acceptance. The earlier implementation and manual-test evidence retain their original scopes; the successful remote run validates source commit `8e22c18`, not a later documentation commit.
