@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: SQLite, React, TypeScript, Tauri, Rust
 created-at: 2026-09-15
-last-updated: 2026-09-30
+last-updated: 2026-10-01
 authors: Retranca OS Core Team
 ---
 
@@ -27,6 +27,7 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 - **BR-OPEN-002:** Native schema/domain validation and transaction semantics are mandatory for every mutation, including direct IPC. Publication-role, reference-resolution, name/order, and template-copy invariants remain unchanged.
 - **BR-OPEN-003:** AI requires valid evidence and an available supported local runtime/model. Native evidence validation, projection, escaping, and budget remain authoritative. Model selection is a runtime setting available to everyone, independent of entitlement.
 - **AI output rendering hardening (Slice 8):** Generated editorial text is untrusted. Both AI modals render Markdown images as description text, without automatic image requests or image preload hints. Formatting and explicit safe links remain supported; raw HTML is not enabled. This does not establish semantic prompt-injection resistance or effective native cancellation.
+- **AI session hardening (Slice 8, 2026-10-01):** Ollama jobs have native HTTP cancellation with teardown acknowledgement and one terminal event. UI cancellation includes setup/close races, provider capture, obsolete-event isolation and retryable error announcements. Require `done: true` for successful stream completion and preserve split UTF-8. This does not promise server/GPU interruption. Both AI consumers use modal native dialogs with initial focus, Escape, inert background and focus return. See the [cancellation/focus evidence and pending desktop checks](../../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md).
 - The commercial state/error vocabulary is retired. Existing domain error envelopes and domain IPC payloads remain stable. Historical downgrade preservation is now unconditional preservation of existing data/configuration; it does not imply any access denial.
 
 Trace these rules to TEST-OPEN-001/002/003 in ADR-013 and the current validation report. The older matrix below retains original identifiers for the unchanged domain requirements and historical commercial requirements.

@@ -1,6 +1,8 @@
 # Phase 6.4 — Slice 8 Integration and Hardening Checkpoint
 
 Date: 2026-09-30 (America/Sao_Paulo).
+
+Historical checkpoint, saved with authorization as `ac453e8` on 2026-10-01. Subsequent implementation and acceptance are tracked in [Slice 8 cancellation/focus validation](PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md); the counts and unresolved behavior below describe this checkpoint, not the newer working tree.
 Branch: `feat/phase-6.4-pro-workflow-customization`.
 Saved baseline: `9fd69601567f60c5a922b0e6523160aecd5b063a` (Slice 7 / open single edition).
 This checkpoint describes the subsequent Slice 8 changes. The product owner authorized their local consolidation commit on 2026-10-01; publication remains unauthorized. Identify that checkpoint with `git log --oneline` and its validation-report path.

@@ -10,6 +10,12 @@
 - [x] Current working-tree validation: frontend 201, Rust debug/release 97, lint/build/security registration checks passed.
 - [x] Slice 8 manual smoke script approved by the product owner: stage creation/duplicate rejection, real local Linguagem Simples inference, and keyboard article close (`1 OK; 2 OK; 3 OK`, 2026-09-30).
 - [ ] Slice 8 acceptance closure: real-runtime/cancellation, manual accessibility, packaged runtime, and exact-commit remote CI evidence.
+- [x] Approved Slice 8 checkpoint saved locally as `ac453e8` (2026-10-01).
+- [x] Slice 8 follow-up implemented locally: native Ollama cancellation, session start/close race handling, UTF-8/terminal stream errors and native AI dialogs.
+- [x] Follow-up local checks: frontend 211; Rust debug/release 102; lint/types/build/fmt/native check/security registration; sampled browser keyboard focus.
+- [x] Follow-up owner desktop checks: cancellation/retry, close/reopen/article cancel and keyboard dialogs; owner reported `1 ok; 2 ok; 3 ok` on 2026-10-01. Exact model tag/runtime traces were not supplied.
+- [x] Explicit owner authorization for this follow-up's local consolidation commit on 2026-10-01, including reviewed Next-generated guidance files.
+- [ ] Separate explicit confirmation before pushing or creating another commit.
 - [ ] Independent technical/security review (Gate B).
 - [ ] Human merge authorization (Gate C).
 - [ ] Human release/tag authorization (Gate D).
@@ -17,6 +23,8 @@
 See the [Slice 8 checkpoint and contributor handoff](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md) and the [saved Slice 7 validation](docs/testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The product owner authorized the local Slice 8 consolidation and continued implementation on 2026-10-01. Ask again before each subsequent commit or push, and before merge, tag, or release; implementation authorization does not grant those actions.
 
 ## Historical Phase 5 checklist
+
+Current follow-up evidence and AntiGravity script: [Slice 8 cancellation/focus validation](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). Prior reports preserve their historical test counts and acceptance limits.
 
 - [x] ETAPA 0: GITOPS & PRESERVAÇÃO DE HISTÓRICO
   - [x] Commit `docs/GOVERNANCE.md`

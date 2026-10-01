@@ -10,6 +10,8 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [checkpoint do Slice 8](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md). Os testes automatizados locais passaram; fechamento de acessibilidade/runtime, Gate B e autorização de merge/release continuam pendentes.
 
+Em 01/10/2026, o checkpoint foi salvo localmente em `ac453e8`. A rodada seguinte implementa cancelamento nativo Ollama e foco dos diálogos; consulte o [relatório e os três testes no AntiGravity](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). O responsável pelo produto confirmou os três testes desktop como aprovados (`1 ok; 2 ok; 3 ok`) e autorizou sua consolidação em commit local. O push exige uma confirmação separada. Os testes de transporte não garantem interrupção do processamento no servidor Ollama.
+
 Baseline já integrado na `main`:
 
 A versão atual reflete a estabilização da Fase 6.3 no baseline principal (`main`).

@@ -1,6 +1,8 @@
 'use client';
 
 import { AiTextMarkdown } from '@/components/AiTextMarkdown';
+import { restoreAiCancelFocus, useModalDialog } from '@/lib/hooks/useModalDialog';
+import { AiJobSession } from '@/lib/adapters/aiJobSession';
 
 import type { AiAction } from '@/types/ai';
 
@@ -8,6 +10,7 @@ import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 import {
   onStreamToken,
   onStreamDone,
+  onStreamCanceled,
   onStreamError,
   onStreamNotice,
 } from '@/lib/adapters/localAiAdapter';
@@ -69,6 +72,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   provider = 'NONE',
 }) => {
   const fieldId = React.useId();
+  const dialogRef = useModalDialog(isOpen && !!article, onClose);
   const [prevArticleId, setPrevArticleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Article>(() => article || {
     id: '',
@@ -99,6 +103,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiCancelling, setAiCancelling] = useState(false);
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiCancelError, setAiCancelError] = useState<string | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
   const [analysisContent, setAnalysisContent] = useState('');
@@ -113,16 +120,34 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
   const aiJobIdRef = React.useRef<string | null>(null);
   const aiJobActiveRef = React.useRef(false);
-  const unlistenFnsRef = React.useRef<(() => void)[]>([]);
+  const sessionRef = React.useRef<AiJobSession | null>(null);
+  const cancelHadFocusRef = React.useRef(false);
+  const sessionKey = isOpen && article ? article.id : null;
+  const [previousSessionKey, setPreviousSessionKey] = useState(sessionKey);
+  const cleanupListeners = React.useCallback(() => {
+    restoreAiCancelFocus(dialogRef.current, cancelHadFocusRef.current);
+    cancelHadFocusRef.current = false;
+    sessionRef.current?.finish();
+    sessionRef.current = null;
+    aiJobIdRef.current = null;
+  }, [dialogRef]);
   
   useEffect(() => {
+    if (sessionKey === null) return;
     return () => {
-      if (unlistenFnsRef.current.length > 0) {
-        unlistenFnsRef.current.forEach(unlisten => unlisten());
-        unlistenFnsRef.current = [];
-      }
+      sessionRef.current?.dispose();
+      cleanupListeners();
+      aiJobActiveRef.current = false;
     };
-  }, []);
+  }, [sessionKey, cleanupListeners]);
+
+  if (sessionKey !== previousSessionKey) {
+    setPreviousSessionKey(sessionKey);
+    setAiLoading(false);
+    setAiCancelling(false);
+    setAiStatus('');
+    setAiCancelError(null);
+  }
 
   if (article && article.id !== prevArticleId) {
     setPrevArticleId(article.id);
@@ -237,35 +262,27 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     aiJobActiveRef.current = true;
 
     // Cleanup previous listeners to prevent duplicates and memory leaks
-    if (unlistenFnsRef.current.length > 0) {
-      unlistenFnsRef.current.forEach(unlisten => unlisten());
-      unlistenFnsRef.current = [];
-    }
+    cleanupListeners();
 
     setAiLoading(true);
+    setAiCancelling(false);
+    setAiStatus('Preparando geração...');
+    setAiCancelError(null);
     setAiResponse(null);
     setContextNotices([]);
 
-    const jobId = `article_ai_${Date.now()}`;
+    const jobId = `article_ai_${crypto.randomUUID()}`;
+    const session = new AiJobSession(jobId, provider === 'OLLAMA' ? OllamaProvider : SidecarProvider);
+    sessionRef.current = session;
     aiJobIdRef.current = jobId;
     let buffer = '';
 
     try {
-      const localUnlistens: (() => void)[] = [];
-      const cleanupLocal = () => {
-        localUnlistens.forEach(u => u());
-        localUnlistens.length = 0;
-      };
-
-      const cleanupListeners = () => {
-        if (unlistenFnsRef.current.length > 0) {
-          unlistenFnsRef.current.forEach(unlisten => unlisten());
-          unlistenFnsRef.current = [];
-        }
-      };
-
-      try {
-        const unNotice = await onStreamNotice((ev) => {
+      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
+        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
+      }
+      if (provider === 'OLLAMA' && !selectedModel) throw new Error('Nenhum modelo OLLAMA selecionado.');
+        await session.listen(() => onStreamNotice((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
             setContextNotices(prev => {
@@ -276,40 +293,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           } else {
             console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
           }
-        });
-        localUnlistens.push(unNotice);
+        }));
 
-        const unToken = await onStreamToken((ev) => {
-          if (ev.job_id !== aiJobIdRef.current) return;
+        await session.listen(() => onStreamToken((ev) => {
+          if (ev.job_id !== aiJobIdRef.current || session.cancellationRequested) return;
           buffer += ev.token;
           setAiResponse(buffer);
-        });
-        localUnlistens.push(unToken);
+          setAiStatus('Gerando...');
+        }));
 
-        const unDone = await onStreamDone((ev) => {
+        await session.listen(() => onStreamDone((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Geração concluída.');
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unDone);
+        }));
 
-        const unError = await onStreamError((ev) => {
+        await session.listen(() => onStreamCanceled((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Geração cancelada.');
+          aiJobActiveRef.current = false;
+          cleanupListeners();
+        }));
+
+        await session.listen(() => onStreamError((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           buffer += `\n\nErro: ${ev.message}`;
           setAiResponse(buffer);
           setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Erro na geração.');
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unError);
-      } catch (err) {
-        cleanupLocal();
-        aiJobActiveRef.current = false;
-        throw err;
-      }
-      
-      unlistenFnsRef.current = localUnlistens;
+        }));
+
+      if (aiJobIdRef.current !== jobId || session.cancellationRequested) return;
 
       const request: AiOrchestrationRequest = {
         job_id: jobId,
@@ -343,35 +365,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         }
       };
 
-      let providerImpl;
-      if (provider === 'OLLAMA') {
-        if (!selectedModel) {
-          throw new Error('Nenhum modelo OLLAMA selecionado.');
-        }
-        providerImpl = OllamaProvider;
-      } else if (provider === 'SIDECAR') {
-        providerImpl = SidecarProvider;
-      } else {
-        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
-      }
-
-      await providerImpl.startInference(request);
+      await session.start(request);
     } catch (err: unknown) {
+      if (aiJobIdRef.current !== jobId) return;
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
+      setAiCancelling(false);
+      setAiStatus('Erro ao iniciar geração.');
       aiJobActiveRef.current = false;
       
-      // Execute cleanup listeners safely since we are exiting early
-      if (unlistenFnsRef.current.length > 0) {
-        unlistenFnsRef.current.forEach(unlisten => unlisten());
-        unlistenFnsRef.current = [];
-      }
+      cleanupListeners();
+    }
+  };
+
+  const handleCancelAi = async () => {
+    const session = sessionRef.current;
+    if (!session || aiCancelling) return;
+    cancelHadFocusRef.current = !!dialogRef.current?.querySelector('[data-ai-cancel]')?.contains(document.activeElement);
+    setAiCancelling(true);
+    setAiStatus('Cancelando geração...');
+    setAiCancelError(null);
+    try {
+      await session.cancel();
+      if (sessionRef.current !== session) return;
+      setAiLoading(false);
+      setAiCancelling(false);
+      setAiStatus('Geração cancelada.');
+      aiJobActiveRef.current = false;
+      cleanupListeners();
+    } catch (error) {
+      if (sessionRef.current !== session) return;
+      setAiCancelling(false);
+      setAiCancelError(`Falha ao cancelar: ${error instanceof Error ? error.message : String(error)}. Tente novamente.`);
+      setAiStatus('Geração em andamento.');
     }
   };
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto flex items-center justify-center transition-all ${isFocusMode ? 'bg-white dark:bg-slate-950 p-0' : 'bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6'}`}>
+    <dialog ref={dialogRef} aria-labelledby={`${fieldId}-dialog-title`} className={`fixed inset-0 m-0 border-0 w-full max-w-none h-full max-h-none overflow-y-auto hidden open:flex items-center justify-center transition-all motion-reduce:transition-none backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs ${isFocusMode ? 'bg-white dark:bg-slate-950 p-0' : 'bg-transparent p-3 sm:p-6'}`}>
       <div className={`bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col transition-all ${isFocusMode ? 'w-full h-full max-w-5xl max-h-screen border-x shadow-2xl my-auto' : 'border rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto max-h-[92vh]'}`}>
         
         {/* Header */}
@@ -381,7 +413,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               <Layers className="w-4 h-4 text-blue-600" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 id={`${fieldId}-dialog-title`} tabIndex={-1} data-dialog-initial-focus className="text-base font-bold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-500">
                 CMS Editorial Local — {formData.id ? 'Editar Pauta' : 'Nova Pauta'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -553,6 +585,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <textarea
                   rows={2}
                   id={`${fieldId}-content`}
+                  data-ai-retry
                   value={analysisContent}
                   onChange={(e) => setAnalysisContent(e.target.value)}
                   placeholder="Cole o texto da matéria para validação (opcional)..."
@@ -681,7 +714,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
                 <span>Assistência de IA para esta Pauta (IA Local)</span>
               </div>
-              {aiLoading && <span className="text-xs text-indigo-600 font-medium">Gerando...</span>}
+              <span role="status" aria-live="polite" className="text-xs text-indigo-600 dark:text-indigo-300 font-medium">{aiStatus}</span>
+              {aiLoading && (
+                <button type="button" onClick={handleCancelAi} data-ai-cancel disabled={aiCancelling} className="px-3 py-2 text-xs rounded-lg bg-red-600 text-white focus-visible:outline-2 focus-visible:outline-sky-500 disabled:opacity-50">
+                  {aiCancelling ? 'Cancelando...' : 'Cancelar geração'}
+                </button>
+              )}
+              {aiCancelError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{aiCancelError}</p>}
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -968,6 +1007,6 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </dialog>
   );
 };

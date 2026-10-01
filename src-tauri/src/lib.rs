@@ -11,7 +11,7 @@ use ai_supervisor::start_inference;
 use ollama_gateway::start_ollama_inference;
 
 use ai_supervisor::{cancel_inference, JobRegistry};
-use ollama_gateway::get_ollama_models;
+use ollama_gateway::{cancel_ollama_inference, get_ollama_models, OllamaJobRegistry};
 use provisioning::commands::{cancel_download, download_model, preflight_check, DownloadRegistry};
 use std::collections::HashMap;
 use std::sync::Mutex as StdMutex;
@@ -22,6 +22,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
         .manage(JobRegistry(StdMutex::new(HashMap::new())))
+        .manage(OllamaJobRegistry::default())
         .manage(DownloadRegistry(AsyncMutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             #[cfg(debug_assertions)]
@@ -29,6 +30,7 @@ pub fn run() {
             #[cfg(debug_assertions)]
             start_ollama_inference,
             cancel_inference,
+            cancel_ollama_inference,
             preflight_check,
             download_model,
             cancel_download,

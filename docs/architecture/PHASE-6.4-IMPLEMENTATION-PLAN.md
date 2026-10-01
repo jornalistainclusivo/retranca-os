@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-updated-at: 2026-09-30
+updated-at: 2026-10-01
 ---
 
 # Phase 6.4 Implementation Plan
@@ -19,6 +19,10 @@ HUMAN IMPLEMENTATION GATE A APPROVED.
 PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
+
+### Slice 8 follow-up — 2026-10-01
+
+The product owner authorized local consolidation of the prior checkpoint and continued implementation, reaffirming a new confirmation before each subsequent commit/push. The approved checkpoint is saved as `ac453e8`. Its follow-up implements native Ollama request cancellation, session lifecycle cleanup and modal dialog focus under the existing architecture; no dependency, migration, CI/authentication change or new provider is required. See the [cancellation/focus validation](../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md) for current local checks and the owner's three-step desktop acceptance (`1 ok; 2 ok; 3 ok`, 2026-10-01). The owner subsequently explicitly authorized this follow-up's local consolidation commit; any push or further commit requires a new confirmation. Gate B, publication, merge and release remain pending; the historical sequence below is subject to ADR-013.
 
 ### Current execution amendment (2026-09-30)
 

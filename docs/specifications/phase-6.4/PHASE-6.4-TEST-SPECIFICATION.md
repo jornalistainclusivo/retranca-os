@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
-last-updated: 2026-09-30
+last-updated: 2026-10-01
 authors: Retranca OS Core Team
 ---
 
@@ -20,6 +20,13 @@ Replace them with TEST-OPEN-001/002/003 from ADR-013: direct native access to al
 Current evidence: [Slice 8 integration/hardening checkpoint](../../testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md); saved baseline: [Slice 7 / open-edition validation](../../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). The original suite below is retained for traceability, subject to this explicit replacement of commercial criteria.
 
 ### Slice 8 regression checks
+
+- **TEST-AI-CANCEL-001:** Native registry cancellation closes an in-flight HTTP stream before acknowledgement, emits no later tokens, rejects duplicate active IDs and tolerates unknown/completed IDs. Cancellation during model lookup/setup must also interrupt the same task. Server/GPU shutdown is not a requirement or a claimed result.
+- **TEST-AI-STREAM-001:** Split UTF-8 and a final completion record without newline survive; malformed/provider-error/truncated streams cannot report success.
+- **TEST-AI-SESSION-001:** Cancel waits for native start acknowledgement; canceled preparation cannot later dispatch. Late subscriptions after close are released, provider errors remain retryable and obsolete job events cannot update a reopened dialog. Controller unit tests and real desktop acceptance are recorded separately.
+- **TEST-A11Y-DIALOG-001:** Assistant/article expose named modal dialogs, place initial focus, exclude background controls, close with Escape and restore invoker focus, including article writing mode. Focus after a canceled generation and actual NVDA announcements require desktop checks. Browser evidence alone is not full WCAG conformance.
+
+Current results and a three-check owner script: [Slice 8 cancellation/focus validation](../../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). The earlier manual three-check approval does not establish this subsequent round's acceptance.
 
 - **TEST-INT-HEADER-001:** Publication metrics follow the current stage lifecycle role, regardless of legacy status, stage name/order, or `PUBLISHED` semantic classification. Unresolved stage IDs do not grant publication.
 - **TEST-INT-SEMANTIC-001:** Native creation and browser create/update reject values outside the five-value semantic vocabulary with `ERR_INVALID_SEMANTIC_CLASSIFICATION`, preserving prior state. Null remains valid; omitted updates preserve classification.

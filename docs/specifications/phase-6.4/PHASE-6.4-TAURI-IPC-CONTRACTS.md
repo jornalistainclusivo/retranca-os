@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-last-updated: 2026-09-30
+last-updated: 2026-10-01
 authors: Retranca OS Core Team
 ---
 
@@ -20,6 +20,16 @@ SPEC APPROVAL DOES NOT BY ITSELF AUTHORIZE IMPLEMENTATION.
 IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
+
+### Slice 8 local AI cancellation amendment — 2026-10-01
+
+- **Command:** `cancel_ollama_inference` (debug and release), arguments `{ jobId: string }`, response `void` on success. This is runtime cancellation, not domain mutation or entitlement authorization. AI runtime commands retain their existing string-error convention; the canonical domain envelope below applies to domain operations.
+- Cancel signals the registered task and awaits request/response teardown. Unknown/completed IDs succeed as idempotent no-ops. Concurrent active reuse of a job ID is rejected when starting a task.
+- The worker emits exactly one terminal event: `ai-stream-done { job_id }`, `ai-stream-canceled { job_id }`, or `ai-stream-error { job_id, message }`. No additional tokens are emitted after cancellation acknowledgement. Completion may win a cancellation race; do not infer a canceled terminal event for an already completed job.
+- The UI waits for the start acknowledgement before cancel IPC, captures the original session provider, ignores obsolete events and disposes subscriptions on close/unmount. Preparation canceled before native dispatch must not later start a request.
+- HTTP teardown does not guarantee stopping server/GPU computation. `cancel_inference` remains the separate sidecar command. Raw `start_ollama_inference` and `start_inference` remain debug-only; release starts require `start_orchestrated_inference` and unchanged native evidence validation.
+
+Evidence and remaining desktop acceptance: [Slice 8 cancellation/focus validation](../../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md).
 
 ## 1. IPC Access and Native Validation (ADR-013)
 
