@@ -11,6 +11,20 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
+## Local article import acceptance delta — ADR-015, 2026-10-02
+
+| ID | Criterion | Evidence boundary |
+| --- | --- | --- |
+| TEST-IMPORT-001 | Add new articles while preserving every existing-ID field/relation; repeated import adds no duplicates. | Frontend and file-backed native tests; owner desktop checks pending. |
+| TEST-IMPORT-002 | Reject malformed/duplicate/oversized input before storage/IPC writes; native boundary revalidates. | Parser/native tests use synthetic data only. |
+| TEST-IMPORT-003 | Reject unknown/inactive new references, invalid ownership and occupied scoped IDs without partial writes. | Native tests including late SQLite trigger failure/whole-batch rollback. |
+| TEST-IMPORT-004 | Reopen file-backed DB with distinct Unicode/full text and intact relations; no schema change. | Disposable SQLx DB, not actual owner DB. |
+| TEST-IMPORT-005 | Native routing bypasses browser writes; committed import/readback failure has truthful message. | IPC/API regressions; actual desktop readback still manual. |
+| TEST-IMPORT-006 | Named keyboard-operable controls, status/error messages, retry same file and visible file controls on small screens. | Implementer browser observations; desktop/NVDA/keyboard chooser/reflow remain pending. |
+| TEST-RUNTIME-PATH-001 | Resolve fixed canonical sibling with spaces; reject missing/directory/relative paths and outside symlink. | Windows path fixtures; Unix symlink test requires Linux. Does not test a real inference engine. |
+
+Current executed counts, partial security coverage and three-step AntiGravity script: [local import validation](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). Preserve historical counts and owner acceptance below.
+
 ## Slice 8 resumption acceptance delta — 2026-10-02
 
 The existing accessibility and real-model requirements apply to the narrow UI follow-up; no new product access, persistence or provider decision is introduced.

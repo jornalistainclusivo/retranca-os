@@ -12,3 +12,18 @@ spikes/**/target/
 *.tsbuildinfo
 next-env.d.ts
 .env.local
+
+# Private local editorial data; only synthetic fixtures belong in Git.
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.bak
+*.backup
+agenda-jinc-editorial-os-*.json
+retranca-pautas-*.json
+/.retranca-local/
+/editorial-data/
+/attachments/

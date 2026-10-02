@@ -1,0 +1,32 @@
+[
+  {
+    "id": "synthetic-import-20261002",
+    "title": "Synthetic import fixture — disposable",
+    "status": "ideia",
+    "categoryTag": "Acessibilidade",
+    "tags": [
+      "Synthetic"
+    ],
+    "publishDate": "2026-10-02",
+    "summary": "Invented test article. No actual editorial content.",
+    "objective": "Verify local import preservation",
+    "analysisContent": "Synthetic content only.\nInclusão.",
+    "checklists": [
+      {
+        "id": "synthetic-check",
+        "label": "Synthetic verification",
+        "completed": false,
+        "category": "editorial"
+      }
+    ],
+    "history": [
+      {
+        "id": "synthetic-history",
+        "date": "2026-10-02T12:00:00Z",
+        "action": "Synthetic fixture created"
+      }
+    ],
+    "createdAt": "2026-10-02T12:00:00Z",
+    "updatedAt": "2026-10-02T12:00:00Z"
+  }
+]

@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-last-updated: 2026-10-01
+last-updated: 2026-10-02
 authors: Retranca OS Core Team
 ---
 
@@ -20,6 +20,16 @@ SPEC APPROVAL DOES NOT BY ITSELF AUTHORIZE IMPLEMENTATION.
 IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
+
+### Local article import amendment — ADR-015, 2026-10-02
+
+- **Command:** `import_articles`, registered in debug/release. Argument `request: { articles: ImportedArticleData[] }`; each item contains `article`, `checklists`, `history`, as produced by the existing adapter. No client database path, SQL, executable or URL.
+- **Article DTO:** Camel-case native fields matching `DbArticle`, with required ID/title/status/categoryTag/tags(JSON string)/publishDate/createdAt/updatedAt/workflowStageId/categoryId; completedAt nullable, metadata strings default empty. Checklist DTO uses articleId, integer completed restricted to 0/1, and nullable category; history includes articleId/date/action. All native DTOs reject unknown fields.
+- **Limits/validation:** Up to 1,000 articles and 5 MiB of serialized normalized request, nonempty bounded IDs, unique article/related IDs, typed/known enums and correct related-row ownership. Require schema 2 and exactly one active publication-role stage; validate active references only for new articles.
+- **Persistence:** Existing article IDs skipped unchanged; new relation IDs derived from the serialized article/relation ID pair. Reject collisions before insertion; bound SQL statements and a single transaction commit/rollback. Import is not a publication transition.
+- **Success:** `{ imported: number, skipped: number }` after commit. Frontend reloads SQLite before UI success; readback failure explicitly reports already committed data.
+- **Errors:** Canonical `{ code, retryable, details }`, with empty diagnostic details. `ERR_IMPORT_INVALID`, `ERR_IMPORT_LIMIT`, `ERR_IMPORT_REFERENCE`, `ERR_IMPORT_RELATION_CONFLICT`, `ERR_IMPORT_SCHEMA`, `ERR_PUBLICATION_ROLE_INVARIANT` are nonretryable; SQL failures use `ERR_DATABASE_FAILURE`, retryable true. Pool acquisition retains its existing envelope.
+- **Privacy/authority:** User-selected file remains local; no schema migration/network/restore command is added. Existing initialization precedes import. See [validation and limits](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md).
 
 ### Article CMS content migration amendment — ADR-014, 2026-10-01
 

@@ -1,10 +1,12 @@
 pub mod ai_supervisor;
 pub mod article_content;
+pub mod article_import;
 pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
 pub mod phase64;
 pub mod provisioning;
+pub mod sidecar_path;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;
@@ -37,6 +39,7 @@ pub fn run() {
             cancel_download,
             get_ollama_models,
             article_content::migrate_article_content,
+            article_import::import_articles,
             orchestrator::start_orchestrated_inference,
             phase64::get_workflow_stages,
             phase64::get_categories,

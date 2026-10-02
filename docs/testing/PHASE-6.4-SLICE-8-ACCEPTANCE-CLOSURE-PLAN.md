@@ -4,6 +4,14 @@ Date: 2026-10-01 (America/Sao_Paulo). Status: execution checklist; acceptance pe
 
 ## Current checkpoint and decision authority
 
+### Superseding local import checkpoint — 2026-10-02
+
+The owner subsequently authorized publication/manual CI of `089174088a780d6fd481e395c4e89c48b7a8c0d5`; [run 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955) passed all four jobs, rechecked on that SHA. The owner then granted autonomy to continue this development/code publication round, superseding per-action confirmation wording below within that scope. Merge/release remain separately gated; no current PR inventory is claimed here.
+
+Native JSON preservation import and canonical sidecar sibling resolution are now implemented under [ADR-015](../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md). [Local import validation](PHASE-6.4-LOCAL-IMPORT-VALIDATION.md) records synthetic local tests, partial canonical security coverage and the new three-step desktop handoff. Earlier browser-only import/path-gap statements describe the preceding checkpoint. Real engine/model binding, installer evidence, broader accessibility and full Gate B remain unresolved. Use the new import handoff without repeating accepted CMS/AI checks. [Phase 6.5](../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) remains a draft, not a completed or approved specification.
+
+### Historical planning checkpoint
+
 The planning checkpoint is `543d03333414698d9aa4d9976aabf4080e21bbc2` on `feat/phase-6.4-pro-workflow-customization`. The owner authorized and completed publication of that documentation commit. The workspace was clean when this planning review began.
 
 The [remote CI run](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36892534647) was rechecked through the GitHub API on 2026-10-01: `completed / success`, `head_sha = 8e22c18f37648322187727c0d5c56e7b1e734213`. Its four successful jobs and their coverage are recorded in the [cancellation/focus report](PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md#subsequent-authorized-publication-and-remote-ci--2026-10-01). It does not represent CI on `543d033` or this later planning documentation. No open PR for this feature branch was returned by the GitHub API at this review checkpoint.

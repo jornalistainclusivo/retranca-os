@@ -10,6 +10,10 @@ The owner confirmed saving and closing the application to unblock compilation, t
 
 The owner later reported **“resultados dos testes: 1 OK; 2 OK; 3 OK”** and authorized continuing development. This establishes owner-reported acceptance of article separation, save/cancel/clear and restart persistence under the supplied script. The agent did not run a migration against the actual editorial database or inspect its schema/backup; do not invent an earlier authorization event. No additional migration is planned. New migrations/restores and commit/push remain separately controlled.
 
+## Subsequent import amendment — ADR-015, 2026-10-02
+
+[ADR-015](ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) supersedes the browser-only replacement behavior described below: local JSON import now adds new IDs through native SQLite transactions/browser preservation merge, preserving existing articles. It is article-only import, not a full database restore. No new migration or permission to overwrite actual saved data is introduced.
+
 ## Context
 
 ### Subsequent save corrective — 2026-10-02

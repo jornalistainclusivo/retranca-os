@@ -2,6 +2,12 @@
 
 Date: 2026-10-02 (America/Sao_Paulo). Status: six AI actions and all three CMS corrective checks reported passing by the owner; local checks passed; local consolidation explicitly authorized. Publication and remaining acceptance gates are separate.
 
+## Subsequent authorized publication and continuation — 2026-10-02
+
+The owner separately authorized commit, push and manual CI of `089174088a780d6fd481e395c4e89c48b7a8c0d5`. [Run 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955) completed successfully on that SHA (updated `2026-10-02T21:20:20Z`), with frontend, Rust Windows/Linux and required Rust aggregate all successful. This supersedes pending-publication wording in the historical preparation record below.
+
+The owner then authorized continued development with autonomy. The next round delivers local preservation import and documents the production-experience draft; see [current validation/handoff](PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). Its tests/security/desktop acceptance are distinct from this earlier CMS corrective. Gates B/C/D remain open.
+
 ## Verified starting point
 
 The owner authorized resuming development under the existing documentation. At the start of this round, the local tree was clean on `feat/phase-6.4-pro-workflow-customization`. Local HEAD, its tracking ref and the GitHub branch ref were all `c03c928252ee498a87bb1abe221d3e4c7a07c93e` (`fix(phase-6.4): persist per-article CMS content safely`). The owner had separately authorized its commit, push and manual CI dispatch.

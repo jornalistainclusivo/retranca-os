@@ -38,7 +38,7 @@ pub async fn start_inference_internal(
     app: AppHandle,
     registry: State<'_, JobRegistry>,
     job_id: String,
-    program: String,
+    program: impl AsRef<std::ffi::OsStr>,
     args: Vec<String>,
 ) -> Result<(), String> {
     // Reject duplicate job IDs without blocking long

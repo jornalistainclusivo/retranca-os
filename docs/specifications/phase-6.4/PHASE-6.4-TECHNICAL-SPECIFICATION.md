@@ -21,6 +21,17 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 ## 1. Requirement Coverage Matrix
 
+### Local article import amendment — ADR-015, 2026-10-02
+
+- **BR-IMPORT-001:** Local JSON import adds new IDs and preserves all existing article fields/relations, regardless of timestamps. No automatic overwrite/delete or cloud synchronization.
+- **BR-IMPORT-002:** Validate the complete bounded input before mutation (5 MiB/1,000 articles, whitelist/types/enums/unique IDs). Native IPC repeats validation; new references must be active and publication-role invariants must hold.
+- **BR-IMPORT-003:** Native inserts are one schema-2 transaction including checklists/history. Related IDs are scoped deterministically and conflicting ownership rejects the batch. No schema migration or new dependency is introduced.
+- **BR-IMPORT-004:** UI success follows persisted-data readback; committed import/readback failure is distinguishable. Errors preserve local articles and permit retrying the same file. Browser fallback follows preservation semantics.
+- **BR-IMPORT-005:** Actual articles/DB/backups/attachments stay local and out of source publication. Tests use labelled synthetic fixtures/disposable DBs. Article JSON export is not a full customization/database backup.
+- **BR-RUNTIME-PATH-001:** Orchestrated SIDECAR uses the canonical absolute application-sibling executable, never PATH/CWD. Readiness includes sibling presence; it does not certify binary authenticity, real inference or verified model binding.
+
+[ADR-015](../../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) and [validation](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md) supersede the earlier browser-only import gap. Actual desktop acceptance, full Gate B and production engine/installer evidence remain open.
+
 ### Article CMS content amendment — ADR-014, 2026-10-01
 
 The owner approved saving full analysis text with each article. [ADR-014](../../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) amends the earlier Phase 6.3 body-persistence deferral; applying the migration to the owner's database requires separate confirmation.

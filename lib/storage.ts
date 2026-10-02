@@ -1,4 +1,5 @@
 import { Article, WorkflowStage, CategoryEntity } from "@/types/editorial";
+import { MAX_ARTICLE_IMPORT_BYTES, parseArticleImport } from './utils/articleImport';
 import {
   ALL_INITIAL_ARTICLES,
   DEFAULT_WORKFLOW_STAGES,
@@ -269,27 +270,18 @@ export const exportArticlesJSON = (articles: Article[]): void => {
   downloadAnchor.remove();
 };
 
-export const importArticlesJSON = (file: File): Promise<Article[]> => {
+export const readArticleImportFile = (file: File): Promise<Article[]> => {
   return new Promise((resolve, reject) => {
+    if (file.size > MAX_ARTICLE_IMPORT_BYTES) {
+      reject(new Error('O arquivo excede o limite de 5 MiB. Nenhuma pauta foi alterada.'));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (Array.isArray(parsed)) {
-          if (parsed.some(article => article?.analysisContent != null && typeof article.analysisContent !== 'string')) {
-            throw new Error('Conteúdo para análise inválido: o campo deve conter texto.');
-          }
-          const migrated = migrateArticles(parsed);
-          saveArticles(migrated);
-          resolve(migrated);
-        } else {
-          reject(
-            new Error(
-              "Formato do arquivo JSON inválido. Deve ser um array de pautas.",
-            ),
-          );
-        }
+        if (typeof content !== 'string') throw new Error('Erro ao ler o arquivo.');
+        resolve(migrateArticles(parseArticleImport(content)));
       } catch (err) {
         reject(err);
       }
@@ -297,6 +289,11 @@ export const importArticlesJSON = (file: File): Promise<Article[]> => {
     reader.onerror = () => reject(new Error("Erro ao ler o arquivo."));
     reader.readAsText(file);
   });
+};
+
+export const importArticlesJSON = async (file: File): Promise<Article[]> => {
+  const { importArticleFile } = await import('./api/articleImport');
+  return (await importArticleFile(file)).articles;
 };
 
 export const createNewArticle = (workflowStages: WorkflowStage[], categories: CategoryEntity[]): Article | null => {

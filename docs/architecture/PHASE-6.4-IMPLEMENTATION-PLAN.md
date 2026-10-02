@@ -20,6 +20,12 @@ PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
 
+### Current local import amendment — 2026-10-02
+
+[ADR-015](../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) adds bounded local JSON import through native schema-2 SQLite transactions, preserving existing IDs and adding only new articles. The browser follows the same preservation policy; this is not a full database restore. Canonical bundled-sidecar path resolution is implemented, while real engine/model binding and installer acceptance remain open. No new migration, dependency or CI/authentication configuration is introduced.
+
+The owner authorized continued development/code consolidation/publication for this round; this supersedes earlier repeated commit/push confirmation wording within that scope, without authorizing actual data restoration, merge or release. Prior `0891740` passed [CI 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955); current checks and the partial canonical security result are recorded in [local import validation](../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). Full Gate B remains pending. [Phase 6.5](PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) is a draft for review.
+
 ### Resumption and narrow UI follow-up — 2026-10-02
 
 The owner authorized resumed development. The article-content corrective was separately authorized for commit/push and manual CI as `c03c928`; frontend, Rust Windows/Linux and the required Rust aggregate passed in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked at the clean, synchronized resumption checkpoint. This supersedes pending-publication status in the historical preparation paragraphs below; full Gate B remains open.

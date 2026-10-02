@@ -1,5 +1,23 @@
 # Current work — Phase 6.4
 
+## Current authority and local import checkpoint — 2026-10-02
+
+This amendment supersedes earlier pending-publication/per-action-confirmation wording for this authorized round; historical test counts/results remain unchanged. The owner granted continued development autonomy, including source/documentation consolidation, publication and existing manual CI. Merge/release still require Gates C/D. Actual editorial data remains local; only code/docs/synthetic fixtures may be published.
+
+- [x] Published CMS corrective `089174088a780d6fd481e395c4e89c48b7a8c0d5` passed all four jobs in [run 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955), rechecked on 2026-10-02.
+- [x] ADR-015: conservative JSON import adds new IDs and preserves existing articles, with native atomic SQLite persistence and browser parity.
+- [x] Local validation: frontend 260 / 23 files; Windows Rust debug/release 114 each; lint/types/build/format/check/security registration passed.
+- [x] Isolated browser synthetic import, repeat, invalid-file/retry and reload observations; named file controls visible at 320 px.
+- [x] Canonical application-sibling sidecar resolution implemented; actual engine/model binding and installer remain unverified.
+- [x] Current-round security review completed with zero reported findings and **partial canonical coverage** due temporary receipt storage; full Gate B remains open.
+- [x] Read-only MCP diagnosis: GitHub and Codex Security calls responded; no config/permission changes.
+- [x] Prepare Phase 6.5 draft production-experience plan.
+- [ ] Owner desktop import checks 1–3.
+- [ ] Verify publication/current-source remote CI separately from the baseline run.
+- [ ] Remaining accessibility/packaging scope, full Gate B, then human Gates C/D.
+
+Current handoff: [local import validation](docs/testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md), [ADR-015](docs/decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md), [Phase 6.5 draft](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md).
+
 - [x] Slice 6 corrective delivered in `6ce03fd`.
 - [x] Human decision: open single edition, recorded in ADR-013 (2026-09-30).
 - [x] Slice 7: dynamic AI recommendation semantics and removal of commercial capability gates implemented locally.

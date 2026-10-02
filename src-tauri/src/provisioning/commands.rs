@@ -87,7 +87,11 @@ pub async fn preflight_check(app: AppHandle) -> Result<PreflightResult, String> 
     }
 
     let ollama = check_ollama_capabilities().await;
-    let sidecar_ready = model_exists;
+    let bundled_sidecar_exists = tauri::utils::platform::current_exe()
+        .ok()
+        .and_then(|executable| crate::sidecar_path::resolve_bundled_sidecar(&executable).ok())
+        .is_some();
+    let sidecar_ready = model_exists && bundled_sidecar_exists;
 
     let selected_provider = determine_provider(&ollama, sidecar_ready);
 

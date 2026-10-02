@@ -18,6 +18,7 @@ import {
   getStoredChecklistTemplates,
   getStoredArticles,
   importArticlesJSON,
+  createNewArticle,
   saveArticles,
   saveChecklistTemplates,
   saveCategories,
@@ -85,13 +86,14 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
     });
 
     it('imports legacy missing content and distinct text without changing valid article IDs', async () => {
-      const first = getStoredArticles()[0];
+      const first = { ...createNewArticle(getStoredWorkflowStages(), getStoredCategories())!, ...getStoredArticles()[0] };
       const imported = await importData([
         { ...first, id: 'constructor', analysisContent: 'Only A\nInclusão.' },
         { ...first, id: '__proto__' },
       ]);
-      expect(imported[0].analysisContent).toBe('Only A\nInclusão.');
-      expect(imported[1].analysisContent).toBeUndefined();
+      expect(imported.find(article => article.id === 'constructor')?.analysisContent).toBe('Only A\nInclusão.');
+      expect(imported.find(article => article.id === '__proto__')?.analysisContent).toBe('');
+      expect(imported.find(article => article.id === 'art_1')?.title).toBe('Art 1');
       expect(getStoredArticles()).toEqual(imported);
     });
 
