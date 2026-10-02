@@ -39,7 +39,9 @@ export const LocalAiSettings: React.FC = () => {
     <div className="fixed bottom-10 right-4 z-[9999]">
       <button
         ref={triggerRef}
+        type="button"
         onClick={() => { setMessage('Consultando modelos locais...'); setIsOpen(!isOpen); }}
+        aria-label="Configuração de IA local"
         aria-expanded={isOpen}
         aria-controls={panelId}
         className="bg-neutral-800 text-neutral-300 hover:bg-neutral-700 min-h-8 p-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shadow-lg border border-neutral-700 text-xs font-bold"

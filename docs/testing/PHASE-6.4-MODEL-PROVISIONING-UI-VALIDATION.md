@@ -1,6 +1,6 @@
 # Phase 6.4 — Model Provisioning UI Validation
 
-Date: 2026-10-02 (America/Sao_Paulo). Status: corrective implemented; automated and isolated browser checks passed; desktop/assistive-technology acceptance remains pending.
+Date: 2026-10-02 (America/Sao_Paulo). Status: provisioning notice owner desktop checks accepted; subsequent local-settings keyboard corrective validated locally, with its desktop retest and broader assistive-technology coverage pending.
 
 ## Authority and scope
 
@@ -48,6 +48,8 @@ The [APG modal-dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-m
 
 ## AntiGravity handoff — only checks affected by this round
 
+**Historical script, subsequently accepted:** the owner reported `1 OK; 2 OK; 3 OK` for these three notice/provider/layout checks and supplied a desktop notice screenshot. Preserve that acceptance. The owner separately reported that the collapsed bottom-right local AI settings control could not be reached practically with Tab; that later defect is addressed below. The three accepted checks do not establish NVDA, actual model download or whole-app keyboard conformance.
+
 Use the existing folder and feature branch. No pull/reset, migration, model pull or dependency installation is requested:
 
 ```powershell
@@ -62,6 +64,29 @@ npx tauri dev
 
 Report `1 OK; 2 OK; 3 OK`, **não apareceu**, or the exact affected behavior. These are current desktop checks, distinct from the previous accepted import script.
 
+## Subsequent corrective — collapsed local AI settings trigger
+
+Starting source: published `af1c01092debd802c659e9632ddf4a92fc0cca75`; its existing manual CI was dispatched as [run 37076408518](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37076408518). This follow-up does not infer or report that run's final result. The owner confirmed saving/closing the app before the layout edit; no owner process or editorial data was altered by the agent.
+
+The isolated browser reproduced the practical barrier: with 30 built-in examples, the collapsed trigger had native `tabIndex=0`, was enabled and was reachable after **324 preceding controls**. Shift+Tab from it focused the last **Abrir no CMS** button, and Tab returned to it. This was excessive traversal caused by rendering `LocalAiSettings` after all page children, rather than removal from the tab sequence. Do not label that observation alone as proof of a normative WCAG failure.
+
+The root layout now renders this single global settings control before the page children, inside the existing runtime provider. Its fixed bottom-right styling is retained. The button has `type="button"` and the accessible name **Configuração de IA local**; no positive tabindex, duplicate shortcut, provider-selection or persistence change is introduced. This follows the project's logical keyboard-order requirement, informed by [W3C Focus Order guidance](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html), [APG disclosure keyboard guidance](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) and [MDN tabindex guidance](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/tabindex), consulted on 2026-10-02. Whole-app conformance remains unverified.
+
+| Check | Status / observation | Scope |
+| --- | --- | --- |
+| Final `npm test` | pass: **274 / 25 files** | Two new actual root-layout rendering checks prevent late/duplicate settings triggers and verify collapsed/named/enabled natural-order output. |
+| Lint/types/build/diff whitespace | pass | Initial new-test lint issue was corrected; final lint, standalone types and focused/full tests passed. Production source did not change after the executed static build. Existing tooling deprecation warnings remain. |
+| First Tab with settings closed | pass | In compiled isolated `127.0.0.1:3048`, after dismissing the startup notice, the first page Tab focused **Configuração de IA local** with `aria-expanded=false`; preceding-control count changed from 324 to 0. Fixed position and visible blue focus ring retained. |
+| Enter / Space / Escape | pass | Enter and Space each opened settings and focused **Modelo Ollama**. Escape closed the panel and restored trigger focus; Tab continued to **Alternar Modo de Escrita**, and Shift+Tab returned to settings. Browser inventory failure was shown truthfully; no actual model was accessed/downloaded or used for inference. |
+| Neighboring modal | pass in sample | Opening the AI assistant kept sampled Tab inside its native modal, rather than reaching the background settings control; Escape restored **IA Assistant** focus. No inference was started. |
+| Owner desktop retest / NVDA | pending / not-tested | Prior notice acceptance is preserved; this new trigger behavior still needs desktop confirmation. Native source/contracts are unchanged; no fresh local Rust result is claimed. |
+
+The agent-created browser tab/static server were closed/stopped after QA; default viewport sizing was retained. Screenshot `.retranca-local/local-ai-trigger-focus.jpg` is ignored and contains built-in examples only.
+
+### Current AntiGravity check — one keyboard flow
+
+Use the same start commands above. On a fresh launch, close the model notice with Escape if it appears. With dialogs closed, enter page keyboard navigation with Tab: **IA local** should receive visible focus immediately. Press Enter to open settings; focus should move to **Modelo Ollama**. Press Escape to close; focus should return to **IA local**. The following Tab should continue to **Modo Escrita**. Report **IA local por teclado: OK** or the step that failed. Do not repeat the previous three accepted checks, download a model or modify actual articles for this retest.
+
 ## Remaining gates
 
-Owner desktop notice/provider observations, assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful local frontend checks or the previous import CI do not close them. Merge/tag/release still require human Gates C/D. Existing manual CI may be dispatched for the new published corrective revision; its result must be verified separately when the owner returns.
+The current local-settings desktop keyboard retest, assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful local frontend checks, owner-reported notice acceptance or the previous import CI do not close them. Merge/tag/release still require human Gates C/D. Existing manual CI may be dispatched for the new published corrective revision; its result must be verified separately when the owner returns.

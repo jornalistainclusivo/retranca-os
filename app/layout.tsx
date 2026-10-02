@@ -13,8 +13,8 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="pt-BR">
       <body suppressHydrationWarning>
         <AiRuntimeProvider>
-          {children}
           <LocalAiSettings />
+          {children}
         </AiRuntimeProvider>
       </body>
     </html>

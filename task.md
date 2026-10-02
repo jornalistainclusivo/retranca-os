@@ -24,11 +24,21 @@ Current handoff: [local import validation](docs/testing/PHASE-6.4-LOCAL-IMPORT-V
 - [x] Remove simulated browser download readiness; await native completion/readback and retain Rust provider selection instead of forcing SIDECAR.
 - [x] Dispose failed/late event subscriptions, reset per-view progress, bound valid numeric updates and stop decorative motion under reduced-motion preference.
 - [x] Final frontend checks: 272 / 24 files, lint/types/static build; isolated compiled-browser keyboard/error/retry and 320 CSS px notice observations.
-- [ ] Current-round desktop notice/provider checks; NVDA and broader accessibility remain separate.
+- [x] Owner reported notice/provider/layout desktop checks as passing (`1 OK; 2 OK; 3 OK`); supplied notice screenshot. NVDA and broader accessibility remain separate.
 - [ ] Verify the published corrective's exact-source manual CI result when the owner returns; do not infer it from the previous import CI.
 - [ ] Full independent Gate B, real engine/model binding and human Gates C/D remain open.
 
 Current narrow handoff: [model provisioning UI validation](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). No native source change or actual model download was executed by the agent; earlier accepted CMS/AI/import scripts are preserved.
+
+### Subsequent corrective — local AI settings keyboard entry
+
+- [x] Reproduce collapsed trigger after 324 preceding controls in built-in examples; native Tab eligibility itself was present.
+- [x] Render the single global settings control before page children, preserving fixed bottom-right placement; add explicit button type and accessible purpose name, without positive tabindex.
+- [x] Final frontend checks: 274 / 25 files, lint/types/static build; isolated compiled-browser first Tab, Enter/Space opening, Escape return, subsequent Tab/Shift+Tab and sampled neighboring-modal behavior.
+- [ ] Owner desktop retest: **IA local por teclado: OK** or the failed step; preserve previous three-check acceptance.
+- [ ] Verify new published-source CI separately; full Gate B, broader accessibility and human Gates C/D remain open.
+
+The current one-flow AntiGravity script is in the [validation follow-up](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#current-antigravity-check--one-keyboard-flow). No native/provider/model/persistence change is introduced.
 
 - [x] Slice 6 corrective delivered in `6ce03fd`.
 - [x] Human decision: open single edition, recorded in ADR-013 (2026-09-30).

@@ -12,7 +12,7 @@ Native JSON preservation import and canonical sidecar sibling resolution are now
 
 ### Historical planning checkpoint
 
-The subsequent [model provisioning notice corrective](PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) addresses scoped keyboard/recovery and native provider-readback gaps. Automated and isolated browser observations passed; its current desktop checks and broader accessibility remain pending. Closing this notice does not cancel a real download; no model transfer or production engine change was executed. This follow-up does not close independent Gate B or approve Phase 6.5.
+The subsequent [model provisioning notice corrective](PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) addresses scoped keyboard/recovery and native provider-readback gaps. Automated and isolated browser observations passed; the owner subsequently reported its three desktop checks as passing. The later collapsed local-settings trigger corrective moves that global control before editorial controls; its focused desktop retest and broader accessibility remain pending. Closing the model notice does not cancel a real download; no model transfer or production engine change was executed. These follow-ups do not close independent Gate B or approve Phase 6.5.
 
 The planning checkpoint is `543d03333414698d9aa4d9976aabf4080e21bbc2` on `feat/phase-6.4-pro-workflow-customization`. The owner authorized and completed publication of that documentation commit. The workspace was clean when this planning review began.
 

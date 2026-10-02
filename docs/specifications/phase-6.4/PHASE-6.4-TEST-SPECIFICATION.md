@@ -11,6 +11,10 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
+## Local AI settings keyboard entry corrective — 2026-10-02
+
+- **TEST-AI-SETTINGS-FOCUS-001:** With page dialogs closed, the single collapsed local-settings trigger is early in natural DOM/tab order, named **Configuração de IA local**, enabled and visibly focused; no positive tabindex or duplicated trigger. Enter/Space opens the panel and focuses the labelled model selector; Escape returns focus to the trigger, with Tab continuing to page controls. An active native modal keeps background settings outside its interactive scope. Actual layout rendering and compiled-browser interactions passed; current desktop/NVDA retest remains separate. See [focused validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#subsequent-corrective--collapsed-local-ai-settings-trigger).
+
 ## Model provisioning UI acceptance delta — 2026-10-02
 
 | ID | Criterion | Evidence boundary |
@@ -20,7 +24,7 @@ authors: Retranca OS Core Team
 | TEST-PROVISION-UI-003 | Verification subscriptions are released on success/failure; progress disposal handles late registration and ignores stale/invalid values. | Deferred/malformed mocked event cases; actual native event timing remains untested. |
 | TEST-PROVISION-UI-004 | Notice closes without cancelling download, explains keeping the app open, exposes labelled progress/text and respects reduced motion. Notice controls remain usable at 320 CSS px. | Actual markup/compiled CSS and sampled browser width; real download, reduced-motion setting, reader/whole-app QA pending. |
 
-Executed results and the three new desktop checks: [model provisioning UI validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). Preserve prior accepted CMS/AI/import scripts; this does not close full Gate B or packaged-engine acceptance.
+Executed results and the three desktop checks subsequently reported passing by the owner: [model provisioning UI validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). Preserve those and prior accepted CMS/AI/import scripts; the later local-settings trigger retest is separate. This does not close full Gate B or packaged-engine acceptance.
 
 ## Local article import acceptance delta — ADR-015, 2026-10-02
 
