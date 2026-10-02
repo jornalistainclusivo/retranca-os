@@ -21,6 +21,14 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 ## 1. Requirement Coverage Matrix
 
+### Model provisioning UI corrective — existing ADR-008 authority, 2026-10-02
+
+- **BR-PROVISION-UI-001:** Use a named native dialog with heading focus, boundary Tab/Shift+Tab, Escape and a visible close control in all displayed model states; READY/closed render nothing. Closing hides the notice without cancelling native download/verification, explained in the notice. Reduced motion stops decorative spinners/progress transitions.
+- **BR-PROVISION-UI-002:** Non-desktop download attempts fail truthfully with recoverable error/retry/close controls; no timers may simulate verified readiness. Native completion must await fresh `preflight_check`, deriving model state from native hardware/model facts and retaining `selected_provider` from Rust rather than forcing SIDECAR.
+- **BR-PROVISION-UI-003:** Release verification subscriptions after success/failure/readback failure and late progress subscriptions after dismissal. Ignore disposed/invalid events; bound valid progress to 0–100. The notice's bundled-model status remains independent of an existing Ollama configuration.
+
+[Validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) distinguishes actual rendering/browser evidence from mocked native transport and untested desktop/model download. This corrective introduces no engine/model binding, native IPC change or new architecture decision.
+
 ### Local article import amendment — ADR-015, 2026-10-02
 
 - **BR-IMPORT-001:** Local JSON import adds new IDs and preserves all existing article fields/relations, regardless of timestamps. No automatic overwrite/delete or cloud synchronization.
@@ -30,7 +38,7 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 - **BR-IMPORT-005:** Actual articles/DB/backups/attachments stay local and out of source publication. Tests use labelled synthetic fixtures/disposable DBs. Article JSON export is not a full customization/database backup.
 - **BR-RUNTIME-PATH-001:** Orchestrated SIDECAR uses the canonical absolute application-sibling executable, never PATH/CWD. Readiness includes sibling presence; it does not certify binary authenticity, real inference or verified model binding.
 
-[ADR-015](../../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) and [validation](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md) supersede the earlier browser-only import gap. Actual desktop acceptance, full Gate B and production engine/installer evidence remain open.
+[ADR-015](../../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) and [validation](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md) supersede the earlier browser-only import gap. Owner-reported import acceptance and exact-source remote CI are recorded; full Gate B and production engine/installer evidence remain open.
 
 ### Article CMS content amendment — ADR-014, 2026-10-01
 

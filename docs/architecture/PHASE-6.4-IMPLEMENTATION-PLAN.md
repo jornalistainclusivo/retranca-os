@@ -20,6 +20,12 @@ PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
 
+### Current accessibility/runtime corrective — 2026-10-02
+
+The owner granted continued development/consolidation/publication/manual-CI autonomy within the current feature work, superseding historical per-action-confirmation wording below. Import source `b2860c617856fe8048d3ac219a38c713c7f69c4d` passed [exact-source CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37070928920), and the owner reported aggregate acceptance of the three import checks. Preserve earlier accepted CMS/AI/import observations.
+
+The next narrow corrective applies ADR-008 native provider authority and the existing dialog/recovery requirements to model provisioning: native dialog/keyboard/close controls, truthful non-desktop errors, post-download preflight readback and event cleanup. [Model provisioning UI validation](../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) records 272 frontend tests, lint/types/build and isolated browser observations, with current desktop/NVDA coverage still pending. No new engine, dependency, migration, CI/authentication change or actual model download is introduced. Phase 6.5 remains a draft; full Gate B and human merge/release Gates C/D remain open.
+
 ### Current local import amendment — 2026-10-02
 
 [ADR-015](../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) adds bounded local JSON import through native schema-2 SQLite transactions, preserving existing IDs and adding only new articles. The browser follows the same preservation policy; this is not a full database restore. Canonical bundled-sidecar path resolution is implemented, while real engine/model binding and installer acceptance remain open. No new migration, dependency or CI/authentication configuration is introduced.

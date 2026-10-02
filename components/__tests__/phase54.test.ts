@@ -1,79 +1,48 @@
-/**
- * Phase 5.4 — UI/UX Runtime Tests
- *
- * Validates the ModelDownloadModal state rendering, ARIA compliance,
- * and runtime state definitions. Commercial locks were retired by ADR-013.
- */
+/** Model provisioning rendering checks; keyboard behavior requires a browser. */
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import { ModelDownloadModal } from '@/components/ModelDownloadModal';
+import type { ModelStatus } from '@/types/ai';
 
-import { describe, it, expect } from 'vitest';
-import type { ModelStatus, GenerationState } from '@/types/ai';
+const render = (modelStatus: ModelStatus, isOpen = true, errorMessage?: string) => renderToStaticMarkup(
+  React.createElement(ModelDownloadModal, { modelStatus, isOpen, errorMessage, onStartDownload: () => {}, onDismiss: () => {} }),
+);
 
-// ─── ModelDownloadModal State Coverage ───────────────────────────────────────
-
-describe('ModelDownloadModal state coverage', () => {
-  const allStates: ModelStatus[] = ['MISSING', 'DOWNLOADING', 'VERIFYING', 'READY', 'INCOMPATIBLE', 'FAILED'];
-
-  it('READY state causes the modal to not render (null)', () => {
-    // In the component, modelStatus === 'READY' returns null
-    const shouldRender = (status: ModelStatus) => status !== 'READY';
-    expect(shouldRender('READY')).toBe(false);
-    expect(shouldRender('MISSING')).toBe(true);
-    expect(shouldRender('DOWNLOADING')).toBe(true);
+describe('Model provisioning dialog rendering', () => {
+  it.each<ModelStatus>(['MISSING', 'DOWNLOADING', 'VERIFYING', 'INCOMPATIBLE', 'FAILED'])('%s has a native named dialog and a visible close control', status => {
+    const html = render(status);
+    expect(html).toContain('<dialog');
+    expect(html).toContain('aria-labelledby="model-download-title"');
+    expect(html).toContain('id="model-download-title"');
+    expect(html).toContain('data-dialog-initial-focus');
+    expect(html).toContain('aria-label="Fechar aviso de modelo"');
   });
 
-  it('all ModelStatus values are covered', () => {
-    expect(allStates).toHaveLength(6);
-    expect(allStates).toContain('MISSING');
-    expect(allStates).toContain('DOWNLOADING');
-    expect(allStates).toContain('VERIFYING');
-    expect(allStates).toContain('READY');
-    expect(allStates).toContain('INCOMPATIBLE');
-    expect(allStates).toContain('FAILED');
-  });
-});
-
-// ─── ARIA Streaming Compliance ──────────────────────────────────────────────
-
-describe('ARIA streaming compliance', () => {
-  it('streaming container uses aria-live=polite (not assertive)', () => {
-    // Assertive would spam screen readers on every token
-    const ariaLive = 'polite';
-    expect(ariaLive).toBe('polite');
-    expect(ariaLive).not.toBe('assertive');
+  it('renders nothing when closed or ready', () => {
+    expect(render('MISSING', false)).toBe('');
+    expect(render('READY')).toBe('');
   });
 
-  it('streaming container uses role=log for ordered content', () => {
-    const role = 'log';
-    expect(role).toBe('log');
+  it('renders labelled bounded progress with text explaining that dismissing does not cancel', () => {
+    const html = render('DOWNLOADING');
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuenow="0"');
+    expect(html).toContain('aria-valuemin="0"');
+    expect(html).toContain('aria-valuemax="100"');
+    expect(html).toContain('Você pode fechar este aviso; o download continuará');
+    expect(html).toContain('role="status"');
   });
 
-  it('aria-atomic=false so only new content is announced', () => {
-    const ariaAtomic = false;
-    expect(ariaAtomic).toBe(false);
-  });
-});
-
-// ─── Progress bar accessibility ─────────────────────────────────────────────
-
-describe('Download progress bar accessibility', () => {
-  it('progress bar has correct ARIA attributes at 0%', () => {
-    const progress = 0;
-    const attrs = {
-      role: 'progressbar',
-      'aria-valuenow': progress,
-      'aria-valuemin': 0,
-      'aria-valuemax': 100,
-    };
-
-    expect(attrs.role).toBe('progressbar');
-    expect(attrs['aria-valuenow']).toBe(0);
-    expect(attrs['aria-valuemin']).toBe(0);
-    expect(attrs['aria-valuemax']).toBe(100);
+  it.each<ModelStatus>(['DOWNLOADING', 'VERIFYING'])('%s respects reduced motion', status => {
+    expect(render(status)).toContain('motion-reduce:animate-none');
   });
 
-  it('progress bar updates aria-valuenow dynamically', () => {
-    const progress = 73;
-    expect(progress).toBeGreaterThan(0);
-    expect(progress).toBeLessThanOrEqual(100);
+  it('shows a specific recoverable error as text with retry and close controls', () => {
+    const html = render('FAILED', true, 'Synthetic desktop-only error <script>');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('Synthetic desktop-only error &lt;script&gt;');
+    expect(html).toContain('Tentar Novamente');
+    expect(html).toContain('Fechar');
   });
 });

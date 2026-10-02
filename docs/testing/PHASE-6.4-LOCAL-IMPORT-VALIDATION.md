@@ -1,6 +1,6 @@
 # Phase 6.4 — Local Article Import Validation
 
-Date: 2026-10-02 (America/Sao_Paulo). Status: implemented and validated locally; owner desktop import acceptance and remaining gates pending.
+Date: 2026-10-02 (America/Sao_Paulo). Status: implemented, locally validated, owner desktop import acceptance reported and exact-source remote CI passed; broader gates remain open.
 
 ## Starting point and authority
 
@@ -71,6 +71,12 @@ Use the clearly invented [synthetic JSON](../../__tests__/fixtures/article-impor
 
 Report `1 OK; 2 OK; 3 OK` or the observed error. These checks add a test article; they do not replace or delete existing articles. If the standard stage/category was deactivated, the new import should reject clearly; report the message rather than changing real workflow configuration just for the test.
 
+## Subsequent owner acceptance and published-source CI
+
+The owner reported **Tudo ok. prossiga.** after the three-check import handoff and the clarification that `{}` is an empty JSON object used only for rejection testing. Record this as owner-reported acceptance of the new-record/restart, preservation/reimport and invalid-file/recovery checks. The agent did not inspect actual editorial records or request their publication.
+
+The GitHub API verified [run 37070928920](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37070928920) as `completed/success` on published source `b2860c617856fe8048d3ac219a38c713c7f69c4d`, updated `2026-10-02T22:23:22Z` (19:23:22 America/Sao_Paulo). Frontend, Rust Windows, Rust Linux and the required Rust aggregate all passed. This updates the earlier pending CI status without changing historical local results or closing Gate B.
+
 ## Remaining limitations and next steps
 
-Owner desktop import acceptance, full keyboard/NVDA/zoom/reduced-motion QA, final whole-branch independent Gate B and real packaged-engine/installer evidence remain pending. No fresh Linux/runtime result is claimed by local Windows tests. The [Phase 6.5 plan](../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) is a draft; it introduces no engine, dependency, model download or attachment implementation. Merge/tag/release remain separate decisions.
+Full keyboard/NVDA/zoom/reduced-motion QA, final whole-branch independent Gate B and real packaged-engine/installer evidence remain pending. Linux automated evidence comes from the exact-source remote CI above, not local Windows execution; it does not prove packaged installation/inference. The [Phase 6.5 plan](../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) is a draft; it introduces no engine, dependency, model download or attachment implementation. Merge/tag/release remain separate decisions.

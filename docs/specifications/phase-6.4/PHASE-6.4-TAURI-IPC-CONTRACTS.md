@@ -21,6 +21,10 @@ IMPLEMENTATION REQUIRES THE SEPARATE HUMAN IMPLEMENTATION PLAN GATE.
 
 This document specifies the Tauri IPC boundaries for Phase 6.4.
 
+### Model provisioning frontend integration — 2026-10-02
+
+The existing `download_model({ jobId })`, `preflight_check`, `download-progress` and `download-verifying` native contracts are unchanged. Subscribe to verification before invoking download; always unsubscribe after its terminal/readback outcome. After native download resolves, await a fresh preflight result and retain its `selected_provider`; completion alone must not force READY/SIDECAR. Dispose late/stale progress subscriptions and bound finite nonnegative progress payloads to 0–100 for rendering. A non-Tauri runtime must reject provisioning instead of simulating completion. Dismissing the notice does not invoke `cancel_download`; native work continues while the app stays open. See the [UI validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) for mocked-transport/browser boundaries; no real download or engine-binding evidence is established.
+
 ### Local article import amendment — ADR-015, 2026-10-02
 
 - **Command:** `import_articles`, registered in debug/release. Argument `request: { articles: ImportedArticleData[] }`; each item contains `article`, `checklists`, `history`, as produced by the existing adapter. No client database path, SQL, executable or URL.

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Article,
   ArticleStatus,
@@ -23,6 +23,11 @@ import { ArticleModal } from "@/components/ArticleModal";
 import { MotivationalModal } from "@/components/MotivationalModal";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { ModelDownloadModal } from "@/components/ModelDownloadModal";
+import {
+  downloadLocalModel,
+  ModelProvisioningUnavailableError,
+  provisionedModelStatus,
+} from "@/lib/api/modelProvisioning";
 import type {
   ModelStatus,
   LocalAiCapabilities,
@@ -79,6 +84,8 @@ export default function Home() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [modelStatus, setModelStatus] = useState<ModelStatus>("MISSING");
+  const [modelDownloadError, setModelDownloadError] = useState<string | null>(null);
+  const downloadInProgressRef = useRef(false);
   const [isDownloadModalDismissed, setIsDownloadModalDismissed] =
     useState(false);
   const [capabilities, setCapabilities] = useState<LocalAiCapabilities | null>(
@@ -124,13 +131,7 @@ export default function Home() {
             const result = await invoke<LocalAiCapabilities>("preflight_check");
             const caps = { ...result };
 
-            if (caps.hardware && !caps.hardware.local_ai_supported) {
-              setModelStatus("INCOMPATIBLE");
-            } else if (caps.model_exists) {
-              setModelStatus("READY");
-            } else {
-              setModelStatus("MISSING");
-            }
+            setModelStatus(provisionedModelStatus(caps));
 
             // Use provider selection from the Rust backend directly.
             // The backend enforces: ollama.reachable && !ollama.models.is_empty() → OLLAMA
@@ -602,42 +603,22 @@ export default function Home() {
       <ModelDownloadModal
         isOpen={showDownloadModal}
         modelStatus={modelStatus}
+        errorMessage={modelDownloadError}
         onStartDownload={async () => {
+          if (downloadInProgressRef.current) return;
+          downloadInProgressRef.current = true;
+          setModelDownloadError(null);
           setModelStatus("DOWNLOADING");
-          if (
-            typeof window !== "undefined" &&
-            (window as any).__TAURI_INTERNALS__
-          ) {
-            try {
-              const { invoke } = await import("@tauri-apps/api/core");
-              const { listen } = await import("@tauri-apps/api/event");
-
-              const unlistenVerifying = await listen(
-                "download-verifying",
-                () => {
-                  setModelStatus("VERIFYING");
-                },
-              );
-
-              // The actual command blocks until success (atomic rename) or fails
-              await invoke("download_model", {
-                jobId: `download_${Date.now()}`,
-              });
-
-              unlistenVerifying();
-              setModelStatus("READY");
-              setSelectedProvider("SIDECAR");
-            } catch (e) {
-              console.error("Download failed:", e);
-              setModelStatus("FAILED");
-            }
-          } else {
-            // Fallback for non-Tauri dev environment
-            setTimeout(() => setModelStatus("VERIFYING"), 5000);
-            setTimeout(() => {
-              setModelStatus("READY");
-              setSelectedProvider("SIDECAR");
-            }, 8000);
+          try {
+            const caps = await downloadLocalModel(() => setModelStatus("VERIFYING"));
+            setCapabilities(caps);
+            setSelectedProvider(caps.selected_provider);
+            setModelStatus(provisionedModelStatus(caps));
+          } catch (error) {
+            setModelDownloadError(error instanceof ModelProvisioningUnavailableError ? error.message : null);
+            setModelStatus("FAILED");
+          } finally {
+            downloadInProgressRef.current = false;
           }
         }}
         onDismiss={() => setIsDownloadModalDismissed(true)}

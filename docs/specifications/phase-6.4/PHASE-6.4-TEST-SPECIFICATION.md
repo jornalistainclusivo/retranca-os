@@ -11,17 +11,28 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
+## Model provisioning UI acceptance delta — 2026-10-02
+
+| ID | Criterion | Evidence boundary |
+| --- | --- | --- |
+| TEST-PROVISION-UI-001 | Actual component renders a named native dialog and close control in all displayed states, nothing when READY/closed; initial heading focus and boundary Tab/Shift+Tab/Escape work. | Rendering plus isolated compiled-browser keyboard checks; desktop/NVDA pending. |
+| TEST-PROVISION-UI-002 | No non-desktop download/readiness simulation; clear error, retry and close. Native completion awaits fresh preflight and retains Rust provider selection. | Actual browser non-Tauri recovery plus mocked IPC ordering/Ollama selection/failure tests; actual download not performed. |
+| TEST-PROVISION-UI-003 | Verification subscriptions are released on success/failure; progress disposal handles late registration and ignores stale/invalid values. | Deferred/malformed mocked event cases; actual native event timing remains untested. |
+| TEST-PROVISION-UI-004 | Notice closes without cancelling download, explains keeping the app open, exposes labelled progress/text and respects reduced motion. Notice controls remain usable at 320 CSS px. | Actual markup/compiled CSS and sampled browser width; real download, reduced-motion setting, reader/whole-app QA pending. |
+
+Executed results and the three new desktop checks: [model provisioning UI validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). Preserve prior accepted CMS/AI/import scripts; this does not close full Gate B or packaged-engine acceptance.
+
 ## Local article import acceptance delta — ADR-015, 2026-10-02
 
 | ID | Criterion | Evidence boundary |
 | --- | --- | --- |
-| TEST-IMPORT-001 | Add new articles while preserving every existing-ID field/relation; repeated import adds no duplicates. | Frontend and file-backed native tests; owner desktop checks pending. |
+| TEST-IMPORT-001 | Add new articles while preserving every existing-ID field/relation; repeated import adds no duplicates. | Frontend/file-backed native tests and subsequent owner-reported desktop acceptance recorded. |
 | TEST-IMPORT-002 | Reject malformed/duplicate/oversized input before storage/IPC writes; native boundary revalidates. | Parser/native tests use synthetic data only. |
 | TEST-IMPORT-003 | Reject unknown/inactive new references, invalid ownership and occupied scoped IDs without partial writes. | Native tests including late SQLite trigger failure/whole-batch rollback. |
 | TEST-IMPORT-004 | Reopen file-backed DB with distinct Unicode/full text and intact relations; no schema change. | Disposable SQLx DB, not actual owner DB. |
 | TEST-IMPORT-005 | Native routing bypasses browser writes; committed import/readback failure has truthful message. | IPC/API regressions; actual desktop readback still manual. |
 | TEST-IMPORT-006 | Named keyboard-operable controls, status/error messages, retry same file and visible file controls on small screens. | Implementer browser observations; desktop/NVDA/keyboard chooser/reflow remain pending. |
-| TEST-RUNTIME-PATH-001 | Resolve fixed canonical sibling with spaces; reject missing/directory/relative paths and outside symlink. | Windows path fixtures; Unix symlink test requires Linux. Does not test a real inference engine. |
+| TEST-RUNTIME-PATH-001 | Resolve fixed canonical sibling with spaces; reject missing/directory/relative paths and outside symlink. | Windows path fixtures and subsequent exact-source Linux CI passed. Does not test a real inference engine. |
 
 Current executed counts, partial security coverage and three-step AntiGravity script: [local import validation](../../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). Preserve historical counts and owner acceptance below.
 

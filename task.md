@@ -12,11 +12,23 @@ This amendment supersedes earlier pending-publication/per-action-confirmation wo
 - [x] Current-round security review completed with zero reported findings and **partial canonical coverage** due temporary receipt storage; full Gate B remains open.
 - [x] Read-only MCP diagnosis: GitHub and Codex Security calls responded; no config/permission changes.
 - [x] Prepare Phase 6.5 draft production-experience plan.
-- [ ] Owner desktop import checks 1–3.
-- [ ] Verify publication/current-source remote CI separately from the baseline run.
+- [x] Owner reported the three desktop import checks as accepted: **Tudo ok. prossiga.** (2026-10-02). No owner database/export was independently inspected.
+- [x] Published import source `b2860c617856fe8048d3ac219a38c713c7f69c4d` passed frontend, Rust Windows/Linux and required Rust aggregate in [run 37070928920](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37070928920), verified on that exact SHA; updated `2026-10-02T22:23:22Z`.
 - [ ] Remaining accessibility/packaging scope, full Gate B, then human Gates C/D.
 
 Current handoff: [local import validation](docs/testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md), [ADR-015](docs/decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md), [Phase 6.5 draft](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md).
+
+### Current corrective — model provisioning notice, 2026-10-02
+
+- [x] Native named dialog, heading focus, Tab/Shift+Tab boundary cycle, Escape and close controls for every displayed state; READY/closed render nothing.
+- [x] Remove simulated browser download readiness; await native completion/readback and retain Rust provider selection instead of forcing SIDECAR.
+- [x] Dispose failed/late event subscriptions, reset per-view progress, bound valid numeric updates and stop decorative motion under reduced-motion preference.
+- [x] Final frontend checks: 272 / 24 files, lint/types/static build; isolated compiled-browser keyboard/error/retry and 320 CSS px notice observations.
+- [ ] Current-round desktop notice/provider checks; NVDA and broader accessibility remain separate.
+- [ ] Verify the published corrective's exact-source manual CI result when the owner returns; do not infer it from the previous import CI.
+- [ ] Full independent Gate B, real engine/model binding and human Gates C/D remain open.
+
+Current narrow handoff: [model provisioning UI validation](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). No native source change or actual model download was executed by the agent; earlier accepted CMS/AI/import scripts are preserved.
 
 - [x] Slice 6 corrective delivered in `6ce03fd`.
 - [x] Human decision: open single edition, recorded in ADR-013 (2026-09-30).
