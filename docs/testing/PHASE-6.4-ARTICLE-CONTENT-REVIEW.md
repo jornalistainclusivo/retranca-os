@@ -53,3 +53,7 @@ git diff --stat
 ```
 
 The existing all-action script is in the acceptance plan; no repeat of the accepted article three-step script is requested merely for reconfirmation.
+
+## Subsequent publication evidence — 2026-10-02
+
+The owner separately authorized the corrective commit/push and manual CI after this review checkpoint. Published source `c03c928252ee498a87bb1abe221d3e4c7a07c93e` passed all four jobs in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked through the GitHub API on 2026-10-02. This closes the publication/CI tasks for that corrective; it does not expand the frozen review's coverage or close Gate B. The [resumption report](PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) tracks the later UI follow-up and real-model handoff separately.

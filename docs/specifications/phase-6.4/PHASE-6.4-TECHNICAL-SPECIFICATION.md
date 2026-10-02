@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: SQLite, React, TypeScript, Tauri, Rust
 created-at: 2026-09-15
-last-updated: 2026-10-01
+last-updated: 2026-10-02
 authors: Retranca OS Core Team
 ---
 
@@ -32,6 +32,7 @@ The owner approved saving full analysis text with each article. [ADR-014](../../
 - **BR-CONTENT-AI-001:** Saved text remains untrusted evidence under ADR-008. Native prerequisites, projection, escaping and context budgets stay mandatory. Image attachments and multimodal inference are not introduced.
 - **BR-CONTENT-INPUT-001:** Reject imported nonstring analysis content before replacing existing browser articles; missing/null legacy content remains empty. Existing malformed runtime content must not crash the modal. Per-article visual draft lookups must not resolve inherited object properties.
 - **BR-CONTENT-SAVE-001:** Save-result UI callbacks apply only to their active dialog session. Closing/switching suppresses stale callbacks without claiming rollback of an in-flight write. Disable form editing while awaiting that session's save.
+- **BR-CONTENT-SAVE-002 (2026-10-02 corrective):** New article/CMS child identities must not collide across articles or same-millisecond creation. Before metadata writes/checklist deletion, resolve incoming related-row identities by ownership: preserve existing owned/native history IDs; give new or legacy conflicting IDs stable article-scoped candidates. Reject candidate ownership conflicts, duplicate IDs and wrong owners before writes. A partially saved draft must be retryable without duplicating history or modifying another article. This introduces no schema migration or guarantee that the entire multi-step save is transactional.
 
 Coverage and owner-reported acceptance: [article content validation](../../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md), TEST-CONTENT-001/002/003/004/005 below in the test specification. Header JSON import carries the field in browser/UI data but does not persist the imported collection into desktop SQLite; native restore remains outside this corrective. Historical schema-1-only clauses are superseded only by this compatible extension.
 
@@ -199,6 +200,7 @@ Legacy statuses map exactly:
 
 **BR-AI-003 (Semantic Principle)** [FR-AI-001, ADR-009, SDD 5]
 Semantic classification may affect RECOMMENDED UX.
+The owner's 2026-10-02 presentation request removes the **Recomendado** suffix from Research Gaps only; semantic evaluation and other actions' recommendation labels remain unchanged.
 It MUST NOT independently make an action AVAILABLE.
 It MUST NOT make an evidence-valid action UNAVAILABLE.
 No custom stage -> AI action 1:1 relationship exists. Validation relies entirely on content evidence (Rust orchestrator).

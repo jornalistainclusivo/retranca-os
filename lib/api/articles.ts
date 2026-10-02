@@ -1,8 +1,9 @@
 import { getDb } from '@/db/client';
 import { articles, checklistItems, historyEntries, DbArticle, DbChecklistItem, DbHistoryEntry } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { invoke } from '@tauri-apps/api/core';
 import { WorkflowStage, CategoryEntity, WorkflowLifecycleRole, SemanticClassification, CategoryOrigin, ChecklistTemplate } from '@/types/editorial';
+import { resolveArticleRelationIds, scopedArticleRelationId } from '@/lib/utils/articleRelationIds';
 
 export interface RawChecklistTemplateItem {
   label: string;
@@ -69,6 +70,19 @@ export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
   const db = await getDb();
   const existing = await db.select().from(articles).where(eq(articles.id, raw.article.id));
 
+  // Resolve legacy global-ID collisions before any metadata write or checklist deletion.
+  const lookupIds = (items: { id: string }[]) => items.flatMap(item => [
+    item.id, scopedArticleRelationId(raw.article.id, item.id),
+  ]);
+  const checklistOwners: DbChecklistItem[] = raw.checklists.length
+    ? await db.select().from(checklistItems).where(inArray(checklistItems.id, lookupIds(raw.checklists)))
+    : [];
+  const historyOwners: DbHistoryEntry[] = raw.history.length
+    ? await db.select().from(historyEntries).where(inArray(historyEntries.id, lookupIds(raw.history)))
+    : [];
+  const savedChecklists = resolveArticleRelationIds(raw.article.id, raw.checklists, checklistOwners);
+  const savedHistory = resolveArticleRelationIds(raw.article.id, raw.history, historyOwners);
+
   if (existing.length > 0) {
     // PROTECT AUTHORITATIVE DOMAIN FIELDS FROM STALE FRONTEND OVERWRITE
     const current = existing[0];
@@ -82,23 +96,23 @@ export const saveRawArticle = async (raw: RawArticleData): Promise<void> => {
 
     // History is NOT deleted to prevent wiping out native transition history.
     // We only insert genuinely new history entries.
-    if (raw.history.length > 0) {
+    if (savedHistory.length > 0) {
       const existingHistory = await db.select().from(historyEntries).where(eq(historyEntries.articleId, raw.article.id));
       const existingHistoryIds = new Set(existingHistory.map((h: DbHistoryEntry) => h.id));
-      const newHistory = raw.history.filter((h: DbHistoryEntry) => !existingHistoryIds.has(h.id));
+      const newHistory = savedHistory.filter((h: DbHistoryEntry) => !existingHistoryIds.has(h.id));
       if (newHistory.length > 0) {
         await db.insert(historyEntries).values(newHistory);
       }
     }
   } else {
     await db.insert(articles).values(raw.article);
-    if (raw.history.length > 0) {
-      await db.insert(historyEntries).values(raw.history);
+    if (savedHistory.length > 0) {
+      await db.insert(historyEntries).values(savedHistory);
     }
   }
 
-  if (raw.checklists.length > 0) {
-    await db.insert(checklistItems).values(raw.checklists);
+  if (savedChecklists.length > 0) {
+    await db.insert(checklistItems).values(savedChecklists);
   }
 };
 

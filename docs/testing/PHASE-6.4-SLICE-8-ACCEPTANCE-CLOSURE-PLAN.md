@@ -18,9 +18,15 @@ The [review follow-up](PHASE-6.4-ARTICLE-CONTENT-REVIEW.md) records fixed malfor
 
 ## Ordered work and exit evidence
 
+### Resumption checkpoint — 2026-10-02
+
+The content corrective was subsequently consolidated/published with separate owner authorizations as `c03c928252ee498a87bb1abe221d3e4c7a07c93e`. The GitHub API recheck confirmed [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994) as successful on that source, including frontend, Rust Windows/Linux and the required Rust aggregate. At resumption, local/tracking/remote branch refs matched and the working tree was clean; no open feature PR was returned. `ollama list` confirmed `gemma4:latest` is installed. These updates supersede pending-publication/inventory status at the original planning checkpoint without changing historical results.
+
+The [resumption report](PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) records the small UI follow-up and numbered six-action script. The owner subsequently reported all AI options working; this is aggregate functional acceptance, without individual outputs/runtime traces or a comprehensive quality evaluation. A new CMS-save regression was then reported and reproduced as an ID collision. Its corrective save/reopen, second-article isolation and restart checks were reported passing by the owner (`1 OK, 2 OK, 3 OK`, 2026-10-02). Preserve both accepted scripts; no repeat is requested solely for reconfirmation. The owner subsequently explicitly authorized its local consolidation. Publication authorization, remaining accessibility checks and Gate B are pending.
+
 | Order | Work | Current evidence | Exit evidence / responsibility |
 | --- | --- | --- | --- |
-| 1 | Exercise all six editorial AI actions with the owner's real installed Ollama model. | Plain Language and cancellation/retry have owner-reported smoke acceptance; all-action inference remains partial. | Action, exact model tag, input fields, completion/error and observed result recorded separately for each action. Implementation/QA prepares the script; owner reports desktop observations. |
+| 1 | Exercise all six editorial AI actions with the owner's real installed Ollama model. | Owner reported all AI options working on 2026-10-02; aggregate functional acceptance recorded. Individual outputs/runtime traces and detailed quality review remain unrecorded. | Preserve owner acceptance; distinguish it from per-action output-quality/runtime evidence. Correct the subsequent CMS-save regression first. |
 | 2 | Complete accessibility and error-path checks in the desktop target. | Sampled browser focus and owner-reported desktop keyboard checks passed. | Keyboard operation of customization and AI, NVDA names/status/errors, zoom/reflow, contrast and reduced motion; missing evidence/runtime failures must be clear and recoverable. Manual QA is required; synthetic coverage is recorded separately. |
 | 3 | Assess packaged-runtime acceptance and review the final source changes (Gate B). | Production installation/model provisioning is not tested. The historical security scan targeted an older range and had partial coverage. | Independent technical/security review identifies blockers, verifies fixes and explicitly addresses packaging/runtime gaps. A successful build or mock sidecar is not installation or real inference evidence. |
 | 4 | Consolidate the accepted round and prepare a PR. | No PR is open for this feature branch. | Owner separately authorizes commit/push. Gate B passes before PR readiness. The existing PR workflow then validates the actual published revision; reviewers inspect the final diff and unresolved limitations. |
@@ -29,6 +35,8 @@ The [review follow-up](PHASE-6.4-ARTICLE-CONTENT-REVIEW.md) records fixed malfor
 An unresolved mandatory criterion remains open. If a packaging/provider task belongs to Phase 6.5, Gate B must identify the boundary explicitly; changing Phase 6.4 acceptance requires a documented human decision. Deferral is not a passing test or permission to publish a release.
 
 ## Next desktop handoff: all-action inference
+
+**Historical script:** the owner subsequently reported all AI options working. The current handoff is the CMS-save corrective retest in the [resumption report](PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md); no repeat of these six actions is requested for that change.
 
 After the content corrective's migration and desktop handoff are accepted, use a disposable test article, without unpublished material or source data. Opening **Nova Pauta** prepares an unsaved article; explicit CMS save creates its persisted record. Do not use an existing editorial article or reset the database. Saving the fields below is unnecessary for session inference. These are synthetic test inputs, not a news report or an actual image.
 
@@ -41,7 +49,7 @@ ollama list
 npx tauri dev
 ```
 
-Select the actual installed model in **IA local** and record its exact inventory tag. `gemma4:latest` is the owner's previously indicated selection; use the inventory spelling, without inventing a model, pulling another model or substituting fixture inference. Model availability is not established by this planning review.
+Select the actual installed model in **IA local** and record its exact inventory tag. `gemma4:latest` is the owner's selection, confirmed installed by `ollama list` at the 2026-10-02 resumption. Use that inventory spelling, without inventing a model, pulling another model or substituting fixture inference. Actual desktop inference remains pending.
 
 Fill the article fields:
 

@@ -365,6 +365,7 @@ describe('Phase 6.4 Storage and Migration Logic', () => {
 import { saveRawArticle, RawArticleData } from '@/lib/api/articles';
 import { getDb } from '@/db/client';
 import { createNewArticle, mergeBrowserSaveArticle } from '@/lib/storage';
+import { scopedArticleRelationId } from '@/lib/utils/articleRelationIds';
 
 vi.mock('@/db/client', () => ({
   getDb: vi.fn(),
@@ -417,9 +418,10 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
 
   it('A. saveRawArticle performs idempotent history merge when article exists', async () => {
     mockDb.where.mockResolvedValueOnce([baseRaw.article]) // 1. select article
-                .mockResolvedValueOnce([]) // 2. update article
-                .mockResolvedValueOnce([]) // 3. delete checklists
-                .mockResolvedValueOnce([{ id: 'h1' }]); // 4. select history
+                .mockResolvedValueOnce([{ id: 'h1', articleId: 'art1' }]) // history owners
+                .mockResolvedValueOnce([]) // update article
+                .mockResolvedValueOnce([]) // delete checklists
+                .mockResolvedValueOnce([{ id: 'h1' }]); // existing article history
 
     const newRaw = {
       ...baseRaw,
@@ -430,14 +432,15 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
     
     // Only h2 should be inserted
     expect(mockDb.insert).toHaveBeenCalled();
-    expect(mockDb.values).toHaveBeenCalledWith([{ id: 'h2', articleId: 'art1', date: '2021', action: 'New' }]);
+    expect(mockDb.values).toHaveBeenCalledWith([{ id: scopedArticleRelationId('art1', 'h2'), articleId: 'art1', date: '2021', action: 'New' }]);
   });
 
   it('B. saveRawArticle prevents native history overwrites (preserves IDs on conflict)', async () => {
     mockDb.where.mockResolvedValueOnce([baseRaw.article]) // 1. select article
-                .mockResolvedValueOnce([]) // 2. update article
-                .mockResolvedValueOnce([]) // 3. delete checklists
-                .mockResolvedValueOnce([{ id: 'h1' }, { id: 'h2' }]); // 4. select history
+                .mockResolvedValueOnce([{ id: 'h1', articleId: 'art1' }]) // history owners
+                .mockResolvedValueOnce([]) // update article
+                .mockResolvedValueOnce([]) // delete checklists
+                .mockResolvedValueOnce([{ id: 'h1' }, { id: 'h2' }]); // existing article history
 
     const newRaw = {
       ...baseRaw,
@@ -471,7 +474,7 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
 
   it('D. saveRawArticle successfully updates checklists alongside article', async () => {
     mockDb.where.mockResolvedValueOnce([baseRaw.article]);
-    mockDb.where.mockResolvedValueOnce([]);
+    mockDb.where.mockResolvedValueOnce([{ id: 'c1', articleId: 'art1' }]);
 
     const newRaw = {
       ...baseRaw,
@@ -485,7 +488,7 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
   });
 
   it('E. saveRawArticle inserts new article with initial history correctly', async () => {
-    mockDb.where.mockResolvedValueOnce([]); // New article, does not exist
+    mockDb.where.mockResolvedValueOnce([]).mockResolvedValueOnce([]); // Article and history ownership.
 
     const newRaw = {
       ...baseRaw,
@@ -495,7 +498,7 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
     await saveRawArticle(newRaw);
     expect(mockDb.insert).toHaveBeenCalledTimes(2); // one for article, one for history
     expect(mockDb.values).toHaveBeenCalledWith(newRaw.article);
-    expect(mockDb.values).toHaveBeenCalledWith(newRaw.history);
+    expect(mockDb.values).toHaveBeenCalledWith([{ ...newRaw.history[0], id: scopedArticleRelationId('art1', 'h1') }]);
   });
 
   it('F. saveRawArticle handles empty history arrays gracefully', async () => {
@@ -505,6 +508,37 @@ describe('Phase 6.4 Authoritative History and Save Logic', () => {
     await saveRawArticle(baseRaw);
     expect(mockDb.update).toHaveBeenCalled();
     // Insert for history should not be called
+    expect(mockDb.insert).not.toHaveBeenCalled();
+  });
+
+  it('repairs a partially saved draft whose checklist/history IDs belong to another article', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article])
+      .mockResolvedValueOnce([{ id: 'c1', articleId: 'other' }])
+      .mockResolvedValueOnce([{ id: 'h1', articleId: 'other' }, { id: scopedArticleRelationId('art1', 'h1'), articleId: 'art1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: scopedArticleRelationId('art1', 'h1'), articleId: 'art1' }]);
+    await saveRawArticle({
+      ...baseRaw,
+      article: { ...baseRaw.article, analysisContent: 'Recovered draft' },
+      checklists: [{ id: 'c1', articleId: 'art1', label: 'Research', completed: 1, category: null }],
+      history: [{ id: 'h1', articleId: 'art1', date: '2020', action: 'Created' }],
+    });
+    expect(mockDb.set).toHaveBeenCalledWith(expect.objectContaining({ analysisContent: 'Recovered draft' }));
+    expect(mockDb.values).toHaveBeenCalledExactlyOnceWith([
+      { id: scopedArticleRelationId('art1', 'c1'), articleId: 'art1', label: 'Research', completed: 1, category: null },
+    ]);
+  });
+
+  it('rejects a conflicting scoped ID before changing metadata or deleting any checklists', async () => {
+    mockDb.where.mockResolvedValueOnce([baseRaw.article])
+      .mockResolvedValueOnce([{ id: scopedArticleRelationId('art1', 'c1'), articleId: 'other' }]);
+    await expect(saveRawArticle({
+      ...baseRaw,
+      checklists: [{ id: 'c1', articleId: 'art1', label: 'Research', completed: 1, category: null }],
+    })).rejects.toThrow('ERR_CMS_RELATED_ID_CONFLICT');
+    expect(mockDb.update).not.toHaveBeenCalled();
+    expect(mockDb.delete).not.toHaveBeenCalled();
     expect(mockDb.insert).not.toHaveBeenCalled();
   });
 });

@@ -64,6 +64,14 @@ describe('Phase 6.4 AI controls in real modal markup', () => {
     expect(html).not.toContain('Premium');
   });
 
+  it('keeps research gaps available without the recommended word in its label', () => {
+    const html = renderArticle({ semanticClassification: 'IDEA' });
+    const gaps = button(html, 'Pesquisar Lacunas');
+    expect(gaps.attributes).not.toContain('disabled=""');
+    expect(gaps.content).not.toContain('Recomendado');
+    expect(gaps.attributes).toContain('tabindex="0"');
+  });
+
   it('loads the opened article\'s saved content as its own AI evidence', () => {
     const first = renderArticle({}, { ...article, analysisContent: 'Only article A' });
     const second = renderArticle({}, { ...article, id: 'other', analysisContent: 'Only article B' });

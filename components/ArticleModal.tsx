@@ -206,7 +206,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     e.preventDefault();
     if (!newChecklistLabel.trim()) return;
     const newItem: ChecklistItem = {
-      id: `custom_${Date.now()}`,
+      id: `custom_${crypto.randomUUID()}`,
       label: newChecklistLabel.trim(),
       completed: false,
       category: 'editorial',
@@ -224,7 +224,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     if (!template) return;
 
     const newItems: ChecklistItem[] = template.items.map(item => ({
-      id: `ci_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `ci_${crypto.randomUUID()}`,
       label: item.label,
       completed: false,
       category: 'editorial' as any
@@ -253,7 +253,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     // Add history log entry
     const newHistory = [
       {
-        id: `h_${Date.now()}`,
+        id: `h_${crypto.randomUUID()}`,
         date: new Date().toISOString(),
         action: `Edição de detalhes CMS salvas (Etapa: ${workflowStages.find(s => s.id === formData.workflowStageId)?.displayName || formData.status})`,
       },
@@ -727,7 +727,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-800 dark:text-indigo-300">
-                <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
+                <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse motion-reduce:animate-none" />
                 <span>Assistência de IA para esta Pauta (IA Local)</span>
               </div>
               <span role="status" aria-live="polite" className="text-xs text-indigo-600 dark:text-indigo-300 font-medium">{aiStatus}</span>
@@ -780,7 +780,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                       className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(gapsCheck.state)} ${(gapsCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Sparkles className="w-3.5 h-3.5 inline mr-1" />
-                      Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE') && `(Falta ${gapsCheck.missing})`} {gapsCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
+                      Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE') && `(Falta ${gapsCheck.missing})`}
                     </button>
                     <button
                       type="button"
@@ -879,7 +879,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               >
                 <div className="flex items-center justify-between font-bold text-indigo-600 mb-2 text-xs">
                   <span>
-                    Resultado da IA Local{aiLoading && <span className="ml-1 animate-pulse">●</span>}:
+                    Resultado da IA Local{aiLoading && <span aria-hidden="true" className="ml-1 animate-pulse motion-reduce:animate-none">●</span>}:
                   </span>
                   <button
                     type="button"

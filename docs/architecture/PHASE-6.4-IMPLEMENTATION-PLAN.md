@@ -5,7 +5,7 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Tauri, Rust, TypeScript
 created-at: 2026-09-15
-updated-at: 2026-10-01
+updated-at: 2026-10-02
 ---
 
 # Phase 6.4 Implementation Plan
@@ -19,6 +19,14 @@ HUMAN IMPLEMENTATION GATE A APPROVED.
 PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
 
 ## Executive implementation objective
+
+### Resumption and narrow UI follow-up — 2026-10-02
+
+The owner authorized resumed development. The article-content corrective was separately authorized for commit/push and manual CI as `c03c928`; frontend, Rust Windows/Linux and the required Rust aggregate passed in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked at the clean, synchronized resumption checkpoint. This supersedes pending-publication status in the historical preparation paragraphs below; full Gate B remains open.
+
+The [resumption report](../testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) documents removal of the obsolete hardcoded footer model/conformance label, named article loading and reduced-motion/decorative-indicator corrections. It prepares the six-action desktop handoff with the installed `gemma4:latest`. These changes use existing ADR-008/013/014 and accessibility requirements; no new architecture decision, provider, dependency, migration or CI/authentication change is introduced. Commit/push still require separate confirmation. Preserve the prior owner content/cancellation acceptance; upcoming real-model and accessibility results remain distinct evidence.
+
+The owner subsequently reported all AI options working and identified a CMS-save failure. Its corrective uses unique creation IDs and preflight related-row ownership handling to repair the reproduced default-checklist collision, including partially saved drafts and retry identity, and removes only the requested Research Gaps recommendation suffix. Added regressions and an isolated production Drizzle/SQLite probe validate the save path. The owner then reported all three corrective desktop recovery/save/restart checks as passing (`1 OK, 2 OK, 3 OK`, 2026-10-02). No mass data rewrite or new migration is planned; local consolidation/publication still require separate confirmations. This acceptance does not close Gate B or the remaining accessibility/runtime boundaries.
 
 ### Slice 8 follow-up — 2026-10-01
 

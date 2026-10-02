@@ -544,7 +544,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
                 <span>
                   Resultado da IA Local
-                  {genState === 'GENERATING' && <span className="ml-1 animate-pulse">●</span>}
+                  {genState === 'GENERATING' && <span aria-hidden="true" className="ml-1 animate-pulse motion-reduce:animate-none">●</span>}
                   {genState === 'CANCELLED' && <span className="ml-1 text-amber-500">(Cancelado)</span>}
                 </span>
                 <button

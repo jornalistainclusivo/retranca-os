@@ -488,8 +488,9 @@ export default function Home() {
           {/* View Container */}
           <div className="flex-1 overflow-hidden min-w-0">
             {isLoading ? (
-              <div className="flex justify-center items-center h-full min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100"></div>
+              <div role="status" className="flex justify-center items-center h-full min-h-[400px]">
+                <span className="sr-only">Carregando pautas...</span>
+                <div aria-hidden="true" className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100"></div>
               </div>
             ) : (
               <>
@@ -566,7 +567,7 @@ export default function Home() {
               que ele vire notícia
             </span>
             <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
-              WCAG 2.2 AA • Geometric Balance Design • Gemini 3.6 Flash
+              IA local • Revisão humana
             </span>
           </div>
         </footer>

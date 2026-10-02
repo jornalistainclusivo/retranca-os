@@ -40,16 +40,34 @@ See the [Slice 8 checkpoint and contributor handoff](docs/testing/PHASE-6.4-SLIC
 - [x] Corrective diff reviewed with Codex Security: two low-severity malformed-import render failures reproduced and then fixed. Frontend independently reviewed; native/database review completed by the parent after worker artifact-access failure. The sealed scan retains a partial coverage flag; full Gate B remains open.
 - [x] Final frontend follow-up: safe visual draft keys, imported content type checks and save-session callback isolation; 236 tests/20 files, lint/types/build passed. Native code unchanged since the executed 106 debug/release tests.
 - [x] Owner explicitly authorized the local consolidation commit of this corrective round's 32 prepared files; authorization recorded in this checkpoint.
-- [ ] Full independent review (Gate B), separate push authorization and CI on the published corrective revision.
+- [x] Owner separately authorized publication of `c03c928252ee498a87bb1abe221d3e4c7a07c93e` and manual CI. Frontend, Rust Windows/Linux and the required Rust aggregate passed in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked on 2026-10-02.
+- [ ] Full independent review (Gate B); the successful corrective CI does not close it.
 - [x] Requested image/text/document utilities preserved in attachment discovery; no upload implementation or binary-storage architecture approved.
 
-Current corrective report and AntiGravity handoff: [article content validation](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Functional owner acceptance is recorded; review/consolidation remain before the broader closure below.
+Current corrective report and AntiGravity handoff: [article content validation](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Functional owner acceptance and authorized consolidation/publication/CI are recorded; full independent review remains before broader closure.
+
+### Resumption — 2026-10-02
+
+- [x] Owner authorized continued development; branch/remote/CI refreshed at `c03c928` with a clean starting tree and no open feature PR.
+- [x] Confirm installed `gemma4:latest` through `ollama list`; no model download, substitution or inference by the agent.
+- [x] Replace obsolete footer model/conformance labels; name article-list loading and respect reduced motion for the spinner and AI pulses.
+- [x] UI follow-up local checks: 236 tests/20 files, lint/types/static build and tracked diff whitespace passed. Generated CSS includes the reduced-motion rule and screen-reader-only utility; actual desktop/NVDA observations remain pending. Native code is unchanged.
+- [x] Owner reported all six AI options working on 2026-10-02. Aggregate functional acceptance recorded; individual outputs/runtime traces and detailed quality review were not supplied.
+- [x] Subsequent CMS save defect reproduced: default checklist IDs reused across articles; SQLite unique-key collision and timestamp ID regressions. Fix unique creation IDs and preflight article-scoped related-row identities, preserving existing owned/native history IDs and retry stability.
+- [x] Remove the requested **Recomendado** suffix from **Pesquisar Lacunas**; evidence/runtime policy unchanged.
+- [x] Final corrective checks: 247 tests/22 files, lint/types/static build and tracked diff whitespace passed. Optional isolated production Drizzle/SQLite probe passed; no actual editorial database or Rust source changed.
+- [x] Owner reported `1 OK, 2 OK, 3 OK` on 2026-10-02 for this corrective: recovered article saves/reopens with retained text/checklists and no Research Gaps suffix; another article saves independently; both texts remain after restart. Recorded as owner desktop observations, separate from the isolated SQL probe and earlier smoke.
+- [x] Owner explicitly authorized this follow-up's local consolidation on 2026-10-02: **sim, criar commit local**, with message `fix(phase-6.4): prevent CMS save identity collisions`.
+- [ ] Obtain separate authorization before pushing this follow-up; manual CI dispatch remains separately controlled.
+
+Current script and evidence: [Slice 8 resumption validation](docs/testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md). No new migration, dependency, CI/authentication change or attachment implementation is introduced.
 
 ### Broader acceptance sequence
 
 The [acceptance closure plan](docs/testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-PLAN.md) records the published checkpoint, remaining evidence, owner desktop script and Phase 6.5 boundary. Preparing this plan does not establish new test results or acceptance.
 
-- [ ] Record all six real-model editorial actions and recoverable evidence/runtime failures.
+- [x] Owner-reported functional completion of all six AI actions; detailed per-action quality/runtime evidence remains unrecorded.
+- [ ] Complete remaining recoverable evidence/runtime failure checks.
 - [ ] Complete desktop accessibility checks beyond the accepted keyboard smoke.
 - [ ] Resolve packaged-runtime acceptance scope and complete independent technical/security review (Gate B).
 - [ ] After separately authorized consolidation/publication, prepare PR readiness and verify its published revision through the existing CI.

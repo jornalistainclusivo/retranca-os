@@ -5,11 +5,24 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
-last-updated: 2026-10-01
+last-updated: 2026-10-02
 authors: Retranca OS Core Team
 ---
 
 # Phase 6.4 Test Specification
+
+## Slice 8 resumption acceptance delta — 2026-10-02
+
+The existing accessibility and real-model requirements apply to the narrow UI follow-up; no new product access, persistence or provider decision is introduced.
+
+- **TEST-A11Y-LOADING-001:** Article-list loading exposes a textual status; its decorative spinner is excluded from the accessibility tree. Its spin and both AI dialogs' decorative pulses stop under reduced-motion preference. Generation status remains textual. Source/build evidence and actual desktop/NVDA/preference observations must be distinguished.
+- **TEST-AI-LABEL-001:** The footer does not advertise a hardcoded obsolete provider/model or assert verified accessibility conformance. Actual model selection remains in local AI controls.
+- **TEST-AI-DESKTOP-001:** Exercise each of the six editorial actions separately through the Tauri application with the owner's installed `gemma4:latest`. Record model tag, action, supplied evidence, completion/failure/cancellation and human output-quality observation. Availability, mocked transport and successful CI alone are insufficient. Preserve prior accepted smoke checks rather than silently replacing them with these unexecuted cases.
+- **TEST-CONTENT-008:** Two newly created articles, including same-millisecond creation, have independent article/checklist/history identities. New/custom/template CMS items must not reuse global relation IDs across articles.
+- **TEST-CONTENT-009:** Native-proxy save resolves new/legacy conflicting relation IDs before writes, preserves existing article-owned/native history IDs and another article's data, and retries a partially saved draft without duplicating history. Candidate-ID conflicts, wrong owners and duplicate inputs reject before metadata updates/checklist deletion. Isolated SQL evidence and actual desktop retest are separate; multi-step save is not claimed to be transactional.
+- **TEST-AI-LABEL-002:** Research Gaps remains available with valid evidence but no **Recomendado** suffix, as requested by the owner. Other actions' recommendation behavior and native prerequisites remain unchanged.
+
+Current script, baseline CI and evidence limits: [Slice 8 resumption validation](../../testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md). The owner reported all six AI options working and subsequently reported the three corrective CMS save/isolation/restart checks as passing (`1 OK, 2 OK, 3 OK`, 2026-10-02). Record these as owner functional observations. They do not establish remaining NVDA/reduced-motion checks, detailed AI quality evaluation, independent Gate B or current-source remote CI.
 
 ## Article CMS content acceptance delta — ADR-014
 

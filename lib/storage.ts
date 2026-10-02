@@ -308,8 +308,9 @@ export const createNewArticle = (workflowStages: WorkflowStage[], categories: Ca
   }
 
   const todayStr = new Date().toISOString().slice(0, 10);
+  const articleId = `art_${crypto.randomUUID()}`;
   return {
-    id: `art_${Date.now()}`,
+    id: articleId,
     title: "",
     status: "ideia",
     categoryTag: "Acessibilidade",
@@ -329,15 +330,15 @@ export const createNewArticle = (workflowStages: WorkflowStage[], categories: Ca
     spentTime: "0m",
     notes: "",
     checklists: [
-      { id: "c1", label: "Pesquisa e checagem de fontes", completed: false, category: "pesquisa" },
-      { id: "c2", label: "Linguagem Simples (fácil leitura)", completed: false, category: "editorial" },
-      { id: "c3", label: "Otimização SEO e palavra-chave no H1", completed: false, category: "seo" },
-      { id: "c4", label: "Descrição Alt Text WCAG 2.2", completed: false, category: "wcag" },
-      { id: "c5", label: "Auditoria Ética de IA", completed: false, category: "ia" },
-      { id: "c6", label: "Divulgação nas redes sociais e newsletter", completed: false, category: "distribuicao" },
+      { id: `${articleId}_c1`, label: "Pesquisa e checagem de fontes", completed: false, category: "pesquisa" },
+      { id: `${articleId}_c2`, label: "Linguagem Simples (fácil leitura)", completed: false, category: "editorial" },
+      { id: `${articleId}_c3`, label: "Otimização SEO e palavra-chave no H1", completed: false, category: "seo" },
+      { id: `${articleId}_c4`, label: "Descrição Alt Text WCAG 2.2", completed: false, category: "wcag" },
+      { id: `${articleId}_c5`, label: "Auditoria Ética de IA", completed: false, category: "ia" },
+      { id: `${articleId}_c6`, label: "Divulgação nas redes sociais e newsletter", completed: false, category: "distribuicao" },
     ],
     history: [
-      { id: `h_${Date.now()}`, date: new Date().toISOString(), action: "Pauta criada" },
+      { id: `h_${crypto.randomUUID()}`, date: new Date().toISOString(), action: "Pauta criada" },
     ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted product decision — 2026-10-01 (America/Sao_Paulo); implementation validated locally and three owner checks reported as passing. The owner subsequently authorized the local consolidation commit. Full independent review and publication remain pending.
+Accepted product decision — 2026-10-01 (America/Sao_Paulo); implementation validated locally and three owner checks reported as passing. The owner subsequently authorized consolidation/publication of `c03c928` and manual CI; all four jobs passed in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked on 2026-10-02. Full independent review remains pending. This evidence update does not change the decision.
 
 The owner reported that pasted analysis text appeared in unrelated articles. Asked whether **Conteúdo para análise** should also survive an application restart, with notice that this requires a database change, the owner explicitly selected **“Sim, salvar com cada pauta”**. This authorizes preparing per-article persistence. Applying the migration to the owner's editorial database remains subject to the user's separate migration confirmation rule; no such database mutation was performed by the implementation agent.
 
@@ -11,6 +11,10 @@ The owner confirmed saving and closing the application to unblock compilation, t
 The owner later reported **“resultados dos testes: 1 OK; 2 OK; 3 OK”** and authorized continuing development. This establishes owner-reported acceptance of article separation, save/cancel/clear and restart persistence under the supplied script. The agent did not run a migration against the actual editorial database or inspect its schema/backup; do not invent an earlier authorization event. No additional migration is planned. New migrations/restores and commit/push remain separately controlled.
 
 ## Context
+
+### Subsequent save corrective — 2026-10-02
+
+The owner reported all six AI actions working, then a failed CMS save and requested removing the Research Gaps recommendation suffix. Default checklist IDs were reused across new articles despite the existing global primary key. The [resumption/corrective report](../testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) records the reproduced collision, new UUID-based creation identities and preflight article-scoped related-row identities. Existing owned IDs/native history are preserved; new/legacy collisions are resolved without rewriting another article, and retry identities remain stable. This implements the existing ownership/data-preservation requirement without changing schema, architecture or migration authority. The owner subsequently reported the corrective desktop save/reopen, article isolation and restart checks as passing (`1 OK, 2 OK, 3 OK`, 2026-10-02). Commit/push authorization remains separate; the agent did not inspect the actual editorial database.
 
 The original Phase 6.3 PRD deferred persistent article body storage. `ArticleModal` instead held one analysis-content state value while switching articles. Unlike summary/objective, it was not part of the article's CMS save; visual description also lacked article ownership. This can display and submit evidence from the wrong article.
 

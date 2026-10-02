@@ -1,6 +1,6 @@
 # Phase 6.4 — Article CMS Content Validation
 
-Date: 2026-10-01 (America/Sao_Paulo). Status: local implementation and corrective review follow-up validated; owner reported all three original acceptance checks as passing and subsequently authorized the local consolidation commit. Publication and full Gate B remain pending.
+Date: 2026-10-01; evidence updated 2026-10-02 (America/Sao_Paulo). Status: local implementation and corrective review follow-up validated; owner reported all three original acceptance checks as passing. Subsequent authorized consolidation/publication and exact-source CI passed; full Gate B remains pending.
 
 ## Result and authorization boundary
 
@@ -15,6 +15,12 @@ The owner's response **“Salvei e fechei o aplicativo”** confirmed only that 
 The agent ran no migration against the owner's editorial database. No installer, model download, real inference, attachment upload, push, CI dispatch, merge, tag or release was performed by the agent in this round. Validation preceded the owner's subsequent authorization for a local consolidation commit of the 32 prepared files. The working branch remains `feat/phase-6.4-pro-workflow-customization`, with published HEAD `543d03333414698d9aa4d9976aabf4080e21bbc2` at the preparation checkpoint; local consolidation does not update that remote revision.
 
 ## Implementation and recovery
+
+### Subsequent authorized publication and remote CI — rechecked 2026-10-02
+
+After the preparation checkpoint above, the owner separately authorized the commit, push and manual CI. The corrective was published as `c03c928252ee498a87bb1abe221d3e4c7a07c93e`. The GitHub API confirmed [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994) as `completed / success` on that exact SHA: frontend, Rust Windows, Rust Linux and the required Rust aggregate all succeeded. Local HEAD, tracking ref and remote branch ref matched when development resumed with a clean tree. No open feature PR was returned. This later evidence does not change the original review/migration limits or establish acceptance of the subsequent UI follow-up.
+
+### Prepared persistence behavior
 
 - `Article.analysisContent` is optional for legacy JSON compatibility; SQLite adds `articles.analysisContent TEXT NOT NULL DEFAULT ''`. The adapter and browser storage round-trip it, and the existing JSON article export/import representation carries the field.
 - Header JSON import currently replaces browser storage/UI state, without persisting the imported collection to desktop SQLite. It is not a desktop database restore. Nonstring analysis content is rejected before replacing browser data; the modal guards existing malformed values. Visual drafts use `Map` so reserved object-property IDs remain safe.
@@ -85,7 +91,7 @@ The owner subsequently reported `1 OK; 2 OK; 3 OK` for this script. No model sel
 - [x] Owner checks 1/2/3 above, reported as passing on 2026-10-01.
 - [ ] Independent technical/security review (Gate B), with migration/backup and save-failure scope included.
 - [x] Owner's subsequent explicit authorization for the local consolidation commit of the 32 prepared files; recorded with this checkpoint.
-- [ ] Separate authorization for push; CI on the resulting published source.
+- [x] Separately authorized push and manual CI on published source `c03c928`; all four jobs passed in run 36940623994, rechecked 2026-10-02.
 - [ ] Remaining [Slice 8 acceptance closure](PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-PLAN.md), human merge and release decisions.
 
 Image/text/document attachments are recorded in [product discovery](../specifications/ARTICLE-ATTACHMENTS-DISCOVERY.md). They are not implemented in this correction. Native alt-text generation still accepts a human visual description and rejects image-asset evidence; attaching an image must not silently grant multimodal inference.
