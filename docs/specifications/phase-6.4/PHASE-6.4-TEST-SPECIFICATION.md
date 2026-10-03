@@ -14,6 +14,7 @@ authors: Retranca OS Core Team
 ## Local AI settings keyboard entry corrective — 2026-10-02
 
 - **TEST-AI-SETTINGS-FOCUS-001:** With page dialogs closed, the single collapsed local-settings trigger is early in natural DOM/tab order, named **Configuração de IA local**, enabled and visibly focused; no positive tabindex or duplicated trigger. Enter/Space opens the panel and focuses the labelled model selector; Escape returns focus to the trigger, with Tab continuing to page controls. An active native modal keeps background settings outside its interactive scope. Actual layout rendering and compiled-browser interactions passed; current desktop/NVDA retest remains separate. See [focused validation](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#subsequent-corrective--collapsed-local-ai-settings-trigger).
+- **TEST-AI-SETTINGS-CLOSE-001:** The named visible X is reachable by Shift+Tab from the selector; pointer click and Enter each close settings and restore trigger focus. Unhandled Escape also closes from the collapsed selector, trigger and following page control. An open foreground dialog owns Escape/focus return without closing background settings. Executed browser checks are recorded in the [dismissal corrective](../../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#local-ai-settings-dismissal-corrective); desktop/NVDA/populated native option lists remain separate.
 
 ## Model provisioning UI acceptance delta — 2026-10-02
 

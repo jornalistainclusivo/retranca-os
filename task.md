@@ -35,10 +35,18 @@ Current narrow handoff: [model provisioning UI validation](docs/testing/PHASE-6.
 - [x] Reproduce collapsed trigger after 324 preceding controls in built-in examples; native Tab eligibility itself was present.
 - [x] Render the single global settings control before page children, preserving fixed bottom-right placement; add explicit button type and accessible purpose name, without positive tabindex.
 - [x] Final frontend checks: 274 / 25 files, lint/types/static build; isolated compiled-browser first Tab, Enter/Space opening, Escape return, subsequent Tab/Shift+Tab and sampled neighboring-modal behavior.
-- [ ] Owner desktop retest: **IA local por teclado: OK** or the failed step; preserve previous three-check acceptance.
+- [x] Owner confirmed keyboard entry and model choice; reported dismissal failure and missing X. Prior notice checks remain accepted.
 - [ ] Verify new published-source CI separately; full Gate B, broader accessibility and human Gates C/D remain open.
 
-The current one-flow AntiGravity script is in the [validation follow-up](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#current-antigravity-check--one-keyboard-flow). No native/provider/model/persistence change is introduced.
+### Local AI settings dismissal corrective
+
+- [x] Reproduce Escape failure from the opening trigger and confirm missing close button; owner saved/closed the app before edits.
+- [x] Add visible named X and scoped document Escape dismissal, trigger-focus return, listener cleanup and foreground-dialog precedence; preserve model choice.
+- [x] Frontend 274 / 25 files, lint/types/build and isolated X pointer/Enter, Escape from selector/trigger/page and neighboring-dialog checks passed.
+- [ ] Owner desktop close checks **1 OK; 2 OK**; NVDA and populated native option-list behavior remain separate.
+- [ ] New published-source CI result and full Gate B/human Gates C/D remain open.
+
+The current scoped AntiGravity script is in the [dismissal follow-up](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#current-antigravity-check--close-settings). No native/provider/model/persistence change is introduced.
 
 - [x] Slice 6 corrective delivered in `6ce03fd`.
 - [x] Human decision: open single edition, recorded in ADR-013 (2026-09-30).

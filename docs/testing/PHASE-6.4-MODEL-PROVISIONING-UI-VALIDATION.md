@@ -1,6 +1,6 @@
 # Phase 6.4 — Model Provisioning UI Validation
 
-Date: 2026-10-02 (America/Sao_Paulo). Status: provisioning notice owner desktop checks accepted; subsequent local-settings keyboard corrective validated locally, with its desktop retest and broader assistive-technology coverage pending.
+Date: 2026-10-02 (America/Sao_Paulo). Status: provisioning notice desktop checks accepted; settings entry/model selection accepted by the owner, with the subsequent dismissal corrective desktop retest and broader assistive-technology coverage pending.
 
 ## Authority and scope
 
@@ -62,7 +62,7 @@ npx tauri dev
 2. **Existing local provider:** open **IA local** and confirm your existing `gemma4:latest` selection remains available. Exercise one AI action on an unsaved disposable article if needed to verify the changed preflight integration. Expect the existing Ollama model to work; this targeted provider check does not replace the six-action acceptance already recorded. Do not install/pull or substitute another model.
 3. **Notice layout / return to editing:** if the notice appears on a subsequent normal launch, resize the window and close it using the named X/button. Expect readable text and accessible close controls, followed by normal article editing. Do not reset articles or download a model to produce an error. Real download success/failure and NVDA announcement tests remain separately pending.
 
-Report `1 OK; 2 OK; 3 OK`, **não apareceu**, or the exact affected behavior. These are current desktop checks, distinct from the previous accepted import script.
+The owner subsequently reported `1 OK; 2 OK; 3 OK` for that historical script. The current scoped retest is below.
 
 ## Subsequent corrective — collapsed local AI settings trigger
 
@@ -83,10 +83,37 @@ The root layout now renders this single global settings control before the page 
 
 The agent-created browser tab/static server were closed/stopped after QA; default viewport sizing was retained. Screenshot `.retranca-local/local-ai-trigger-focus.jpg` is ignored and contains built-in examples only.
 
-### Current AntiGravity check — one keyboard flow
+### Historical AntiGravity check — keyboard entry
 
 Use the same start commands above. On a fresh launch, close the model notice with Escape if it appears. With dialogs closed, enter page keyboard navigation with Tab: **IA local** should receive visible focus immediately. Press Enter to open settings; focus should move to **Modelo Ollama**. Press Escape to close; focus should return to **IA local**. The following Tab should continue to **Modo Escrita**. Report **IA local por teclado: OK** or the step that failed. Do not repeat the previous three accepted checks, download a model or modify actual articles for this retest.
 
+## Local AI settings dismissal corrective
+
+Starting source: published `0620f3362872caf3b0347238319d195c7a21249c`. Its [manual CI dispatch](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37079216527) was previously observed in progress; no final result is inferred here. The owner confirmed keyboard entry and model selection, but reported Escape not closing settings and no visible X. The owner saved/closed the app before this edit.
+
+Code inspection and the isolated compiled browser confirmed that the panel had no dedicated close button. The old Escape handler covered panel descendants only: Shift+Tab back to the opening trigger followed by Escape left it expanded. Escape from a collapsed model selector had passed in the previous browser sample; that sample did not establish desktop native-option-list behavior.
+
+Add a named native **Fechar configuração de IA local** X button with a visible focus ring and 32-by-32 CSS-pixel target. Both the X and Escape restore focus to the opening trigger. Subscribe to document keydown only while settings are open, releasing the listener on close/unmount; ignore already-handled/composing events and defer to any foreground open dialog. The model-choice state and native IPC remain unchanged. This preserves the disclosure semantics described by [APG](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/) and uses the event propagation documented by [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Element/keydown_event), consulted on 2026-10-02. Escape dismissal beyond the trigger is a project usability requirement, not a mandatory interaction claimed from the basic APG disclosure pattern.
+
+| Check | Result / scope |
+| --- | --- |
+| `npm test`, lint, standalone types, static build | pass: **274 / 25 files**; no new test count claimed. Existing tooling warnings remain. Native Rust source/contracts are unchanged; no fresh local Rust run. |
+| X button | pass in isolated compiled browser: visible/named; Shift+Tab from selector reaches it; Enter and pointer click each close and restore trigger focus. |
+| Escape / traversal | pass in isolated compiled browser: first page Tab still reaches settings; Enter/Space opens and focuses selector; Escape from collapsed selector, opening trigger and following page control closes and restores trigger focus. |
+| Foreground dialog | pass in sample: when AI assistant opens over settings, Escape closes only the assistant and restores its own trigger; settings stays open. A subsequent Escape closes settings and restores its trigger. No inference started. |
+| Owner desktop / NVDA / populated native option list | pending / not-tested. Existing owner model-choice acceptance is preserved; the browser has no native Ollama inventory and displays its truthful error. If the system's option list consumes the first Escape, close that list before testing panel dismissal. |
+
+QA used only built-in examples at `127.0.0.1:3049`; no owner data/model/download was accessed. Screenshot `.retranca-local/local-ai-settings-close.png` is ignored. The agent-created tab/server were closed/stopped after QA.
+
+### Current AntiGravity check — close settings
+
+Use the same start commands above; close any startup model notice with Escape. Test only these changed controls, without downloading/changing a model or editing articles:
+
+1. Open **IA local**, then click its new **X**. Expect settings to close and focus to return to **IA local**.
+2. Reopen with Enter. With the model option list closed, press Escape. Expect the same dismissal/focus return. Optionally Shift+Tab from the selector to X and press Enter to check the close button by keyboard.
+
+Report **1 OK; 2 OK** or the exact failed step. The earlier accepted notice/provider checks do not need repetition.
+
 ## Remaining gates
 
-The current local-settings desktop keyboard retest, assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful local frontend checks, owner-reported notice acceptance or the previous import CI do not close them. Merge/tag/release still require human Gates C/D. Existing manual CI may be dispatched for the new published corrective revision; its result must be verified separately when the owner returns.
+The current local-settings desktop dismissal retest, assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful local frontend checks, owner-reported notice/entry acceptance or the previous import CI do not close them. Merge/tag/release still require human Gates C/D. Existing manual CI may be dispatched for the new published corrective revision; its result must be verified separately when the owner returns.

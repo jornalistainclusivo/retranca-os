@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useId, useRef } from 'react';
+import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 
 export const LocalAiSettings: React.FC = () => {
@@ -11,6 +12,23 @@ export const LocalAiSettings: React.FC = () => {
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const modelRef = useRef<HTMLSelectElement>(null);
+  const closeSettings = useCallback(() => {
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      // A foreground dialog owns Escape and its focus return.
+      if (document.querySelector('dialog[open]')) return;
+      event.preventDefault();
+      closeSettings();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, closeSettings]);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,8 +68,19 @@ export const LocalAiSettings: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div id={panelId} onKeyDown={event => { if (event.key === 'Escape') { setIsOpen(false); triggerRef.current?.focus(); } }} className="absolute bottom-12 right-0 w-64 max-w-[calc(100vw-2rem)] bg-neutral-900 border border-neutral-700 p-4 rounded shadow-2xl flex flex-col gap-4">
-          <h3 className="text-sm font-bold text-neutral-200 border-b border-neutral-800 pb-2">Configuração de IA local</h3>
+        <div id={panelId} className="absolute bottom-12 right-0 w-64 max-w-[calc(100vw-2rem)] bg-neutral-900 border border-neutral-700 p-4 rounded shadow-2xl flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-2 border-b border-neutral-800 pb-2">
+            <h3 className="text-sm font-bold text-neutral-200">Configuração de IA local</h3>
+            <button
+              type="button"
+              onClick={closeSettings}
+              aria-label="Fechar configuração de IA local"
+              title="Fechar configuração de IA local"
+              className="min-h-8 min-w-8 shrink-0 flex items-center justify-center rounded text-neutral-300 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
