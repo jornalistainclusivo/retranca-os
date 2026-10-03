@@ -1,6 +1,18 @@
-# Current work — Phase 6.4
+# Current work — Phase 6.4 closure / Phase 6.5 Increment 1
 
-Next-session handoff for **2026-10-03**: [saved checkpoint and resumption plan](docs/testing/PHASE-6.4-RESUMPTION-2026-10-03.md). Latest application source is published `08218bf6c05d510904686d3a89c56d7bfe8826ae`; verify its [CI result](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) when resuming. The owner requested ending the session on 2026-10-02. Preserve existing accepted tests; confirm only the current X/Escape report if still missing, then complete accessibility/Gate B and resolve production phase ownership before integration.
+## Resumed entry / Phase 6.5 Increment 1 — 2026-10-03
+
+- [x] Verify application source `08218bf6c05d510904686d3a89c56d7bfe8826ae` [CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950): frontend, Rust Windows/Linux and required aggregate passed.
+- [x] Owner explicitly accepted both desktop settings X/Escape checks; no repetition requested.
+- [x] Record Node 20 Action-runtime warning and Ubuntu migration notices as separate CI maintenance; workflow unchanged.
+- [x] Prepare [bounded inventory/recovery specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md); preserve existing provider policy/session selection and owner model configuration.
+- [x] Implement named model refresh/retry, bounded native inventory and late-response invalidation; preserve session model choice.
+- [x] Final frontend 287 / 26 files, lint/types/static build and isolated compiled-browser keyboard/error/retry/modal observations passed; [validation and current desktop handoff](docs/testing/PHASE-6.5-INCREMENT-1-VALIDATION.md).
+- [ ] Owner desktop acceptance of the three new inventory checks; previous accepted checks remain preserved.
+- [ ] Verify the published increment's exact-source CI result when the owner returns; dispatch the existing workflow without continuous monitoring.
+- [ ] Complete outstanding accessibility/Gate B; production-engine/capability/persistence/packaging decisions and human Gates C/D remain separate.
+
+The [saved pre-increment checkpoint](docs/testing/PHASE-6.4-RESUMPTION-2026-10-03.md) records the owner's 2026-10-02 stop request. Its application source `08218bf6c05d510904686d3a89c56d7bfe8826ae` now has verified successful CI and accepted X/Escape checks as recorded above. Use the new inventory handoff for current testing; preserve prior acceptance, then complete accessibility/Gate B and production phase ownership before integration.
 
 ## Current authority and local import checkpoint — 2026-10-02
 
@@ -45,8 +57,8 @@ Current narrow handoff: [model provisioning UI validation](docs/testing/PHASE-6.
 - [x] Reproduce Escape failure from the opening trigger and confirm missing close button; owner saved/closed the app before edits.
 - [x] Add visible named X and scoped document Escape dismissal, trigger-focus return, listener cleanup and foreground-dialog precedence; preserve model choice.
 - [x] Frontend 274 / 25 files, lint/types/build and isolated X pointer/Enter, Escape from selector/trigger/page and neighboring-dialog checks passed.
-- [ ] Owner desktop close checks **1 OK; 2 OK**; NVDA and populated native option-list behavior remain separate.
-- [ ] New published-source CI result and full Gate B/human Gates C/D remain open.
+- [x] Owner explicitly accepted both desktop close checks on 2026-10-03; NVDA remains separate.
+- [x] Published dismissal source `08218bf6c05d510904686d3a89c56d7bfe8826ae` passed exact-source CI 37080317950, verified on 2026-10-03. Full Gate B/human Gates C/D remain open.
 
 The current scoped AntiGravity script is in the [dismissal follow-up](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#current-antigravity-check--close-settings). No native/provider/model/persistence change is introduced.
 

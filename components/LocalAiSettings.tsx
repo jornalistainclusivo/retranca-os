@@ -3,19 +3,55 @@
 import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
+import { fetchLocalAiModels, LocalModelInventoryUnavailableError } from '@/lib/api/localAiModels';
 
 export const LocalAiSettings: React.FC = () => {
   const { selectedModel, setSelectedModel } = useAiRuntime();
   const [isOpen, setIsOpen] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const modelRef = useRef<HTMLSelectElement>(null);
+  const openRef = useRef(false);
+  const loadingRef = useRef(false);
+  const requestRef = useRef(0);
   const closeSettings = useCallback(() => {
+    openRef.current = false;
+    loadingRef.current = false;
+    requestRef.current += 1;
     setIsOpen(false);
     triggerRef.current?.focus();
   }, []);
+  const queryModels = useCallback(async () => {
+    if (!openRef.current || loadingRef.current) return;
+    loadingRef.current = true;
+    const request = ++requestRef.current;
+    try {
+      const models = await fetchLocalAiModels();
+      if (!openRef.current || request !== requestRef.current) return;
+      setAvailableModels(models);
+      setMessage(models.length ? `${models.length} modelo(s) disponível(is).` : 'Nenhum modelo Ollama disponível. Instale um modelo no Ollama e atualize esta lista.');
+    } catch (error) {
+      if (!openRef.current || request !== requestRef.current) return;
+      setAvailableModels([]);
+      setMessage(error instanceof LocalModelInventoryUnavailableError
+        ? error.message
+        : 'Não foi possível consultar o Ollama. Verifique se ele está em execução e use Atualizar modelos para tentar novamente.');
+    } finally {
+      if (openRef.current && request === requestRef.current) {
+        loadingRef.current = false;
+        setIsLoading(false);
+      }
+    }
+  }, []);
+  const refreshModels = useCallback(() => {
+    if (!openRef.current || loadingRef.current) return;
+    setIsLoading(true);
+    setMessage('Consultando modelos locais...');
+    void queryModels();
+  }, [queryModels]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -31,34 +67,29 @@ export const LocalAiSettings: React.FC = () => {
   }, [isOpen, closeSettings]);
 
   useEffect(() => {
-    if (isOpen) {
-      let active = true;
-      modelRef.current?.focus();
-      // Fetch models via Tauri IPC when opened
-      import('@tauri-apps/api/core').then(({ invoke }) => {
-        invoke<string[]>('get_ollama_models')
-          .then((models) => {
-            if (!active) return;
-            setAvailableModels(models);
-            setMessage(models.length ? '' : 'Nenhum modelo Ollama disponível. Instale um modelo no Ollama e reabra esta configuração.');
-          })
-          .catch(() => {
-            if (active) setMessage('Não foi possível consultar o Ollama. Verifique se o aplicativo desktop e o Ollama estão em execução.');
-          });
-      }).catch(() => {
-        if (active) setMessage('Configuração de IA local indisponível neste ambiente.');
-      });
-      return () => { active = false; };
-    }
+    if (!isOpen) return;
+    modelRef.current?.focus();
   }, [isOpen]);
 
+  useEffect(() => () => {
+    openRef.current = false;
+    loadingRef.current = false;
+    requestRef.current += 1;
+  }, []);
 
   return (
     <div className="fixed bottom-10 right-4 z-[9999]">
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => { setMessage('Consultando modelos locais...'); setIsOpen(!isOpen); }}
+        onClick={() => {
+          if (isOpen) closeSettings();
+          else {
+            openRef.current = true;
+            setIsOpen(true);
+            refreshModels();
+          }
+        }}
         aria-label="Configuração de IA local"
         aria-expanded={isOpen}
         aria-controls={panelId}
@@ -88,8 +119,11 @@ export const LocalAiSettings: React.FC = () => {
               <select
                 ref={modelRef}
                 id={`${panelId}-model`}
-                value={selectedModel || ''}
-                onChange={(e) => setSelectedModel(e.target.value || null)}
+                value={selectedModel && availableModels.includes(selectedModel) ? selectedModel : ''}
+                onChange={(e) => {
+                  const model = e.target.value;
+                  if (!model || availableModels.includes(model)) setSelectedModel(model || null);
+                }}
                 className="bg-neutral-800 text-neutral-300 text-xs rounded border border-neutral-700 min-h-8 p-1 max-w-[120px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 <option value="">Selecione um modelo</option>
@@ -101,7 +135,18 @@ export const LocalAiSettings: React.FC = () => {
             <p className="text-xs text-neutral-300 leading-tight">
               Selecione um modelo disponível no Ollama instalado neste computador.
             </p>
+            <button
+              type="button"
+              onClick={refreshModels}
+              aria-disabled={isLoading}
+              className={`min-h-8 px-2 py-1 text-xs font-bold rounded bg-neutral-800 text-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isLoading ? 'opacity-60' : 'hover:bg-neutral-700'}`}
+            >
+              Atualizar modelos
+            </button>
             <p role="status" aria-atomic="true" className="text-xs text-neutral-300">{message}</p>
+            {!isLoading && selectedModel && !availableModels.includes(selectedModel) && (
+              <p className="text-xs text-amber-300">O modelo escolhido nesta sessão ({selectedModel}) não está na lista atual. Atualize os modelos ou selecione outro.</p>
+            )}
           </div>
         </div>
       )}

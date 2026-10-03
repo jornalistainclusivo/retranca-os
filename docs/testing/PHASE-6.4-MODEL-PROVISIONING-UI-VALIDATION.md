@@ -116,4 +116,6 @@ Report **1 OK; 2 OK** or the exact failed step. The earlier accepted notice/prov
 
 ## Remaining gates
 
-The current local-settings desktop dismissal retest, assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful local frontend checks, owner-reported notice/entry acceptance or the previous import CI do not close them. Merge/tag/release still require human Gates C/D. Existing manual CI may be dispatched for the new published corrective revision; its result must be verified separately when the owner returns.
+On 2026-10-03 the owner explicitly accepted both X/Escape desktop closure checks. The GitHub API verified [CI 37080317950](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) as successful on `08218bf6c05d510904686d3a89c56d7bfe8826ae`, including frontend, Rust Windows/Linux and the required Rust aggregate. Node 20 Action-runtime deprecation warnings and upcoming Ubuntu-runner migration notices do not change that successful result; they are separate CI-maintenance work. This is not CI evidence for later revisions.
+
+Assistive-technology/manual accessibility, real packaged engine/model binding and full independent Gate B remain open. Successful CI and owner-reported notice/entry/dismissal acceptance do not close them. Merge/tag/release still require human Gates C/D. The owner authorized the next bounded model-inventory/recovery increment without changing provider authority.

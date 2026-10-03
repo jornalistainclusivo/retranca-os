@@ -2,6 +2,12 @@
 
 Date: 2026-10-02. Status: draft for product/architecture review, not an approved specification or completed phase.
 
+## Authorized preparation / increment — 2026-10-03
+
+The owner reported successful CI and authorized continuing into the next phase, then explicitly accepted both settings X/Escape desktop checks. The GitHub API confirmed all four jobs of [CI 37080317950](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) on `08218bf6c05d510904686d3a89c56d7bfe8826ae`. Its Node 20 Actions warning is a separate reviewed CI-maintenance item.
+
+The bounded [Increment 1 inventory/recovery specification](../specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md) uses the existing Ollama IPC, provider policy and session state. Refresh/retry usability is implemented with 287 frontend tests, lint/types/build and a compiled-browser keyboard sample; [owner desktop acceptance and exact-source CI remain separate](../testing/PHASE-6.5-INCREMENT-1-VALIDATION.md). No new engine/dependency/migration is included. The owner confirmed closing the app before interface edits. This authorizes that increment and preparation of production contracts; it does not declare Phase 6.4 accessibility/Gate B complete, approve the entire draft, amend ADR-007 or grant merge/release authorization.
+
 ## Entry conditions
 
 Preserve Phase 6.4's open single edition (ADR-013), article-owned text (ADR-014), local preserving import (ADR-015) and Rust evidence authority (ADR-008). Close the remaining Phase 6.4 desktop/accessibility and independent review scope; prepare a reviewable PR. Merge remains Gate C; tag/release remains Gate D. Successful automated tests alone do not close these gates.
