@@ -1,6 +1,6 @@
 # Phase 6.5 — Increment 1: Local model inventory recovery
 
-Date: 2026-10-03. Status: narrow increment authorized by the owner's next-phase continuation request; implemented with local checks recorded in the [validation report](../../testing/PHASE-6.5-INCREMENT-1-VALIDATION.md). Owner desktop acceptance and exact-source CI remain separate. This increment does not approve the complete Phase 6.5 draft or amend the runtime decision in ADR-007.
+Date: 2026-10-03. Status: implemented, owner desktop handoff accepted (`1 ok; 2 ok; 3 ok`) and successful exact-source CI verified on `32e64a56084a5d42cef3275e00195c3262563e86`; evidence and limits are recorded in the [validation report](../../testing/PHASE-6.5-INCREMENT-1-VALIDATION.md). This narrow acceptance does not approve the complete Phase 6.5 draft or amend the runtime decision in ADR-007.
 
 ## Verified entry checkpoint
 

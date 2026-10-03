@@ -8,8 +8,8 @@
 - [x] Prepare [bounded inventory/recovery specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md); preserve existing provider policy/session selection and owner model configuration.
 - [x] Implement named model refresh/retry, bounded native inventory and late-response invalidation; preserve session model choice.
 - [x] Final frontend 287 / 26 files, lint/types/static build and isolated compiled-browser keyboard/error/retry/modal observations passed; [validation and current desktop handoff](docs/testing/PHASE-6.5-INCREMENT-1-VALIDATION.md).
-- [ ] Owner desktop acceptance of the three new inventory checks; previous accepted checks remain preserved.
-- [ ] Verify the published increment's exact-source CI result when the owner returns; dispatch the existing workflow without continuous monitoring.
+- [x] Owner accepted all three new inventory desktop checks (`1 ok; 2 ok; 3 ok`, 2026-10-03); no repetition requested.
+- [x] Published increment `32e64a56084a5d42cef3275e00195c3262563e86` passed all four jobs in [CI 37141777120](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37141777120), verified once on the owner's return; updated `2026-10-03T18:02:36Z`. Later documentation commits require their own HEAD checks before integration.
 - [ ] Complete outstanding accessibility/Gate B; production-engine/capability/persistence/packaging decisions and human Gates C/D remain separate.
 
 The [saved pre-increment checkpoint](docs/testing/PHASE-6.4-RESUMPTION-2026-10-03.md) records the owner's 2026-10-02 stop request. Its application source `08218bf6c05d510904686d3a89c56d7bfe8826ae` now has verified successful CI and accepted X/Escape checks as recorded above. Use the new inventory handoff for current testing; preserve prior acceptance, then complete accessibility/Gate B and production phase ownership before integration.
