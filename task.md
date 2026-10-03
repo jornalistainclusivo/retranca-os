@@ -1,5 +1,7 @@
 # Current work — Phase 6.4
 
+Next-session handoff for **2026-10-03**: [saved checkpoint and resumption plan](docs/testing/PHASE-6.4-RESUMPTION-2026-10-03.md). Latest application source is published `08218bf6c05d510904686d3a89c56d7bfe8826ae`; verify its [CI result](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) when resuming. The owner requested ending the session on 2026-10-02. Preserve existing accepted tests; confirm only the current X/Escape report if still missing, then complete accessibility/Gate B and resolve production phase ownership before integration.
+
 ## Current authority and local import checkpoint — 2026-10-02
 
 This amendment supersedes earlier pending-publication/per-action-confirmation wording for this authorized round; historical test counts/results remain unchanged. The owner granted continued development autonomy, including source/documentation consolidation, publication and existing manual CI. Merge/release still require Gates C/D. Actual editorial data remains local; only code/docs/synthetic fixtures may be published.
