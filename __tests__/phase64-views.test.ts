@@ -187,6 +187,20 @@ describe('Phase 6.4 - CalendarView Integration', () => {
     expect(html).toContain('bg-emerald-50');
   });
 
+  it('exposes article opening and month navigation as named native buttons', () => {
+    const html = renderToStaticMarkup(React.createElement(CalendarView, {
+      articles: [baseArticle], workflowStages: stages, onSelectArticle: vi.fn(),
+    }));
+    const buttons = [...html.matchAll(/<button\b([^>]*)>/g)].map(match => match[1]);
+    for (const name of ['Mês anterior', 'Próximo mês', 'Abrir pauta: Calendar Test Article']) {
+      const control = buttons.find(attributes => attributes.includes(`aria-label="${name}"`));
+      expect(control, name).toBeDefined();
+      expect(control).toContain('type="button"');
+      expect(control).not.toContain('disabled');
+      expect(control).not.toContain('tabindex="-1"');
+    }
+  });
+
   it('publishDate controls calendar position but does NOT confer publication', () => {
     // publishDate is the dynamically generated date, but stage is IDEATION
     const art1: Article = { ...baseArticle, status: 'publicado', workflowStageId: 'stage-idea' };

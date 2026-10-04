@@ -40,6 +40,23 @@ describe('Phase 6.4 AI controls in real modal markup', () => {
     vi.mocked(useAiRuntime).mockReturnValue({ selectedModel: null, setSelectedModel: vi.fn() });
   });
 
+  it('associates CMS labels with unique editable controls, including distinct link and time purposes', () => {
+    const html = renderArticle();
+    const labels = [...html.matchAll(/<label\b[^>]*for="([^"]+)"[^>]*>([\s\S]*?)<\/label>/g)];
+    const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const name of [
+      'Categoria Principal', 'Data de Publicação', 'Persona do Leitor', 'Chamada para Ação (CTA)',
+      'Links Internos', 'Links Externos / Fontes', 'Tempo Estimado', 'Tempo Gasto',
+      'Notas do Jornalista', 'Novo item de verificação',
+    ]) {
+      const label = labels.find(match => match[2].trim() === name);
+      expect(label, name).toBeDefined();
+      const controls = [...html.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)];
+      expect(controls.filter(match => match[0].includes(`id="${label![1]}"`)), name).toHaveLength(1);
+    }
+  });
+
   it('keeps evidence-valid article actions open without an entitlement provider', () => {
     const html = renderArticle();
     for (const label of ['Pesquisar Lacunas', 'Simplificar Linguagem', 'Validar Inclusividade', 'Otimizar Meta Tags SEO']) {

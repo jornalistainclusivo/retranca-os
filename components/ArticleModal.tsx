@@ -524,10 +524,11 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             {/* Category */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor={`${fieldId}-category`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
                 Categoria Principal
               </label>
               <select
+                id={`${fieldId}-category`}
                 value={formData.categoryId || ''}
                 onChange={(e) => handleChange('categoryId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -542,11 +543,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             {/* Publish Date */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor={`${fieldId}-publish-date`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
                 Data de Publicação
               </label>
               <input
                 type="date"
+                id={`${fieldId}-publish-date`}
                 value={formData.publishDate}
                 onChange={(e) => handleChange('publishDate', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -638,11 +640,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-persona`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Persona do Leitor
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-persona`}
                   value={formData.persona}
                   onChange={(e) => handleChange('persona', e.target.value)}
                   placeholder="Ex: Editores e repórteres de redação digital"
@@ -651,11 +654,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-cta`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Chamada para Ação (CTA)
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-cta`}
                   value={formData.cta}
                   onChange={(e) => handleChange('cta', e.target.value)}
                   placeholder="Ex: Baixe o guia completo em PDF"
@@ -664,55 +668,66 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Links Internos & Externos
-                </label>
                 <div className="grid grid-cols-2 gap-2">
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-internal-links`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Links Internos</label>
                   <input
                     type="text"
+                    id={`${fieldId}-internal-links`}
                     value={formData.internalLinks}
                     onChange={(e) => handleChange('internalLinks', e.target.value)}
                     placeholder="URL Interna..."
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-external-links`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Links Externos / Fontes</label>
                   <input
                     type="text"
+                    id={`${fieldId}-external-links`}
                     value={formData.externalLinks}
                     onChange={(e) => handleChange('externalLinks', e.target.value)}
                     placeholder="URL Externa/Fonte..."
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Tempo Estimado x Tempo Gasto
-                </label>
                 <div className="grid grid-cols-2 gap-2">
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-estimated-time`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tempo Estimado</label>
                   <input
                     type="text"
+                    id={`${fieldId}-estimated-time`}
                     value={formData.estimatedTime}
                     onChange={(e) => handleChange('estimatedTime', e.target.value)}
                     placeholder="Estimado (ex: 3h)"
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-spent-time`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tempo Gasto</label>
                   <input
                     type="text"
+                    id={`${fieldId}-spent-time`}
                     value={formData.spentTime}
                     onChange={(e) => handleChange('spentTime', e.target.value)}
                     placeholder="Gasto (ex: 2h 15m)"
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-notes`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Notas do Jornalista
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-notes`}
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   placeholder="Lembretes, contatos de fontes..."
@@ -939,9 +954,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
 
             {/* Add Custom Checklist Item */}
+            <div>
+            <label htmlFor={`${fieldId}-new-checklist`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Novo item de verificação</label>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
+                id={`${fieldId}-new-checklist`}
                 placeholder="Adicionar novo item de verificação..."
                 value={newChecklistLabel}
                 onChange={(e) => setNewChecklistLabel(e.target.value)}
@@ -956,15 +974,19 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <span>Adicionar</span>
               </button>
             </div>
+            </div>
 
             {/* Checklist Templates (Available to all tiers per Slice 6 contract) */}
             {checklistTemplates.length > 0 && (
-              <div className="flex items-center space-x-2 mt-4 bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+              <div className="mt-4 bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+                <label htmlFor={`${fieldId}-template`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Template de checklist</label>
+                <div className="flex items-center space-x-2">
                 <ShieldAlert className="w-4 h-4 text-sky-500 flex-shrink-0" />
                 <select
+                  id={`${fieldId}-template`}
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  className="min-w-0 flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
                   <option value="">Aplicar template salvo...</option>
                   {checklistTemplates.map(t => (
@@ -979,6 +1001,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 >
                   Aplicar
                 </button>
+                </div>
               </div>
             )}
           </div>

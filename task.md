@@ -1,4 +1,17 @@
-# Current work — Phase 6.4 closure / Phase 6.5 Increment 1
+# Current work — Phase 6.4 closure (scope frozen)
+
+## Closure candidate — 2026-10-04
+
+- [x] Owner froze feature scope and confirmed saving/closing the app before interface edits; preserve already accepted Phase 6.5 Increment 1.
+- [x] Verify feature/local HEAD `7e9702b` and all four successful jobs in [CI 37212420511](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37212420511). Feature is 84 commits ahead / zero behind main; no open PR at intake.
+- [x] Correct CMS labels, template name and Calendar native keyboard opener; preserve values, callbacks, provider and persistence contracts.
+- [x] Candidate frontend: 289 tests / 26 files, types, lint and static build passed. Isolated Chrome labels/template/Calendar Enter/Space/Escape focus return and sampled 320 CSS px CMS reflow passed.
+- [x] Record current residual security triage, proposed integration boundary and Windows/Linux evidence limits; update README around current state.
+- [ ] Owner desktop/NVDA acceptance and explicit decision on remaining manual/runtime evidence and Linux glib risk; Gate B stays open.
+- [x] Owner explicitly authorized commit/push of the 11 reviewed files and Draft PR on 2026-10-04; final published-source checks and actual desktop/NVDA results remain pending.
+- [ ] Separate specific merge authorization; optional tag/release remains separately gated. New features belong to another branch.
+
+Current entry point and bounded handoff: [closure candidate](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md). Subsequent sections retain historical results and authorizations; they do not turn unverified checks into passes.
 
 ## Resumed dependency correction — 2026-10-04
 

@@ -8,33 +8,21 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-Retomada de 04/10/2026: a correção autorizada removeu o Firebase de desenvolvimento não utilizado e atualizou Vitest/UI para 4.1.11 e js-yaml para 4.3.2. Passaram a instalação limpa no ambiente local, 287 testes, tipos, lint e build; a revisão independente não encontrou regressão concreta. A auditoria do lock final ainda aponta 7 entradas de pacotes afetados (1 crítica, 6 altas), relacionadas a Next e à cadeia de lint; glib no Linux e acessibilidade seguem pendentes. Consulte o [registro de validação e retomada](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md), incluindo avisos e limites. CI da nova revisão e fechamento dos alertas da branch principal exigem verificação própria; Gate B permanece aberto.
+Em 04/10/2026, a fase 6.4 está publicada na branch `feat/phase-6.4-pro-workflow-customization` e ainda não foi integrada à `main`. O escopo está congelado para fechamento: corrigir barreiras existentes, registrar decisões sobre riscos, reunir evidências e preparar o PR. Novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta branch, será preservado.
 
-Revisão de 03/10/2026: o [checkpoint de Gate B e dependências](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) registra a revisão estática completa do código alterado até `0d2f5e9`, sem novas vulnerabilidades reportáveis introduzidas pelo diff. Naquela consulta havia 12 alertas abertos do Dependabot: oito dependiam exclusivamente do Firebase de desenvolvimento, que o responsável confirmou não usar; três pertenciam a ferramentas npm mantidas; um envolvia `glib` na cadeia Linux do Tauri/GTK. Foram identificadas barreiras de rótulos do CMS, nome do seletor de template e abertura de pautas por teclado no calendário. Naquele checkpoint, dependências e interface ainda não haviam sido alteradas; a correção posterior autorizada está no roteiro de retomada acima. Gate B, NVDA e instalador/motor real continuam pendentes.
+| Entrega / verificação | Estado atual |
+| --- | --- |
+| Fluxos dinâmicos, categorias e templates | Implementados na edição aberta, sem conta, assinatura ou ativação comercial ([ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md)). |
+| Texto completo por pauta, salvamento e importação preservadora | Implementados; checks desktop informados pelo responsável estão registrados e não precisam ser repetidos apenas para confirmação. |
+| Seis ações de IA local, cancelamento, fechamento e inventário de modelos | Implementados; aceites funcionais anteriores preservados. Não equivalem a avaliação completa da qualidade de IA. |
+| Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. Auditoria atual ainda registra sete entradas npm afetadas, além da pendência Linux `glib`. |
+| CI publicado | Os quatro jobs passaram em [`7e9702b`, run 37212420511](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37212420511): frontend, Rust Windows/Linux e agregador `rust`. |
+| Rodada local de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O novo diff exige publicação e CI próprios. |
+| Aceitação e merge | Gate B aberto: aceite desktop/NVDA e decisão explícita sobre riscos/evidências restantes. Merge, tag e release exigem autorizações específicas. |
 
-Retomada de 03/10/2026: o responsável aceitou X/Escape na configuração de IA local; os quatro jobs passaram no [CI 37080317950](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950), verificado no código de `08218bf`. O primeiro incremento da fase 6.5 acrescenta **Atualizar modelos**, estados de consulta/lista vazia/erro e nova tentativa dentro do painel, preservando a escolha durante a sessão. Passaram 287 testes de frontend, lint, tipos, build e a amostra de teclado/erro no navegador isolado. O responsável aceitou os três checks desktop (`1 ok; 2 ok; 3 ok`), e os quatro jobs passaram no [CI 37141777120](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37141777120), verificado no SHA completo de `32e64a5`. Consulte a [especificação](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md) e o [registro de validação e aceite](docs/testing/PHASE-6.5-INCREMENT-1-VALIDATION.md); não precisa repetir os testes aceitos. Preferência após reiniciar, motor real, acessibilidade completa e Gate B continuam pendentes. O aviso de runtime Node 20 das Actions foi registrado para manutenção separada, sem alterar o CI.
+O [candidato de fechamento](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md) é o ponto de entrada para resultados, limites, decisões propostas e o novo roteiro desktop. A [revisão de segurança](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) mantém seu intervalo imutável; a [correção de dependências](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md) registra o lock e as verificações anteriores. Os registros de IA/CMS/importação/inventário permanecem em `docs/testing`; seus aceites se aplicam às revisões e ambientes identificados.
 
-Rodada de importação local (02/10/2026): [ADR-015](docs/decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) registra o padrão conservador: adicionar pautas novas e preservar integralmente as já existentes, com gravação atômica no SQLite desktop. Pautas reais, banco, backups e anexos ficam locais; o GitHub recebe código, documentação e testes fictícios. O responsável informou os três testes como aprovados (**Tudo ok. prossiga.**); os quatro jobs passaram no [CI 37070928920](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37070928920), conferido no SHA completo de `b2860c6`. Consulte o [registro de validação](docs/testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). A fase 6.5 tem um [plano preliminar](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md); revisão completa, acessibilidade e instalador/motor real continuam pendentes.
-
-A branch `feat/phase-6.4-pro-workflow-customization` está na fase 6.4: fluxos dinâmicos, categorias e templates, com edição única aberta aprovada em 30/09/2026. Todas as funcionalidades implementadas ficam disponíveis sem conta, assinatura ou ativação; IA local depende de runtime/modelo configurado e evidências válidas. O nome histórico da branch foi mantido. Consulte o [ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) e o [checkpoint do Slice 8](docs/testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md). Os testes automatizados locais passaram; fechamento de acessibilidade/runtime, Gate B e autorização de merge/release continuam pendentes.
-
-Rodada seguinte (02/10/2026): o aviso **Modelo embutido do Retranca** usa diálogo nativo, foco inicial, Tab/Shift+Tab, Escape e botão de fechar em todos os estados exibidos. Fechar o aviso não cancela um download já iniciado. O navegador informa que o download exige desktop, sem simular sucesso; após um download nativo, a interface consulta novamente o Rust e preserva sua escolha de provedor. A configuração existente no Ollama continua independente do modelo embutido. Passaram 272 testes de frontend, lint, tipos, build e os checks do aviso no navegador isolado, inclusive a largura de 320 pixels CSS. O responsável posteriormente confirmou os três checks desktop (`1 OK; 2 OK; 3 OK`). Consulte o [relatório de validação](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md). NVDA, instalador/motor real e Gate B continuam pendentes; nenhum modelo foi baixado pelo agente.
-
-A correção seguinte resolve a dificuldade relatada para alcançar **IA local** com Tab quando fechada. O botão estava depois de todos os controles das pautas; agora entra no início da ordem de teclado, mantendo a posição no canto inferior direito e o nome acessível **Configuração de IA local**. O responsável confirmou acesso e escolha do modelo, mas relatou dificuldade de fechamento. A configuração agora tem um **X** acessível e Escape com retorno de foco ao botão, preservando a escolha do modelo e o fechamento dos outros diálogos. Passaram 274 testes de frontend, lint, tipos, build e os checks de fechamento no navegador isolado. O responsável aceitou X e Escape em 03/10/2026; não precisa repetir aquele roteiro. Consulte o [registro de fechamento](docs/testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#current-antigravity-check--close-settings); NVDA e demais gates continuam separados.
-
-Em 01/10/2026, o checkpoint foi salvo em `ac453e8` e a rodada de cancelamento nativo Ollama/foco em `8e22c18`. O responsável pelo produto confirmou os três testes desktop daquela rodada (`1 ok; 2 ok; 3 ok`), autorizou os pushes e o CI manual; Windows/Linux/frontend passaram no código de `8e22c18`. A documentação foi publicada em `543d033`. Consulte o [relatório de cancelamento/foco](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). Os testes de transporte não garantem interrupção do processamento no servidor Ollama.
-
-A correção seguinte separa **Conteúdo para análise (Texto completo)** por pauta e inclui seu salvamento após reiniciar, conforme o [ADR-014](docs/decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md). A implementação foi validada localmente e o responsável informou os três testes como aprovados (`1 OK; 2 OK; 3 OK`, 01/10/2026), autorizando continuar o desenvolvimento. A revisão acrescentou proteção contra dados JSON inválidos e salvamentos de sessões antigas; 236 testes de frontend, lint, tipos e build passaram. O agente não executou a migração nem inspecionou o banco/backup editorial. O responsável autorizou separadamente commit, push e CI manual de `c03c928`; os quatro jobs passaram no [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), reconfirmado em 02/10/2026. Gate B completo continua pendente. Consulte o [relatório e roteiro no AntiGravity](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md) e o [resultado da revisão, correções e limites](docs/testing/PHASE-6.4-ARTICLE-CONTENT-REVIEW.md). Naquele checkpoint, a importação JSON era restrita ao estado visual/navegador; o ADR-015 documenta a implementação posterior no SQLite, preservando pautas existentes, sem restauração integral do banco. Anexos de imagens/textos/documentos estão em [levantamento de escopo](docs/specifications/ARTICLE-ATTACHMENTS-DISCOVERY.md), sem implementação nesta rodada.
-
-Retomada de 02/10/2026: `gemma4:latest` foi confirmado no inventário local. A rodada corrige o rótulo antigo no rodapé e os indicadores de carregamento/movimento reduzido. O responsável informou que as seis ações de IA funcionam e relatou uma falha ao salvar no CMS. Foi reproduzida uma colisão de IDs de checklist entre pautas; a correção usa IDs únicos e resolve conflitos antigos antes de gravar, preservando registros de outras pautas e históricos existentes. “Recomendado” foi removido de **Pesquisar Lacunas**, conforme solicitado. Os 247 testes de frontend, lint, tipos, build e verificação com SQLite descartável passaram; o responsável confirmou os três checks de salvar/reabrir, separar outra pauta e manter os textos após reiniciar (`1 OK, 2 OK, 3 OK`). O [registro da rodada](docs/testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) separa CI anterior, verificações locais e aceite informado pelo responsável. A rodada foi salva/publicada em `0891740` com autorizações explícitas; os quatro jobs passaram no [CI 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955), reconfirmado no SHA completo em 02/10/2026. Gate B permanece pendente. Não é necessário repetir os testes já aceitos.
-
-Baseline já integrado na `main`:
-
-A versão atual reflete a estabilização da Fase 6.3 no baseline principal (`main`).
-**Phase 6.3 integrated into main**
-**tag:** `v0.1.0-phase-6.3-editorial-ai-orchestration`
-
-Nesta fase, a orquestração segura de ferramentas de IA Editorial foi finalizada, isolando a interface de usuário da execução e validação da IA através de uma fronteira confiável em Rust. (Nota: Implementações legadas utilizando a API do Gemini como backend padrão de IA ou Cloud Run foram totalmente descontinuadas e substituídas por esta arquitetura local/desktop; qualquer menção a eles na base documental é puramente de caráter histórico).
+O baseline integrado na `main` continua sendo a fase 6.3. A assistência atual usa uma fronteira confiável em Rust; APIs legadas de Gemini/Cloud Run foram removidas do fluxo. Menções históricas não representam a arquitetura implementada.
 
 ## 3. Editorial workflow
 
@@ -83,7 +71,14 @@ O stack moderno do Retranca OS baseia-se em tecnologias focadas em performance e
 - **TypeScript** (Tipagem estrita full-stack)
 - **SQLite** com **Tauri SQL Plugin** e **Drizzle ORM** (Persistência)
 
-## 9. Development prerequisites
+## 9. Platforms and development prerequisites
+
+| Sistema | Evidência disponível | Limite |
+| --- | --- | --- |
+| Windows | Operação desktop em desenvolvimento informada pelo responsável; Rust debug/release e frontend passam no CI identificado acima. | Instalador, instalação limpa, atualização e recuperação não validados nesta rodada. |
+| Linux | Rust debug/release passam no CI Ubuntu, com bibliotecas nativas e mock sidecar. | Execução desktop humana, instalador e motor real não demonstrados por esse CI; `glib` continua em revisão. |
+
+O CI verifica código e testes; não executa `tauri build`, instalação de bundles nem publicação de binários. Essas evidências não justificam prometer instaladores Windows/Linux prontos para distribuição. Uma tag de marco pode ser considerada depois do merge autorizado; não é necessária para integrar código. Release com binários depende de validação própria, decisão de licença e resolução dos riscos aplicáveis.
 
 - Node.js e NPM
 - Rust / Cargo
@@ -140,6 +135,7 @@ Para verificar a integridade antes de cometer código (sempre exigida para pull 
 
 **Frontend Validation:**
 ```bash
+npx tsc --noEmit --incremental false
 npm run lint
 npm test
 npm run build
@@ -164,8 +160,8 @@ O diretório `/docs` é a espinha dorsal de conhecimento arquitetural do projeto
 
 ## 13. Immediate roadmap
 
-- **Phase 6.4:** Dynamic workflow, categories, checklist templates and AI recommendation semantics in one open edition (ADR-013); remaining integration/security review in Slice 8.
-- **Phase 6.5:** Production Provider & Model Experience
+- **Phase 6.4:** Escopo congelado para fechar os critérios de aceitação e integrar após autorização específica. Consulte o candidato de fechamento; novas funcionalidades seguirão em outra branch.
+- **Phase 6.5:** Production Provider & Model Experience. Preservar o incremento 1 já aceito; motor/modelo real, instalação e distribuição continuam no plano preliminar.
 
 ## 14. Governance
 

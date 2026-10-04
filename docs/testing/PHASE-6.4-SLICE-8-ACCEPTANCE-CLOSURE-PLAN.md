@@ -4,6 +4,10 @@ Date: 2026-10-01 (America/Sao_Paulo). Status: execution checklist; acceptance pe
 
 ## Current checkpoint and decision authority
 
+### Frozen-scope closure candidate — 2026-10-04
+
+The owner directed the next round toward Phase 6.4 integration without new features. Preserve accepted Phase 6.5 Increment 1 in the existing branch; subsequent increments move to another branch. [The current closure candidate](PHASE-6.4-CLOSURE-2026-10-04.md) supersedes the earlier pending CI/UI status below: `7e9702b` passed all four jobs; the bounded CMS/template/Calendar corrective passed local tests and isolated browser checks. Desktop/NVDA acceptance, explicit residual-risk/runtime decisions, candidate publication/PR checks and specific merge/tag/release authorization remain open. No automatic Gate B closure or production distribution acceptance is claimed.
+
 ### Subsequent dependency correction — 2026-10-04
 
 The owner explicitly authorized Firebase removal and js-yaml/Vitest patching, confirmed the app was closed and resumed the paused work. Clean workspace installation, types, 287 frontend tests, lint, build and independent candidate review passed. The [validation checkpoint](PHASE-6.4-RESUMPTION-2026-10-04.md) supersedes the dependency implementation queue in the historical checkpoint below. Seven Next/lint-chain affected-package audit entries remain, together with Linux glib, CMS labels/template naming and Calendar keyboard access. Exact-source CI is a separate delivery check; preserve accepted functional scripts and human merge/release gates. No default-branch alert closure, complete accessibility or production acceptance is claimed.

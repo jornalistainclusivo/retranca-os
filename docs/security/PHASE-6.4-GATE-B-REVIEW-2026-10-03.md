@@ -2,6 +2,10 @@
 
 Date: 2026-10-03 (America/Sao_Paulo). Status: static changed-source review completed; **Gate B remains open**. No dependency or UI corrective has been applied by this checkpoint.
 
+## Subsequent frozen-scope closure candidate — 2026-10-04
+
+[The current closure record](../testing/PHASE-6.4-CLOSURE-2026-10-04.md) verifies successful exact-source CI on `7e9702b`, records the locally validated CMS/template/Calendar accessibility corrective, and supplies static applicability triage for seven residual npm package entries plus Linux glib. It preserves the sealed range/results below and the 12 still-open default-branch alerts. No direct Next ImageResponse/editorial glob-input path was established; affected versions remain. Linux indirect VariantStrIter/optimized runtime reachability remains `needs_review`. Scoped desktop/NVDA acceptance and explicit owner integration/risk decisions are required before Gate B closure; final published-source PR checks and human Gates C/D remain separate.
+
 ## Subsequent authorized dependency correction — 2026-10-04
 
 After explicit owner authorization, unused development Firebase was removed and the final lock resolves js-yaml 4.3.2 and aligned Vitest/UI 4.1.11. Clean installation, types, 287 frontend tests, lint and static build passed. A fresh independent candidate review inspected the complete semantic dependency delta, nested/aliased copies, exact peers and platform bindings without finding a concrete bypass or regression. This is subsequent evidence on the dependency patch, not an amendment to the sealed scan's frozen source range.

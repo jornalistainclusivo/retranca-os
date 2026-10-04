@@ -53,8 +53,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         <div className="flex items-center space-x-2">
           <button
+            type="button"
+            aria-label="Mês anterior"
             onClick={prevMonth}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -65,8 +67,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             Agosto 2026
           </button>
           <button
+            type="button"
+            aria-label="Próximo mês"
             onClick={nextMonth}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -130,10 +134,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   const isProduction = stage?.semanticClassification === 'DRAFTING' && !isPublished;
 
                   return (
-                    <div
+                    <button
                       key={art.id}
+                      type="button"
+                      aria-label={`Abrir pauta: ${art.title}`}
                       onClick={() => onSelectArticle(art)}
-                      className={`p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all ${
+                      className={`block w-full text-left p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-1 ${
                         isPublished
                           ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : isReview
@@ -145,7 +151,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       title={art.title}
                     >
                       {isPublished ? '✓ ' : ''}{art.title}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
