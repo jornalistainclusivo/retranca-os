@@ -10,6 +10,10 @@ The bounded [Increment 1 inventory/recovery specification](../specifications/pha
 
 ## Entry conditions
 
+Update 2026-10-04: the explicitly authorized Firebase removal and js-yaml/Vitest patches passed local clean installation, types, 287 frontend tests, lint, build and independent candidate review. The [dependency validation checkpoint](../testing/PHASE-6.4-RESUMPTION-2026-10-04.md) records the final remaining Next/lint audit entries and warnings. Linux glib and the accessibility queue below remain unresolved; new-revision CI must be verified separately. This correction does not choose a production engine or close Gate B.
+
+The [2026-10-03 Gate B review](../security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) completed the immutable changed-source security review through `0d2f5e9`, without new reported vulnerabilities. Its initial queue included unused Firebase tooling and retained npm patch levels, addressed by the subsequent correction above, plus unresolved Linux glib compatibility, CMS labels/template naming and Calendar keyboard activation. The owner confirmed the intended current workflow is Tauri/Ollama only. Complete the remaining queue before treating static review as full product acceptance; no production-engine choice is implied by removing unused development tooling.
+
 Preserve Phase 6.4's open single edition (ADR-013), article-owned text (ADR-014), local preserving import (ADR-015) and Rust evidence authority (ADR-008). Close the remaining Phase 6.4 desktop/accessibility and independent review scope; prepare a reviewable PR. Merge remains Gate C; tag/release remains Gate D. Successful automated tests alone do not close these gates.
 
 ## Proposed sequence

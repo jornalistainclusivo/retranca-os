@@ -1,5 +1,22 @@
 # Current work — Phase 6.4 closure / Phase 6.5 Increment 1
 
+## Resumed dependency correction — 2026-10-04
+
+The owner resumed the explicitly authorized correction after the daily-limit stop. Firebase development tooling is removed, Vitest/UI lock is 4.1.11 and js-yaml is 4.3.2. Clean workspace installation, dependency graph verification, types, 287 frontend tests, lint and static build passed; the one fresh independent candidate review found no concrete bypass/regression. The final audit still reports 7 affected-package entries (1 critical, 6 high), or 1 critical Next entry excluding dev dependencies. Next/lint, Linux glib and accessibility remain separate work. Consolidate/publish and dispatch existing CI on the new revision under existing authority; check its result when the owner returns, without watching it to completion. Follow the [2026-10-04 validation checkpoint](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md); preserve accepted functional scripts. Gate B and human merge/release gates remain open.
+
+## Gate B static review / dependency intake — 2026-10-03
+
+- [x] Complete immutable changed-source review on `528be4f..0d2f5e9`: all 76 compact source items plus 11 changed supporting files; 41 non-executable context paths accounted separately. Sealed scan `eabec0c4-20c8-47c0-a1b7-373663819e15` has complete static diff coverage and zero new reported security findings.
+- [x] Triage all 12 open Dependabot records individually; keep GitHub alerts unchanged. Owner confirmed the current workflow uses only Tauri/Ollama, without Firebase publishing/emulators/MCP.
+- [x] Record three separate static accessibility failures: CMS label associations, unnamed template selector and Calendar article keyboard opener. Earlier functional acceptance remains valid; no NVDA or new runtime pass is claimed.
+- [x] Apply the explicitly authorized npm correction: remove unused development-only Firebase, patch js-yaml and aligned Vitest/UI, verify the final graph/audit and pass clean installation/types/frontend tests/lint/build plus independent patch review. Original 11 npm alert records' package families are no longer flagged in the final-lock audit; this does not close GitHub alerts or certify remaining dependencies.
+- [ ] Confirm the dependency correction's published-source CI when the owner returns; separately plan remaining Next/lint-chain maintenance. No blanket audit fix or major downgrade.
+- [ ] Resolve Linux glib through a compatible Tauri/GTK plan; no isolated major override or unapproved production dependency change.
+- [ ] Save/close confirmation before interface updates; apply the bounded accessibility corrective, then provide a new numbered desktop/NVDA handoff without repeating accepted scripts.
+- [ ] Complete remaining accessibility/runtime acceptance, exact published-source checks and human Gates C/D. **Gate B remains open** despite completed static source review.
+
+Evidence, alert table, corrective sequence and limits: [Gate B review](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md). This checkpoint supersedes earlier partial-security-review status for the reviewed range only. No dependencies, migrations, CI/authentication or app code changed during this review.
+
 ## Resumed entry / Phase 6.5 Increment 1 — 2026-10-03
 
 - [x] Verify application source `08218bf6c05d510904686d3a89c56d7bfe8826ae` [CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950): frontend, Rust Windows/Linux and required aggregate passed.

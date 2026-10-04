@@ -5,11 +5,26 @@ status: approved
 related-branch: docs/phase-6.4-product-access-monetization
 tech-stack: Vitest, Rust cargo test, Tauri/Rust integration/security testing
 created-at: 2026-09-15
-last-updated: 2026-10-02
+last-updated: 2026-10-04
 authors: Retranca OS Core Team
 ---
 
 # Phase 6.4 Test Specification
+
+## Gate B corrective acceptance delta — 2026-10-03
+
+Execution update 2026-10-04: TEST-DEPENDENCY-GATE-001 has local graph/audit, clean installation, types, 287 frontend tests, lint, static build and fresh independent candidate-review evidence in the [validation checkpoint](../../testing/PHASE-6.4-RESUMPTION-2026-10-04.md). Exact published-source CI remains to be verified. The audit retains 7 Next/lint-chain affected-package entries; Linux glib is explicitly unresolved. The three accessibility corrective cases below have not been implemented or accepted by this dependency-only round.
+
+The [static review](../../security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) records failures, not executed corrective results. Existing keyboard/name requirements apply; prior accepted AI/CMS/import/settings/inventory checks remain valid.
+
+| ID | Required corrective result | Evidence required after implementation |
+| --- | --- | --- |
+| TEST-CMS-LABELS-001 | Every editable CMS field has a programmatic name; visible labels activate their own control. Internal/external links and estimated/spent time have distinct purpose names. | Rendered label/name relationships, keyboard and desktop/NVDA; article values/save remain intact. |
+| TEST-CMS-TEMPLATE-001 | Template selector has a visible associated native label and works with keyboard without changing template behavior. | Named rendered select, label activation and desktop keyboard/reader observation. |
+| TEST-CALENDAR-KEYBOARD-001 | Calendar article openers are named native controls, reachable by Tab with visible focus, activated by Enter/Space; dialog close restores opener focus. | Actual rendered component plus keyboard/focus observation; desktop/NVDA and zoom/reflow separately recorded. |
+| TEST-DEPENDENCY-GATE-001 | Authorized maintenance removes unused Firebase development tooling, uses patched retained npm packages and preserves intended scripts/build behavior; Linux glib unresolved compatibility is explicit. | Regenerated manifest/lock graph, fresh audit, lint/types/frontend tests/build, exact published-source CI. Do not force incompatible production-major overrides or infer default-branch alert closure from feature checks. |
+
+No new desktop/NVDA acceptance or comprehensive WCAG conformance is claimed by this specification amendment. Gate B remains open until required evidence and any explicit owner-approved deferral are recorded.
 
 ## Local AI settings keyboard entry corrective — 2026-10-02
 

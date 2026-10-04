@@ -4,6 +4,20 @@ Date: 2026-10-01 (America/Sao_Paulo). Status: execution checklist; acceptance pe
 
 ## Current checkpoint and decision authority
 
+### Subsequent dependency correction — 2026-10-04
+
+The owner explicitly authorized Firebase removal and js-yaml/Vitest patching, confirmed the app was closed and resumed the paused work. Clean workspace installation, types, 287 frontend tests, lint, build and independent candidate review passed. The [validation checkpoint](PHASE-6.4-RESUMPTION-2026-10-04.md) supersedes the dependency implementation queue in the historical checkpoint below. Seven Next/lint-chain affected-package audit entries remain, together with Linux glib, CMS labels/template naming and Calendar keyboard access. Exact-source CI is a separate delivery check; preserve accepted functional scripts and human merge/release gates. No default-branch alert closure, complete accessibility or production acceptance is claimed.
+
+### Superseding Gate B review checkpoint — 2026-10-03
+
+The owner accepted the Phase 6.5 inventory/recovery handoff; [CI 37141777120](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37141777120) passed all four jobs on implementation `32e64a56084a5d42cef3275e00195c3262563e86`. That evidence does not certify later documentation or future dependency changes.
+
+The [immutable Gate B review](../security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) now accounts for all 76 compact source items, 11 additional changed supporting files and 41 non-executable context paths in `528be4f..0d2f5e9`. Canonical static diff coverage is complete, with zero new reported security findings. This supersedes earlier partial-scan status for this range; it does not close Gate B or certify dependencies, runtime installation or accessibility.
+
+All 12 Dependabot alerts remain open. The owner confirmed only Tauri/Ollama is used; unused Firebase development tooling accounts for eight exclusive records. Retained js-yaml and Vitest require a targeted maintenance plan; Linux glib requires compatible native-chain investigation. The source review also found unassociated CMS labels, an unnamed template selector and a mouse-only Calendar opener. Correct these, verify new locks/accessible controls, then complete manual accessibility and packaged-runtime ownership before integration. Preserve accepted functional scripts. No current PR inventory or new CI execution is claimed by this checkpoint.
+
+No app source, dependency, schema, CI or authentication change was applied during this review. Explicit security-fix authorization and save/close confirmation precede the proposed correction. Existing broad consolidation/publication authority remains as recorded below; merge/release remain separately gated.
+
 ### Superseding local import checkpoint — 2026-10-02
 
 The owner subsequently authorized publication/manual CI of `089174088a780d6fd481e395c4e89c48b7a8c0d5`; [run 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955) passed all four jobs, rechecked on that SHA. The owner then granted autonomy to continue this development/code publication round, superseding per-action confirmation wording below within that scope. Merge/release remain separately gated; no current PR inventory is claimed here.
