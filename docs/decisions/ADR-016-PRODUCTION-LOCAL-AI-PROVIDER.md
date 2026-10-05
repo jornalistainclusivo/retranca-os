@@ -1,0 +1,42 @@
+# ADR 016: Production Local AI Provider
+
+## Status
+
+Accepted provider direction — 2026-10-05 (America/Sao_Paulo). The owner accepted external local Ollama for the first production path and explicitly retained **an embedded engine as the preferred future delivery**. This narrows [ADR-007](ADR-007-LOCAL-LLM-RUNTIME.md) for the first production path; it does not abandon the isolated-sidecar goal or approve a specific embedded engine. The owner then authorized the bounded native Increment 2 implementation. Its supported [readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) and [local validation](../testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md) do not grant distribution approval.
+
+## Context and observed implementation
+
+Phase 6.4 was merged through [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5) as `37b272c1ae048c5aa004211fd9d09178bd41709c`. It includes the accepted [Phase 6.5 Increment 1](../specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md), which must be preserved. Code integration acceptance does not accept an installer, real bundled inference engine, comprehensive accessibility or release.
+
+ADR-007 selects an isolated llama.cpp sidecar. Current [preflight selection](../../src-tauri/src/provisioning/commands.rs) prefers reachable Ollama with model tags, otherwise a model/executable-based sidecar readiness check. [Native orchestration](../../src-tauri/src/orchestrator.rs) supports both providers. At the merged baseline, Ollama generation checked inventory membership, including its implicit `:latest` alias, and used loopback. The Increment 2 branch now adds fresh version/catalog/capability checks and a per-request local constraint before [Ollama generation](../../src-tauri/src/ollama_gateway.rs). The accepted settings UI preserves exact returned tags. [Session selection](../../lib/contexts/AiRuntimeContext.tsx) is not a persisted preference. Preflight remains an availability hint, not production attestation or proof of a shipped engine's capabilities.
+
+The official [Ollama cloud documentation](https://docs.ollama.com/cloud), consulted 2026-10-05, describes cloud execution through the app/CLI. Therefore a loopback address or listed tag alone does not establish local inference. The [model-details API](https://docs.ollama.com/api-reference/show-model-details) exposes capabilities and model metadata; its example is not evidence about the owner's model. The [FAQ](https://docs.ollama.com/faq#how-do-i-disable-ollama-cloud-features) documents cloud-disable configuration. Retranca must not change another application's settings without explicit permission or claim that its own process environment proves the already-running server's configuration.
+
+## Alternatives
+
+| Option | Benefit | Cost / unresolved evidence |
+| --- | --- | --- |
+| A — External Ollama, local models, first production path | Reuses the existing integration and the owner's workflow; avoids bundling a new engine/model in the first package. | Requires separately installed/configured Ollama, verified local execution and Windows/Linux installer acceptance. Retranca does not own the server's process or guarantee GPU teardown on cancellation. |
+| B — Real isolated sidecar as first production path | Keeps the intended bundled-engine architecture and process ownership. | Needs an actual engine/protocol/model binding, packaging, licensing and integrity evidence. The mock fixture cannot supply this evidence. |
+| C — Ship both production paths immediately | Gives users both choices. | Combines both validation/distribution obligations and expands the first release scope. |
+
+## Accepted provider direction and implementation constraints
+
+The owner accepted **Option A** for the first supported production path, while preferring an embedded engine later. Sequence the deliveries without discarding that preference. The bounded native implementation follows these constraints:
+
+- Keep one open edition and an editable, exact model choice. Ollama and its model are installed independently by the user; Retranca does not silently install, download, start, replace or update them.
+- The owner reports preferring the Gemma 4 model currently used and DeepSeek based on informal experience (2026-10-05). Preserve them as candidates for a later representative pilot, not mandated/default models or independently established performance winners. The earlier accepted inventory handoff used `gemma4:latest`; its current presence and the exact DeepSeek tag/variant must be verified when that pilot runs. No model-family name establishes local provenance or image capability.
+- Keep [ADR-008](ADR-008-EDITORIAL-AI-ORCHESTRATION-BOUNDARY.md): Rust validates evidence, composes trusted instructions, bounds context and controls dispatch/cancellation. No raw release inference or frontend-controlled remote endpoint.
+- Native readiness distinguishes runtime availability, selected-tag membership, textual completion and local-request enforcement. A failed/unknown check blocks dispatch; a prior UI report cannot authorize generation.
+- The initial supported **server** version is exactly `0.35.1`, source-audited at upstream commit `b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce`. Both show and generation use `<resolved_catalog_name>:local`; the audited daemon rejects remote configuration before proxy dispatch. Require bounded local GGUF/architecture/completion metadata and reject remote markers before sending editorial content. Do not use tag spelling, missing metadata or confirmation alone as proof. No global cloud-setting change is needed.
+- This constraint trusts the separately installed daemon and its reported version. It is not independent process attestation, atomic digest/model binding, hardware readiness or proof of successful/quality inference. Other versions/formats remain blocked until their evidence is separately established; exact mechanism, bounds and pinned primary sources are in the readiness contract.
+- Preserve Increment 1's refresh/retry, exact tags, session choice, focus and stale-response handling. No automatic fallback or model substitution after a failed check. The existing development sidecar is not removed by this decision; its production exposure must be specified explicitly in the technical contract.
+- Leave image uploads, vision inference, persisted selection, full backup/restore and cloud providers to separately specified increments. Text-based alt descriptions remain part of the existing editorial actions; no new image capability is implied.
+
+## Consequences and acceptance gates
+
+The owner subsequently accepted the bounded native-round functional handoff on 2026-10-05: completed simplification without perceived inconsistencies, cancellation and original CMS text preservation. This does not supply exact runtime/model identity, comparative quality, dedicated readiness UI/accessibility or installer evidence. Preserve that acceptance when planning the next UI increment; do not repeat the same functional checks solely for confirmation.
+
+The expected smaller first implementation is an inference from reusing the current adapter, not a delivery estimate. The installer still needs clear onboarding when Ollama/model is absent and must remain usable for editorial work without AI. Document cancellation as interruption of Retranca's registered request; server/GPU termination requires separate evidence.
+
+Before distribution, verify code/runtime/model licensing for the actual assets and install/start/recovery outside the repository on Windows/Linux. Record version/model identities, synthetic inference/cancellation and relevant accessibility evidence. The Increment 2 native portion is implemented; readiness UI/recovery, actual-daemon pilot and exact published-source CI remain pending. The preferred future embedded delivery still requires a specific real-engine/protocol choice, model binding, licensing and packaged acceptance; it is not implemented by selecting Option A first. Acceptance of this architectural direction does not authorize a model download, dependency, migration, CI change, publication of binaries, merge, tag or release.

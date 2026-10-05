@@ -36,3 +36,7 @@ While `llama.cpp` is the superior engine for consumer hardware, embedding it dir
 *   The build pipeline must compile `llama.cpp` as a standalone binary and bundle it using Tauri's Sidecar feature.
 *   The main Rust backend will manage child process lifecycles (`std::process::Command`).
 *   IPC backpressure will be handled by reading from the child's `stdout` into a bounded channel.
+
+## Subsequent bounded provider direction — 2026-10-05
+
+[ADR-016](ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md) records the owner's accepted external local Ollama path for the first production delivery. This supersedes this ADR's first-delivery provider choice only; an embedded engine remains the owner's preferred future delivery and subprocess isolation remains its recorded architectural basis. No real sidecar/model implementation, installer or release is accepted by this sequencing decision.

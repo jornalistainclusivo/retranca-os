@@ -2,6 +2,10 @@
 
 Date: 2026-10-03. Scope: local model inventory refresh/retry under the [increment specification](../specifications/phase-6.5/PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md). Implementer observations, owner acceptance and remote CI are distinct evidence.
 
+## Subsequent integration checkpoint — 2026-10-05
+
+The accepted increment is included in `main` merge `37b272c1ae048c5aa004211fd9d09178bd41709c` through [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5); all four jobs passed [main CI 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721). The [6.4 closure](PHASE-6.4-CLOSURE-2026-10-04.md) records later bounded Gate B acceptance and merge authorization. That supersedes the earlier open integration gates below; broad accessibility, real-engine/installer evidence and release remain pending. The [new branch checkpoint](PHASE-6.5-RESUMPTION-2026-10-05.md) preserves this increment. Original observations/owner reports remain unchanged; no test repetition or new runtime result is claimed.
+
 ## Entry and resulting behavior
 
 The owner accepted the preceding settings X/Escape desktop checks and confirmed saving/closing the application before this increment. The API verified successful [CI 37080317950](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) on previous source `08218bf6c05d510904686d3a89c56d7bfe8826ae`: frontend, Rust Windows, Rust Linux and the required aggregate. The Node 20 Action-runtime warning and Ubuntu runner migration notice are separate maintenance items; workflows remain unchanged.

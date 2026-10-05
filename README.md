@@ -8,17 +8,18 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-A entrega da fase 6.4 está consolidada no [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), a partir da branch `feat/phase-6.4-pro-workflow-customization`. Em 04/10/2026, o responsável aprovou o fechamento limitado à integração do código em desenvolvimento e autorizou o merge após os quatro jobs passarem no HEAD final. O estado efetivo da integração e seus checks estão no PR. O escopo permanece congelado; novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta entrega, será preservado.
+A fase 6.4 foi integrada na `main` pelo [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), no commit `37b272c1ae048c5aa004211fd9d09178bd41709c`; os quatro jobs passaram no [CI da main 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721), conferido em 05/10/2026. O fechamento aprovado é limitado à integração do código; distribuição e acessibilidade ampla continuam pendentes. O Incremento 1 da fase 6.5 está incluído e será preservado. A continuidade local usa `codex/phase-6.5-production-provider-contract`, seguindo o [plano da 6.5](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md). Foi aceito o Ollama instalado pela pessoa como primeiro caminho de produção, com **preferência futura por motor embutido**, registrada no [ADR-016](docs/decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md). O Incremento 2 tem contrato e bloqueio nativo implementados localmente; interface de diagnóstico, piloto com servidor real e CI desta revisão ainda estão pendentes. Consulte a [validação nativa](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md) e o [registro de retomada](docs/testing/PHASE-6.5-RESUMPTION-2026-10-05.md).
 
 | Entrega / verificação | Estado atual |
 | --- | --- |
 | Fluxos dinâmicos, categorias e templates | Implementados na edição aberta, sem conta, assinatura ou ativação comercial ([ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md)). |
 | Texto completo por pauta, salvamento e importação preservadora | Implementados; checks desktop informados pelo responsável estão registrados e não precisam ser repetidos apenas para confirmação. |
 | Seis ações de IA local, cancelamento, fechamento e inventário de modelos | Implementados; aceites funcionais anteriores preservados. Não equivalem a avaliação completa da qualidade de IA. |
+| Prontidão nativa da 6.5 | Na branch local, cada geração Ollama verifica servidor `0.35.1`, modelo/capacidade e exige `:local`; versões não auditadas e dados não verificáveis bloqueiam o envio. O responsável informou sucesso nos três checks funcionais: simplificação completa, cancelamento e preservação do texto original. Depende de um daemon confiável; não comprova hardware, qualidade nem identidade atômica do modelo. |
 | Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. Auditoria atual ainda registra sete entradas npm afetadas, além da pendência Linux `glib`. |
-| CI publicado | Os quatro jobs passaram em [`8fd28e1`, run 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825): frontend, Rust Windows/Linux e agregador `rust`. Essa revisão inclui o corretivo de fechamento. |
+| CI integrado | Os quatro jobs passaram em [`37b272c`, run 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721): frontend, Rust Windows/Linux e agregador `rust`. Esse merge inclui o corretivo de fechamento e o Incremento 1. |
 | Rodada de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O responsável também aprovou os três checks delimitados no desktop com NVDA 2026.2 e teclado. |
-| PR, aceitação e merge | Gate B aprovado para a integração limitada de código. Publicação dos seis documentos, Ready e merge por merge commit autorizados, condicionado aos quatro jobs no novo HEAD. Validação ampla e distribuição permanecem pendentes; tag/release não autorizados. |
+| PR, aceitação e merge | PR #5 integrado; Gate B aprovado para a integração limitada de código e Gate C concluído para essa entrega. Validação ampla e distribuição permanecem pendentes; tag/release não autorizados. |
 
 O [candidato de fechamento](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md) é o ponto de entrada para resultados, limites, decisões propostas e o novo roteiro desktop. A [revisão de segurança](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) mantém seu intervalo imutável; a [correção de dependências](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md) registra o lock e as verificações anteriores. Os registros de IA/CMS/importação/inventário permanecem em `docs/testing`; seus aceites se aplicam às revisões e ambientes identificados.
 
@@ -160,8 +161,8 @@ O diretório `/docs` é a espinha dorsal de conhecimento arquitetural do projeto
 
 ## 13. Immediate roadmap
 
-- **Phase 6.4:** Escopo congelado para fechar os critérios de aceitação e integrar após autorização específica. Consulte o candidato de fechamento; novas funcionalidades seguirão em outra branch.
-- **Phase 6.5:** Production Provider & Model Experience. Preservar o incremento 1 já aceito; motor/modelo real, instalação e distribuição continuam no plano preliminar.
+- **Phase 6.4:** Integrada na main pelo PR #5, com aceitação limitada ao código. Manutenção de dependências, acessibilidade ampla e distribuição seguem explicitamente pendentes.
+- **Phase 6.5:** Production Provider & Model Experience. Preservar o Incremento 1; primeiro caminho com Ollama instalado pela pessoa, mantendo motor embutido como preferência futura. Detalhar prontidão/proveniência/capacidade antes de alterar comportamento; instalação e distribuição exigem evidência própria.
 
 ## 14. Governance
 

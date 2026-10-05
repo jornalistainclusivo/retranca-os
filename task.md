@@ -1,4 +1,23 @@
-# Current work — Phase 6.4 closure (scope frozen)
+# Current work — Phase 6.5 Increment 2 native readiness
+
+## Integrated baseline and new continuation — 2026-10-05
+
+- [x] Verify merged [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), `main`/`origin/main` at `37b272c1ae048c5aa004211fd9d09178bd41709c`, and all four successful jobs in [main CI 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721).
+- [x] Preserve accepted Phase 6.5 Increment 1 and the completed 6.4 source-integration gate; retain broader accessibility/distribution limits.
+- [x] Create `codex/phase-6.5-production-provider-contract` from fetched `origin/main`, preserving the previous clean branch/history.
+- [x] Prepare [ADR-016](docs/decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md) and the proposed [Increment 2 readiness contract/matrix](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md), following the existing draft plan.
+- [x] Owner accepted external local Ollama for the first production path and explicitly retained an embedded engine as the preferred future delivery. Record the bounded ADR-007 amendment; no particular embedded engine, download or distribution is approved.
+- [x] Record owner-preferred Gemma 4/DeepSeek candidates as informal experience; preserve model choice. Exact current tags/variants and comparative quality/latency remain to be verified in a later synthetic pilot.
+- [x] Define the supported native contract from pinned Ollama 0.35.1 source: bounded metadata, textual completion, trusted daemon and per-request `:local` enforcement; no process-attestation/digest-pinning claim.
+- [x] Implement query/registration, shared bounded catalog and fresh checks before every Ollama generation; preserve native prompt authority and cancellation during metadata/streaming.
+- [x] Validate Rust debug/release and obtain focused independent read-only review; record results in the [native validation report](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md).
+- [x] Record owner-reported completed simplification without perceived inconsistencies, earlier cancellation and original CMS text preservation; the three bounded functional checks are accepted and should not be repeated solely for confirmation. AI suggestions remain temporary; exact runtime/model identity and broader quality/accessibility evidence were not supplied.
+- [ ] Integrate native diagnostics into accessible settings/status/retry UI, invalidating stale results while preserving exact session selection and focus.
+- [x] Owner explicitly authorized the local Git commit of the 14 prepared native-round files on 2026-10-05, with message `feat(phase-6.5): enforce native local AI readiness`.
+- [ ] Retain exact runtime/model identity and broader pilot evidence as separate gates; obtain separate publication/manual-CI authorization and verify exact published-source CI for this new increment.
+- [ ] Retain separate dependency maintenance, licensing, preference persistence, attachments, packaged Windows/Linux and release gates. Do not reopen accepted scripts or introduce these features implicitly.
+
+Current entry: [Increment 2 native validation](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md), after the [2026-10-05 preparatory resumption](docs/testing/PHASE-6.5-RESUMPTION-2026-10-05.md). The Rust implementation has bounded owner functional acceptance and explicitly authorized local Git consolidation; push/CI/merge/release are outside that authorization. Dedicated Increment 2 readiness UI, runtime identity and broader desktop acceptance remain pending. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
 
 ## Closure candidate — 2026-10-04
 

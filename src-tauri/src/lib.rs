@@ -1,6 +1,7 @@
 pub mod ai_supervisor;
 pub mod article_content;
 pub mod article_import;
+pub mod local_ai_readiness;
 pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
@@ -38,6 +39,7 @@ pub fn run() {
             download_model,
             cancel_download,
             get_ollama_models,
+            local_ai_readiness::get_local_ai_readiness,
             article_content::migrate_article_content,
             article_import::import_articles,
             orchestrator::start_orchestrated_inference,
