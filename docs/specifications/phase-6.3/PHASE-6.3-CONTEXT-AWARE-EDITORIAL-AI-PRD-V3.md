@@ -1,5 +1,7 @@
 # PHASE-6.3-CONTEXT-AWARE-EDITORIAL-AI-PRD-V3
 
+> **2026-10-01 amendment — article CMS content:** [ADR-014](../../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) records the owner's later Phase 6.4 decision to persist full analysis text with each article. The body-persistence deferral in sections 3/11/18 remains a historical Phase 6.3 boundary and no longer forbids this narrow extension. The owner subsequently reported the three content checks as passing; review/consolidation and broader acceptance remain pending. See [content validation](../../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Native AI safety remains governed by ADR-008; no binary attachment or multimodal support is introduced.
+
 ## 1. Problema
 A assistência de IA atual na plataforma opera de modo genérico, ignorando o contexto rico e o ciclo de vida da pauta no CMS. Quando o LLM recebe tarefas sem o contexto apropriado (status, metadados, checklists, restrições), o resultado é subotimizado, arriscando gerar respostas conversacionais ("chatbot") inúteis, inventar dados inexistentes ou perder o rigor editorial exigido pelas diretrizes WCAG e de linguagem simples.
 

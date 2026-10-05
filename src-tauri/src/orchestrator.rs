@@ -588,11 +588,20 @@ pub async fn start_orchestrated_inference(
         }
         DispatchPlan::Sidecar {
             job_id,
-            program,
+            program: _,
             args,
         } => {
-            crate::ai_supervisor::start_inference_internal(app, registry, job_id, program, args)
-                .await
+            let executable = tauri::utils::platform::current_exe()
+                .map_err(|_| "SIDECAR_UNAVAILABLE: Application path is unavailable")?;
+            let program = crate::sidecar_path::resolve_bundled_sidecar(&executable)?;
+            crate::ai_supervisor::start_inference_internal(
+                app,
+                registry,
+                job_id,
+                program.into_os_string(),
+                args,
+            )
+            .await
         }
     }
 }

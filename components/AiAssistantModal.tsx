@@ -2,10 +2,11 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, X, Send, Copy, Check, Lightbulb, Search, Eye, FileText, Paperclip, FileImage, StopCircle, AlertTriangle } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AiTextMarkdown } from '@/components/AiTextMarkdown';
+import { restoreAiCancelFocus, useModalDialog } from '@/lib/hooks/useModalDialog';
+import { AiJobSession } from '@/lib/adapters/aiJobSession';
 import type { AiAction, GenerationState, AiOrchestrationRequest } from '@/types/ai';
-import { useEntitlement } from '@/lib/contexts/EntitlementContext';
+import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 import {
   onStreamToken,
   onStreamDone,
@@ -29,6 +30,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   onApplyIdea,
   provider = 'NONE',
 }) => {
+  const dialogRef = useModalDialog(isOpen, onClose);
+  const fieldId = React.useId();
   const [prompt, setPrompt] = useState('');
   const [action, setAction] = useState<AiAction>('generate_outline');
   const [genState, setGenState] = useState<GenerationState>('IDLE');
@@ -39,8 +42,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [visualDescription, setVisualDescription] = useState('');
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
   const [copied, setCopied] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
+  const { selectedModel } = useAiRuntime();
 
   // Streaming result stored in a ref to avoid re-renders per token,
   // and flushed to state on a 60fps animation frame for the typewriter effect.
@@ -48,7 +52,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const [displayResult, setDisplayResult] = useState<string | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const aiJobActiveRef = useRef(false);
-  const unlistenRefs = useRef<Array<() => void>>([]);
+  const sessionRef = useRef<AiJobSession | null>(null);
+  const cancelHadFocusRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
   // Flush buffer to display on animation frame
@@ -61,19 +66,28 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
   // Helper para garantir limpeza segura de listeners
   const cleanupListeners = useCallback(() => {
-    if (unlistenRefs.current.length > 0) {
-      unlistenRefs.current.forEach(unlisten => unlisten());
-      unlistenRefs.current = [];
-    }
-  }, []);
+    restoreAiCancelFocus(dialogRef.current, cancelHadFocusRef.current);
+    cancelHadFocusRef.current = false;
+    sessionRef.current?.finish();
+    sessionRef.current = null;
+    jobIdRef.current = null;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  }, [dialogRef]);
 
   // Cleanup listeners and animation frame on unmount or modal close
   useEffect(() => {
+    if (!isOpen) return;
     return () => {
+      sessionRef.current?.dispose();
       cleanupListeners();
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      aiJobActiveRef.current = false;
     };
-  }, [cleanupListeners]);
+  }, [isOpen, cleanupListeners]);
+
+  useEffect(() => {
+    if (!isOpen) setGenState('IDLE');
+  }, [isOpen]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,7 +123,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (aiJobActiveRef.current) return;
-    if (genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING') return; // Prevent concurrent jobs
+    if (genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING' || genState === 'CANCELLING') return;
 
     if (!prompt.trim() && action !== 'generate_alt_text') return; // permit prompt to be empty if it's alt text with visual desc. Wait, prompt is required generally? We'll just enforce below.
 
@@ -124,25 +138,22 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     }
 
     aiJobActiveRef.current = true;
-    const jobId = `job_${Date.now()}`;
+    cleanupListeners();
+    const jobId = `job_${crypto.randomUUID()}`;
+    const session = new AiJobSession(jobId, provider === 'OLLAMA' ? OllamaProvider : SidecarProvider);
+    sessionRef.current = session;
     jobIdRef.current = jobId;
     streamBufferRef.current = '';
     setDisplayResult(null);
     setContextNotices([]);
+    setCancelError(null);
     setGenState('QUEUED');
 
-    // Cleanup previous listeners
-    cleanupListeners();
-
     try {
-      const localUnlistens: (() => void)[] = [];
-      const cleanupLocal = () => {
-        localUnlistens.forEach(u => u());
-        localUnlistens.length = 0;
-      };
-
-      try {
-        const unNotice = await onStreamNotice((ev) => {
+      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
+        throw new Error('Provedor não suportado ou não configurado.');
+      }
+        await session.listen(() => onStreamNotice((ev) => {
           if (ev.job_id !== jobIdRef.current) return;
           if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
             setContextNotices(prev => {
@@ -153,36 +164,33 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           } else {
             console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
           }
-        });
-        localUnlistens.push(unNotice);
+        }));
 
-        const unToken = await onStreamToken((ev) => {
-          if (ev.job_id !== jobIdRef.current) return;
+        await session.listen(() => onStreamToken((ev) => {
+          if (ev.job_id !== jobIdRef.current || session.cancellationRequested) return;
           streamBufferRef.current += ev.token;
           setGenState('GENERATING');
-        });
-        localUnlistens.push(unToken);
+        }));
 
-        const unDone = await onStreamDone((ev) => {
+        await session.listen(() => onStreamDone((ev) => {
           if (ev.job_id !== jobIdRef.current) return;
           setGenState('COMPLETED');
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
           setDisplayResult(streamBufferRef.current);
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unDone);
+        }));
 
-        const unCanceled = await onStreamCanceled((ev) => {
+        await session.listen(() => onStreamCanceled((ev) => {
           if (ev.job_id !== jobIdRef.current) return;
           setGenState('CANCELLED');
+          setDisplayResult(streamBufferRef.current || null);
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unCanceled);
+        }));
 
-        const unError = await onStreamError((ev) => {
+        await session.listen(() => onStreamError((ev) => {
           if (ev.job_id !== jobIdRef.current) return;
           streamBufferRef.current += `\n\nErro: ${ev.message}`;
           setDisplayResult(streamBufferRef.current);
@@ -190,25 +198,15 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unError);
-      } catch (err) {
-        cleanupLocal();
-        aiJobActiveRef.current = false;
-        throw err;
-      }
+        }));
 
-      unlistenRefs.current = localUnlistens;
+      if (jobIdRef.current !== jobId || session.cancellationRequested) return;
 
       // Start the animation-frame flush loop
       rafRef.current = requestAnimationFrame(flushBuffer);
 
       // Start the actual inference via Tauri IPC
       setGenState('LOADING_MODEL');
-      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
-        throw new Error('Provedor não suportado ou não configurado.');
-      }
-      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
       
       const request: AiOrchestrationRequest = {
         job_id: jobId,
@@ -233,8 +231,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         }
       };
       
-      await providerImpl.startInference(request);
+      await session.start(request);
     } catch (err: unknown) {
+      if (jobIdRef.current !== jobId) return;
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setDisplayResult(`Erro ao iniciar inferência local: ${message}`);
       setGenState('ERROR');
@@ -244,16 +243,23 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   };
 
   const handleCancel = async () => {
-    if (!jobIdRef.current) return;
+    const session = sessionRef.current;
+    if (!session || genState === 'CANCELLING') return;
+    cancelHadFocusRef.current = !!dialogRef.current?.querySelector('[data-ai-cancel]')?.contains(document.activeElement);
     setGenState('CANCELLING');
+    setCancelError(null);
     try {
-      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
-        throw new Error('Provedor não suportado ou não configurado.');
+      await session.cancel();
+      if (sessionRef.current === session) {
+        setGenState('CANCELLED');
+        setDisplayResult(streamBufferRef.current || null);
+        aiJobActiveRef.current = false;
+        cleanupListeners();
       }
-      const providerImpl = provider === 'OLLAMA' ? OllamaProvider : SidecarProvider;
-      await providerImpl.cancelInference(jobIdRef.current);
-    } catch {
-      setGenState('ERROR');
+    } catch (error) {
+      if (sessionRef.current !== session) return;
+      setCancelError(`Falha ao cancelar a geração: ${error instanceof Error ? error.message : String(error)}. Tente novamente.`);
+      setGenState('GENERATING');
     }
   };
 
@@ -265,10 +271,10 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     }
   };
 
-  const isLoading = genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING';
+  const isLoading = genState === 'QUEUED' || genState === 'LOADING_MODEL' || genState === 'GENERATING' || genState === 'CANCELLING';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <dialog ref={dialogRef} aria-labelledby={`${fieldId}-dialog-title`} className="fixed inset-0 m-0 border-0 w-full max-w-none h-full max-h-none overflow-y-auto bg-transparent backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs hidden open:flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[85vh]">
 
         {/* Modal Header */}
@@ -278,7 +284,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <Sparkles className="w-4 h-4 text-blue-600" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 id={`${fieldId}-dialog-title`} tabIndex={-1} data-dialog-initial-focus className="text-base font-bold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-blue-500">
                 Assistente IA de Redação (Local)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -289,6 +295,8 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
           <button
             onClick={onClose}
+            type="button"
+            aria-label="Fechar assistente de IA"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -341,9 +349,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setAction('check_accessibility')}
+              onClick={() => setAction('plain_language')}
               className={`p-2.5 rounded-lg border text-xs font-semibold flex flex-col items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
-                action === 'check_accessibility'
+                action === 'plain_language'
                   ? 'bg-blue-50 dark:bg-blue-950/80 border-blue-400 text-blue-800 dark:text-blue-300'
                   : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
               }`}
@@ -370,10 +378,11 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-3">
             {action === 'generate_seo' && (
               <div className="flex flex-col gap-1">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                <label htmlFor={`${fieldId}-keyword`} className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
                   Palavra-chave (Keyword) *
                 </label>
                 <input
+                  id={`${fieldId}-keyword`}
                   type="text"
                   required
                   value={keyword}
@@ -387,10 +396,11 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
             {action === 'generate_alt_text' && (
               <div className="flex flex-col gap-1">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                <label htmlFor={`${fieldId}-visual`} className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
                   Descrição Visual (Obrigatório para Fase 6.3) *
                 </label>
                 <textarea
+                  id={`${fieldId}-visual`}
                   required
                   value={visualDescription}
                   onChange={(e) => setVisualDescription(e.target.value)}
@@ -404,18 +414,20 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               </div>
             )}
 
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
+            <label htmlFor={`${fieldId}-prompt`} className="block text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
               {action === 'generate_alt_text'
                 ? 'Contexto Adicional (Opcional)'
                 : action === 'generate_seo'
                 ? 'Informe o Tema ou Texto da Pauta'
-                : (action === 'check_accessibility' || action === 'validate_inclusivity')
+                : (action === 'plain_language' || action === 'validate_inclusivity')
                 ? 'Cole o Rascunho do Texto para Análise'
                 : 'Tema ou Ideia Central da Matéria'}
             </label>
 
             <div className="flex flex-col gap-2 relative">
               <textarea
+                id={`${fieldId}-prompt`}
+                data-ai-retry
                 required={!imageBase64 && action !== 'generate_alt_text'}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -466,24 +478,20 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
                     <button
                       type="button"
                       onClick={handleCancel}
+                      data-ai-cancel
+                      disabled={genState === 'CANCELLING'}
                       className="px-3 py-2 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                       aria-label="Cancelar geração"
                     >
                       <StopCircle className="w-3.5 h-3.5" />
-                      <span>Cancelar</span>
+                      <span>{genState === 'CANCELLING' ? 'Cancelando...' : 'Cancelar'}</span>
                     </button>
                   )}
                   <button
                     type="submit"
-                    disabled={isLoading || !isPremiumMode}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      isPremiumMode
-                        ? "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-                        : "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                    }`}
-                    aria-disabled={!isPremiumMode || isLoading}
-                    tabIndex={isPremiumMode ? 0 : -1}
-                    title={isPremiumMode ? "Gerar com IA Local" : "Gerar com IA (Recurso Premium)"}
+                    disabled={isLoading}
+                    className="px-4 py-2 text-xs font-bold rounded-lg shadow-2xs transition-all motion-reduce:transition-none flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    title="Gerar com IA Local"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{isLoading ? 'Processando...' : 'Gerar com IA'}</span>
@@ -492,6 +500,11 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               </div>
             </div>
           </form>
+
+          <p role="status" aria-live="polite" className="text-xs text-slate-600 dark:text-slate-300">
+            {genState === 'CANCELLING' ? 'Cancelando geração...' : genState === 'CANCELLED' ? 'Geração cancelada.' : genState === 'COMPLETED' ? 'Geração concluída.' : ''}
+          </p>
+          {cancelError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{cancelError}</p>}
 
           {contextNotices.map((notice, i) => (
             <div 
@@ -531,7 +544,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <div className="flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
                 <span>
                   Resultado da IA Local
-                  {genState === 'GENERATING' && <span className="ml-1 animate-pulse">●</span>}
+                  {genState === 'GENERATING' && <span aria-hidden="true" className="ml-1 animate-pulse motion-reduce:animate-none">●</span>}
                   {genState === 'CANCELLED' && <span className="ml-1 text-amber-500">(Cancelado)</span>}
                 </span>
                 <button
@@ -544,9 +557,9 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               </div>
 
               <div className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-blue max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-blue-600 hover:prose-a:text-blue-500">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <AiTextMarkdown>
                   {displayResult}
-                </ReactMarkdown>
+                </AiTextMarkdown>
               </div>
             </div>
           )}
@@ -554,6 +567,6 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </dialog>
   );
 };

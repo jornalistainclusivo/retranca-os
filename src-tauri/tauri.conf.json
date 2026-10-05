@@ -39,5 +39,10 @@
     "externalBin": [
       "bin/llama-sidecar"
     ]
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:retranca.db"]
+    }
   }
 }

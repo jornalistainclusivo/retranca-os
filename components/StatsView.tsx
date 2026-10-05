@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Article, GamificationBadge } from '@/types/editorial';
+import { Article, GamificationBadge, WorkflowStage } from '@/types/editorial';
 import { 
   Trophy, 
   CheckCircle2, 
@@ -18,18 +18,43 @@ import {
 
 interface StatsViewProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
 }
 
-export const StatsView: React.FC<StatsViewProps> = ({ articles }) => {
+export const StatsView: React.FC<StatsViewProps> = ({ articles, workflowStages }) => {
   const total = articles.length;
-  const publicados = articles.filter((a) => a.status === 'publicado').length;
-  const emRevisao = articles.filter((a) => a.status === 'revisao').length;
-  const emEscrita = articles.filter((a) => a.status === 'escrita').length;
-  const emPesquisa = articles.filter((a) => a.status === 'pesquisa').length;
-  const emIdeia = articles.filter((a) => a.status === 'ideia').length;
+
+  const publicados = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    return stage?.lifecycleRole === 'PUBLICATION';
+  }).length;
+
+  const emRevisao = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    return stage?.lifecycleRole !== 'PUBLICATION' && stage?.semanticClassification === 'REVIEW';
+  }).length;
+
+  const emEscrita = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    return stage?.lifecycleRole !== 'PUBLICATION' && stage?.semanticClassification === 'DRAFTING';
+  }).length;
+
+  const emPesquisa = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    return stage?.lifecycleRole !== 'PUBLICATION' && stage?.semanticClassification === 'RESEARCH';
+  }).length;
+
+  const emIdeia = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    return stage?.lifecycleRole !== 'PUBLICATION' && stage?.semanticClassification === 'IDEA';
+  }).length;
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const atrasados = articles.filter((a) => a.status !== 'publicado' && a.publishDate < todayStr).length;
+  const atrasados = articles.filter((a) => {
+    const stage = workflowStages.find(s => s.id === a.workflowStageId);
+    const isPub = stage?.lifecycleRole === 'PUBLICATION';
+    return !isPub && a.publishDate < todayStr;
+  }).length;
 
   const percentPublished = total > 0 ? Math.round((publicados / total) * 100) : 0;
 

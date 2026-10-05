@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Article } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
 
 interface CalendarViewProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   onSelectArticle: (article: Article) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   articles,
+  workflowStages,
   onSelectArticle,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date('2026-08-01'));
@@ -51,8 +53,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         <div className="flex items-center space-x-2">
           <button
+            type="button"
+            aria-label="Mês anterior"
             onClick={prevMonth}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -63,8 +67,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             Agosto 2026
           </button>
           <button
+            type="button"
+            aria-label="Próximo mês"
             onClick={nextMonth}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -121,24 +127,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
               {/* Day Articles Pills */}
               <div className="flex-1 overflow-y-auto mt-1 space-y-1 pr-0.5">
-                {dayArticles.map((art) => (
-                  <div
-                    key={art.id}
-                    onClick={() => onSelectArticle(art)}
-                    className={`p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all ${
-                      art.status === 'publicado'
-                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : art.status === 'revisao'
-                        ? 'bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800'
-                        : art.status === 'escrita'
-                        ? 'bg-yellow-50 text-yellow-800 dark:bg-amber-950 dark:text-amber-300 border border-yellow-200 dark:border-amber-800'
-                        : 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                    }`}
-                    title={art.title}
-                  >
-                    {art.status === 'publicado' ? '✓ ' : ''}{art.title}
-                  </div>
-                ))}
+                {dayArticles.map((art) => {
+                  const stage = workflowStages.find(s => s.id === art.workflowStageId);
+                  const isPublished = stage?.lifecycleRole === 'PUBLICATION';
+                  const isReview = stage?.semanticClassification === 'REVIEW' && !isPublished;
+                  const isProduction = stage?.semanticClassification === 'DRAFTING' && !isPublished;
+
+                  return (
+                    <button
+                      key={art.id}
+                      type="button"
+                      aria-label={`Abrir pauta: ${art.title}`}
+                      onClick={() => onSelectArticle(art)}
+                      className={`block w-full text-left p-1 rounded text-[10px] font-semibold cursor-pointer truncate transition-all focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-1 ${
+                        isPublished
+                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : isReview
+                          ? 'bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-200 dark:border-orange-800'
+                          : isProduction
+                          ? 'bg-yellow-50 text-yellow-800 dark:bg-amber-950 dark:text-amber-300 border border-yellow-200 dark:border-amber-800'
+                          : 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                      }`}
+                      title={art.title}
+                    >
+                      {isPublished ? '✓ ' : ''}{art.title}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Article, ArticleStatus } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
 import { 
   CheckCircle2, 
   Clock, 
@@ -15,16 +15,18 @@ import {
 
 interface ListViewProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   searchTerm: string;
   onSelectArticle: (article: Article) => void;
-  onUpdateStatus: (id: string, status: ArticleStatus) => void;
+  onUpdateStage: (id: string, stageId: string) => void;
 }
 
 export const ListView: React.FC<ListViewProps> = ({
   articles,
+  workflowStages,
   searchTerm,
   onSelectArticle,
-  onUpdateStatus,
+  onUpdateStage,
 }) => {
   const [sortField, setSortField] = useState<'title' | 'status' | 'publishDate' | 'progress'>('publishDate');
   const [sortAsc, setSortAsc] = useState(true);
@@ -43,7 +45,9 @@ export const ListView: React.FC<ListViewProps> = ({
       return sortAsc ? a.publishDate.localeCompare(b.publishDate) : b.publishDate.localeCompare(a.publishDate);
     }
     if (sortField === 'status') {
-      return sortAsc ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status);
+      const stageA = workflowStages.find(s => s.id === a.workflowStageId)?.displayName || a.status;
+      const stageB = workflowStages.find(s => s.id === b.workflowStageId)?.displayName || b.status;
+      return sortAsc ? stageA.localeCompare(stageB) : stageB.localeCompare(stageA);
     }
     if (sortField === 'progress') {
       return sortAsc ? getProgress(a) - getProgress(b) : getProgress(b) - getProgress(a);
@@ -70,7 +74,7 @@ export const ListView: React.FC<ListViewProps> = ({
             CMS Editorial — Visão em Tabela Compacta
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            {sortedArticles.length} pautas listadas ({articles.filter(a => a.status === 'publicado').length} concluídas)
+            {sortedArticles.length} pautas listadas ({articles.filter(a => workflowStages.find(s => s.id === a.workflowStageId)?.lifecycleRole === 'PUBLICATION').length} concluídas)
           </p>
         </div>
       </div>
@@ -96,7 +100,7 @@ export const ListView: React.FC<ListViewProps> = ({
                   onClick={() => toggleSort('status')}
                   className="w-full flex items-center gap-1 font-bold uppercase tracking-widest hover:text-slate-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
                 >
-                  <span>Status</span>
+                  <span>Etapa</span>
                   <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 </button>
               </th>
@@ -159,16 +163,14 @@ export const ListView: React.FC<ListViewProps> = ({
 
                     <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
                       <select
-                        value={art.status}
-                        onChange={(e) => onUpdateStatus(art.id, e.target.value as ArticleStatus)}
+                        value={art.workflowStageId || ''}
+                        onChange={(e) => onUpdateStage(art.id, e.target.value)}
                         className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-slate-800 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                        aria-label="Atualizar Status"
+                        aria-label="Atualizar Etapa"
                       >
-                        <option value="ideia">Ideia</option>
-                        <option value="pesquisa">Pesquisa</option>
-                        <option value="escrita">Escrita</option>
-                        <option value="revisao">Revisão</option>
-                        <option value="publicado">Publicado</option>
+                        {workflowStages.map(st => (
+                          <option key={st.id} value={st.id}>{st.displayName}</option>
+                        ))}
                       </select>
                     </td>
 

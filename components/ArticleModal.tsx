@@ -1,14 +1,16 @@
 'use client';
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AiTextMarkdown } from '@/components/AiTextMarkdown';
+import { restoreAiCancelFocus, useModalDialog } from '@/lib/hooks/useModalDialog';
+import { AiJobSession } from '@/lib/adapters/aiJobSession';
 
 import type { AiAction } from '@/types/ai';
 
-import { useEntitlement } from '@/lib/contexts/EntitlementContext';
+import { useAiRuntime } from '@/lib/contexts/AiRuntimeContext';
 import {
   onStreamToken,
   onStreamDone,
+  onStreamCanceled,
   onStreamError,
   onStreamNotice,
 } from '@/lib/adapters/localAiAdapter';
@@ -16,8 +18,10 @@ import { SidecarProvider, OllamaProvider } from '@/lib/adapters/aiProviderRouter
 import type { ProviderType, AiOrchestrationRequest } from '@/types/ai';
 
 import React, { useState, useEffect } from 'react';
-import { Article, ArticleStatus, CategoryTag, ChecklistItem } from '@/types/editorial';
+import { Article, ArticleStatus, CategoryTag, ChecklistItem, WorkflowStage, CategoryEntity, ChecklistTemplate } from '@/types/editorial';
+import { fetchChecklistTemplates } from '@/lib/api/articles';
 import { evaluateAiAction } from '@/lib/utils/aiActionEvaluator';
+import { runArticleSave } from '@/lib/utils/articleSave';
 import { 
   X, 
   Save, 
@@ -39,41 +43,27 @@ import {
   Maximize,
   Minimize,
   Copy,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 
 interface ArticleModalProps {
   article: Article | null;
+  workflowStages: WorkflowStage[];
+  categories: CategoryEntity[];
   isOpen: boolean;
   onClose: () => void;
-  onSave: (article: Article) => void;
+  onSave: (article: Article) => void | Promise<void>;
   onDelete: (id: string) => void;
   isFocusMode: boolean;
   setIsFocusMode: (focus: boolean) => void;
   provider?: ProviderType;
 }
 
-const CATEGORIES: CategoryTag[] = [
-  'IA',
-  'Acessibilidade',
-  'Inclusão',
-  'SEO',
-  'Docs',
-  'Blog',
-  'Social',
-  'Linguagem Simples',
-];
-
-const STATUS_OPTIONS: { id: ArticleStatus; label: string }[] = [
-  { id: 'ideia', label: 'Ideia (Cinza)' },
-  { id: 'pesquisa', label: 'Pesquisa (Azul)' },
-  { id: 'escrita', label: 'Escrita (Amarelo)' },
-  { id: 'revisao', label: 'Revisão (Laranja)' },
-  { id: 'publicado', label: 'Publicado (Verde)' },
-];
-
 export const ArticleModal: React.FC<ArticleModalProps> = ({
   article,
+  workflowStages,
+  categories,
   isOpen,
   onClose,
   onSave,
@@ -82,12 +72,15 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   setIsFocusMode,
   provider = 'NONE',
 }) => {
-  const [prevArticleId, setPrevArticleId] = useState<string | null>(null);
+  const fieldId = React.useId();
+  const dialogRef = useModalDialog(isOpen && !!article, onClose);
   const [formData, setFormData] = useState<Article>(() => article || {
     id: '',
     title: '',
     status: 'ideia',
     categoryTag: 'Acessibilidade',
+    workflowStageId: workflowStages.length > 0 ? workflowStages[0].id : undefined,
+    categoryId: categories.length > 0 ? categories[0].id : undefined,
     tags: [],
     publishDate: '',
     summary: '',
@@ -107,33 +100,68 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
   });
 
   const [newChecklistLabel, setNewChecklistLabel] = useState('');
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiCancelling, setAiCancelling] = useState(false);
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiCancelError, setAiCancelError] = useState<string | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [contextNotices, setContextNotices] = useState<{ notice_code: string, message: string, omitted?: string[] }[]>([]);
-  const [analysisContent, setAnalysisContent] = useState('');
-  const [visualDescription, setVisualDescription] = useState('');
+  const analysisContent = typeof formData.analysisContent === 'string' ? formData.analysisContent : '';
+  const [visualDescriptions, setVisualDescriptions] = useState(() => new Map<string, string>());
+  const visualDescription = article ? visualDescriptions.get(article.id) ?? '' : '';
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const aiJobIdRef = React.useRef<string | null>(null);
-  const aiJobActiveRef = React.useRef(false);
-  const unlistenFnsRef = React.useRef<(() => void)[]>([]);
-  
-  const { isPremium: isPremiumMode, selectedModel } = useEntitlement();
+
+  const { selectedModel } = useAiRuntime();
 
   useEffect(() => {
-    return () => {
-      if (unlistenFnsRef.current.length > 0) {
-        unlistenFnsRef.current.forEach(unlisten => unlisten());
-        unlistenFnsRef.current = [];
-      }
-    };
+    fetchChecklistTemplates().then(setChecklistTemplates).catch(console.error);
   }, []);
 
-  if (article && article.id !== prevArticleId) {
-    setPrevArticleId(article.id);
-    setFormData({ ...article });
-    setAiResponse(null);
-    setContextNotices([]);
-    setCopied(false);
+  const aiJobIdRef = React.useRef<string | null>(null);
+  const aiJobActiveRef = React.useRef(false);
+  const sessionRef = React.useRef<AiJobSession | null>(null);
+  const cancelHadFocusRef = React.useRef(false);
+  const sessionKey = isOpen && article ? article.id : null;
+  const saveSessionRef = React.useRef<AbortController | null>(null);
+  const [previousSessionKey, setPreviousSessionKey] = useState(sessionKey);
+  const cleanupListeners = React.useCallback(() => {
+    restoreAiCancelFocus(dialogRef.current, cancelHadFocusRef.current);
+    cancelHadFocusRef.current = false;
+    sessionRef.current?.finish();
+    sessionRef.current = null;
+    aiJobIdRef.current = null;
+  }, [dialogRef]);
+  
+  useEffect(() => {
+    if (sessionKey === null) return;
+    const saveSession = new AbortController();
+    saveSessionRef.current = saveSession;
+    return () => {
+      saveSession.abort();
+      sessionRef.current?.dispose();
+      cleanupListeners();
+      aiJobActiveRef.current = false;
+    };
+  }, [sessionKey, cleanupListeners]);
+
+  if (sessionKey !== previousSessionKey) {
+    setPreviousSessionKey(sessionKey);
+    setAiLoading(false);
+    setAiCancelling(false);
+    setAiStatus('');
+    setAiCancelError(null);
+    setSaveError(null);
+    setSaving(false);
+    if (article && sessionKey !== null) {
+      setFormData({ ...article });
+      setAiResponse(null);
+      setContextNotices([]);
+      setCopied(false);
+    }
   }
 
   const handleCopy = () => {
@@ -178,7 +206,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     e.preventDefault();
     if (!newChecklistLabel.trim()) return;
     const newItem: ChecklistItem = {
-      id: `custom_${Date.now()}`,
+      id: `custom_${crypto.randomUUID()}`,
       label: newChecklistLabel.trim(),
       completed: false,
       category: 'editorial',
@@ -190,6 +218,25 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     setNewChecklistLabel('');
   };
 
+  const handleApplyTemplate = () => {
+    if (!selectedTemplateId) return;
+    const template = checklistTemplates.find(t => t.id === selectedTemplateId);
+    if (!template) return;
+
+    const newItems: ChecklistItem[] = template.items.map(item => ({
+      id: `ci_${crypto.randomUUID()}`,
+      label: item.label,
+      completed: false,
+      category: 'editorial' as any
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      checklists: [...prev.checklists, ...newItems]
+    }));
+    setSelectedTemplateId('');
+  };
+
   const handleDeleteChecklistItem = (id: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -197,23 +244,27 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const saveSession = saveSessionRef.current;
+    if (saving || !saveSession || saveSession.signal.aborted) return;
+    setSaving(true);
+    setSaveError(null);
     // Add history log entry
     const newHistory = [
       {
-        id: `h_${Date.now()}`,
+        id: `h_${crypto.randomUUID()}`,
         date: new Date().toISOString(),
-        action: `Edição de detalhes CMS salvas (Status: ${formData.status.toUpperCase()})`,
+        action: `Edição de detalhes CMS salvas (Etapa: ${workflowStages.find(s => s.id === formData.workflowStageId)?.displayName || formData.status})`,
       },
       ...formData.history,
     ];
 
-    onSave({
-      ...formData,
-      history: newHistory,
+    await runArticleSave(() => onSave({ ...formData, analysisContent, history: newHistory }), saveSession.signal, {
+      onSaved: onClose,
+      onError: () => setSaveError('Não foi possível salvar a pauta. Seu texto continua aqui; tente novamente.'),
+      onSettled: () => setSaving(false),
     });
-    onClose();
   };
 
   // Quick AI Assistant action call via local Tauri IPC
@@ -222,35 +273,27 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     aiJobActiveRef.current = true;
 
     // Cleanup previous listeners to prevent duplicates and memory leaks
-    if (unlistenFnsRef.current.length > 0) {
-      unlistenFnsRef.current.forEach(unlisten => unlisten());
-      unlistenFnsRef.current = [];
-    }
+    cleanupListeners();
 
     setAiLoading(true);
+    setAiCancelling(false);
+    setAiStatus('Preparando geração...');
+    setAiCancelError(null);
     setAiResponse(null);
     setContextNotices([]);
 
-    const jobId = `article_ai_${Date.now()}`;
+    const jobId = `article_ai_${crypto.randomUUID()}`;
+    const session = new AiJobSession(jobId, provider === 'OLLAMA' ? OllamaProvider : SidecarProvider);
+    sessionRef.current = session;
     aiJobIdRef.current = jobId;
     let buffer = '';
 
     try {
-      const localUnlistens: (() => void)[] = [];
-      const cleanupLocal = () => {
-        localUnlistens.forEach(u => u());
-        localUnlistens.length = 0;
-      };
-
-      const cleanupListeners = () => {
-        if (unlistenFnsRef.current.length > 0) {
-          unlistenFnsRef.current.forEach(unlisten => unlisten());
-          unlistenFnsRef.current = [];
-        }
-      };
-
-      try {
-        const unNotice = await onStreamNotice((ev) => {
+      if (provider !== 'OLLAMA' && provider !== 'SIDECAR') {
+        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
+      }
+      if (provider === 'OLLAMA' && !selectedModel) throw new Error('Nenhum modelo OLLAMA selecionado.');
+        await session.listen(() => onStreamNotice((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           if (ev.notice_code === 'CONTEXT_REDUCED' || ev.notice_code === 'EDITORIAL_WARNING') {
             setContextNotices(prev => {
@@ -261,40 +304,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           } else {
             console.warn(`[AI Context Notice] ${ev.notice_code}: ${ev.message}`);
           }
-        });
-        localUnlistens.push(unNotice);
+        }));
 
-        const unToken = await onStreamToken((ev) => {
-          if (ev.job_id !== aiJobIdRef.current) return;
+        await session.listen(() => onStreamToken((ev) => {
+          if (ev.job_id !== aiJobIdRef.current || session.cancellationRequested) return;
           buffer += ev.token;
           setAiResponse(buffer);
-        });
-        localUnlistens.push(unToken);
+          setAiStatus('Gerando...');
+        }));
 
-        const unDone = await onStreamDone((ev) => {
+        await session.listen(() => onStreamDone((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Geração concluída.');
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unDone);
+        }));
 
-        const unError = await onStreamError((ev) => {
+        await session.listen(() => onStreamCanceled((ev) => {
+          if (ev.job_id !== aiJobIdRef.current) return;
+          setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Geração cancelada.');
+          aiJobActiveRef.current = false;
+          cleanupListeners();
+        }));
+
+        await session.listen(() => onStreamError((ev) => {
           if (ev.job_id !== aiJobIdRef.current) return;
           buffer += `\n\nErro: ${ev.message}`;
           setAiResponse(buffer);
           setAiLoading(false);
+          setAiCancelling(false);
+          setAiStatus('Erro na geração.');
           aiJobActiveRef.current = false;
           cleanupListeners();
-        });
-        localUnlistens.push(unError);
-      } catch (err) {
-        cleanupLocal();
-        aiJobActiveRef.current = false;
-        throw err;
-      }
-      
-      unlistenFnsRef.current = localUnlistens;
+        }));
+
+      if (aiJobIdRef.current !== jobId || session.cancellationRequested) return;
 
       const request: AiOrchestrationRequest = {
         job_id: jobId,
@@ -328,35 +376,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         }
       };
 
-      let providerImpl;
-      if (provider === 'OLLAMA') {
-        if (!selectedModel) {
-          throw new Error('Nenhum modelo OLLAMA selecionado.');
-        }
-        providerImpl = OllamaProvider;
-      } else if (provider === 'SIDECAR') {
-        providerImpl = SidecarProvider;
-      } else {
-        throw new Error(`Provedor de inferência local indisponível ou não suportado: ${provider}`);
-      }
-
-      await providerImpl.startInference(request);
+      await session.start(request);
     } catch (err: unknown) {
+      if (aiJobIdRef.current !== jobId) return;
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err);
       setAiResponse(`Erro ao iniciar inferência local: ${message}`);
       setAiLoading(false);
+      setAiCancelling(false);
+      setAiStatus('Erro ao iniciar geração.');
       aiJobActiveRef.current = false;
       
-      // Execute cleanup listeners safely since we are exiting early
-      if (unlistenFnsRef.current.length > 0) {
-        unlistenFnsRef.current.forEach(unlisten => unlisten());
-        unlistenFnsRef.current = [];
-      }
+      cleanupListeners();
+    }
+  };
+
+  const handleCancelAi = async () => {
+    const session = sessionRef.current;
+    if (!session || aiCancelling) return;
+    cancelHadFocusRef.current = !!dialogRef.current?.querySelector('[data-ai-cancel]')?.contains(document.activeElement);
+    setAiCancelling(true);
+    setAiStatus('Cancelando geração...');
+    setAiCancelError(null);
+    try {
+      await session.cancel();
+      if (sessionRef.current !== session) return;
+      setAiLoading(false);
+      setAiCancelling(false);
+      setAiStatus('Geração cancelada.');
+      aiJobActiveRef.current = false;
+      cleanupListeners();
+    } catch (error) {
+      if (sessionRef.current !== session) return;
+      setAiCancelling(false);
+      setAiCancelError(`Falha ao cancelar: ${error instanceof Error ? error.message : String(error)}. Tente novamente.`);
+      setAiStatus('Geração em andamento.');
     }
   };
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto flex items-center justify-center transition-all ${isFocusMode ? 'bg-white dark:bg-slate-950 p-0' : 'bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6'}`}>
+    <dialog ref={dialogRef} aria-labelledby={`${fieldId}-dialog-title`} className={`fixed inset-0 m-0 border-0 w-full max-w-none h-full max-h-none overflow-y-auto hidden open:flex items-center justify-center transition-all motion-reduce:transition-none backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs ${isFocusMode ? 'bg-white dark:bg-slate-950 p-0' : 'bg-transparent p-3 sm:p-6'}`}>
       <div className={`bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col transition-all ${isFocusMode ? 'w-full h-full max-w-5xl max-h-screen border-x shadow-2xl my-auto' : 'border rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto max-h-[92vh]'}`}>
         
         {/* Header */}
@@ -366,7 +424,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               <Layers className="w-4 h-4 text-blue-600" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 id={`${fieldId}-dialog-title`} tabIndex={-1} data-dialog-initial-focus className="text-base font-bold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-500">
                 CMS Editorial Local — {formData.id ? 'Editar Pauta' : 'Nova Pauta'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -396,6 +454,8 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              type="button"
+              aria-label="Fechar pauta"
               className="p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -421,19 +481,21 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form id={`${fieldId}-form`} onSubmit={handleSubmit} aria-busy={saving} className="flex-1 overflow-y-auto p-6">
+          <fieldset disabled={saving} className="min-w-0 space-y-6">
           
           {/* Section 1: Core Fields (Title, Status, Category, Date) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
             {/* Title */}
             <div className="md:col-span-3">
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor={`${fieldId}-title`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
                 Título da Matéria *
               </label>
               <input
                 type="text"
                 required
+                id={`${fieldId}-title`}
                 value={formData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
                 placeholder="Ex: IA para Acessibilidade: Ferramentas para Redações"
@@ -441,19 +503,20 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               />
             </div>
 
-            {/* Status */}
+            {/* Stage */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
-                Status Editorial
+              <label htmlFor={`${fieldId}-stage`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+                Etapa do Fluxo
               </label>
               <select
-                value={formData.status}
-                onChange={(e) => handleChange('status', e.target.value as ArticleStatus)}
+                id={`${fieldId}-stage`}
+                value={formData.workflowStageId || ''}
+                onChange={(e) => handleChange('workflowStageId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
-                {STATUS_OPTIONS.map((st) => (
+                {workflowStages.map((st) => (
                   <option key={st.id} value={st.id}>
-                    {st.label}
+                    {st.displayName}
                   </option>
                 ))}
               </select>
@@ -461,17 +524,18 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             {/* Category */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor={`${fieldId}-category`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
                 Categoria Principal
               </label>
               <select
-                value={formData.categoryTag}
-                onChange={(e) => handleChange('categoryTag', e.target.value as CategoryTag)}
+                id={`${fieldId}-category`}
+                value={formData.categoryId || ''}
+                onChange={(e) => handleChange('categoryId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -479,11 +543,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             {/* Publish Date */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+              <label htmlFor={`${fieldId}-publish-date`} className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
                 Data de Publicação
               </label>
               <input
                 type="date"
+                id={`${fieldId}-publish-date`}
                 value={formData.publishDate}
                 onChange={(e) => handleChange('publishDate', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -500,11 +565,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-summary`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Resumo
                 </label>
                 <textarea
                   rows={2}
+                  id={`${fieldId}-summary`}
                   value={formData.summary}
                   onChange={(e) => handleChange('summary', e.target.value)}
                   placeholder="Síntese da notícia ou reportagem..."
@@ -513,11 +579,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-objective`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Objetivo da Matéria
                 </label>
                 <textarea
                   rows={2}
+                  id={`${fieldId}-objective`}
                   value={formData.objective}
                   onChange={(e) => handleChange('objective', e.target.value)}
                   placeholder="Qual o impacto e mensagem principal para a sociedade?"
@@ -526,37 +593,45 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-content`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Conteúdo para análise (Texto completo)
                 </label>
                 <textarea
                   rows={2}
+                  id={`${fieldId}-content`}
+                  data-ai-retry
                   value={analysisContent}
-                  onChange={(e) => setAnalysisContent(e.target.value)}
+                  onChange={(e) => handleChange('analysisContent', e.target.value)}
+                  aria-describedby={`${fieldId}-analysis-help`}
                   placeholder="Cole o texto da matéria para validação (opcional)..."
                   className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                <p id={`${fieldId}-analysis-help`} className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Texto desta pauta. Para mantê-lo ao reabrir o aplicativo, selecione Salvar Pauta no CMS.
+                </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-visual`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Descrição Visual para Alt Text (Apenas Sessão)
                 </label>
                 <textarea
                   rows={2}
+                  id={`${fieldId}-visual`}
                   value={visualDescription}
-                  onChange={(e) => setVisualDescription(e.target.value)}
+                  onChange={(e) => setVisualDescriptions(previous => new Map(previous).set(article.id, e.target.value))}
                   placeholder="Descreva a imagem (cores, objetos, pessoas, contexto) para gerar o Alt Text..."
                   className="w-full p-2.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-keyword`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Palavra-Chave SEO
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-keyword`}
                   value={formData.keyword}
                   onChange={(e) => handleChange('keyword', e.target.value)}
                   placeholder="Ex: IA para acessibilidade"
@@ -565,11 +640,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-persona`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Persona do Leitor
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-persona`}
                   value={formData.persona}
                   onChange={(e) => handleChange('persona', e.target.value)}
                   placeholder="Ex: Editores e repórteres de redação digital"
@@ -578,11 +654,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-cta`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Chamada para Ação (CTA)
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-cta`}
                   value={formData.cta}
                   onChange={(e) => handleChange('cta', e.target.value)}
                   placeholder="Ex: Baixe o guia completo em PDF"
@@ -591,55 +668,66 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Links Internos & Externos
-                </label>
                 <div className="grid grid-cols-2 gap-2">
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-internal-links`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Links Internos</label>
                   <input
                     type="text"
+                    id={`${fieldId}-internal-links`}
                     value={formData.internalLinks}
                     onChange={(e) => handleChange('internalLinks', e.target.value)}
                     placeholder="URL Interna..."
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-external-links`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Links Externos / Fontes</label>
                   <input
                     type="text"
+                    id={`${fieldId}-external-links`}
                     value={formData.externalLinks}
                     onChange={(e) => handleChange('externalLinks', e.target.value)}
                     placeholder="URL Externa/Fonte..."
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Tempo Estimado x Tempo Gasto
-                </label>
                 <div className="grid grid-cols-2 gap-2">
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-estimated-time`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tempo Estimado</label>
                   <input
                     type="text"
+                    id={`${fieldId}-estimated-time`}
                     value={formData.estimatedTime}
                     onChange={(e) => handleChange('estimatedTime', e.target.value)}
                     placeholder="Estimado (ex: 3h)"
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
+                  <div className="min-w-0">
+                  <label htmlFor={`${fieldId}-spent-time`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tempo Gasto</label>
                   <input
                     type="text"
+                    id={`${fieldId}-spent-time`}
                     value={formData.spentTime}
                     onChange={(e) => handleChange('spentTime', e.target.value)}
                     placeholder="Gasto (ex: 2h 15m)"
-                    className="p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg"
+                    className="w-full p-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label htmlFor={`${fieldId}-notes`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Notas do Jornalista
                 </label>
                 <input
                   type="text"
+                  id={`${fieldId}-notes`}
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   placeholder="Lembretes, contatos de fontes..."
@@ -654,16 +742,22 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-800 dark:text-indigo-300">
-                <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
+                <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse motion-reduce:animate-none" />
                 <span>Assistência de IA para esta Pauta (IA Local)</span>
               </div>
-              {aiLoading && <span className="text-xs text-indigo-600 font-medium">Gerando...</span>}
+              <span role="status" aria-live="polite" className="text-xs text-indigo-600 dark:text-indigo-300 font-medium">{aiStatus}</span>
+              {aiLoading && (
+                <button type="button" onClick={handleCancelAi} data-ai-cancel disabled={aiCancelling} className="px-3 py-2 text-xs rounded-lg bg-red-600 text-white focus-visible:outline-2 focus-visible:outline-sky-500 disabled:opacity-50">
+                  {aiCancelling ? 'Cancelando...' : 'Cancelar geração'}
+                </button>
+              )}
+              {aiCancelError && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{aiCancelError}</p>}
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
               {(() => {
-                const getButtonStyles = (state: string, isPremium: boolean) => {
-                  if (!isPremium || state === 'UNAVAILABLE') {
+                const getButtonStyles = (state: string) => {
+                  if (state === 'UNAVAILABLE') {
                     return "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60";
                   }
                   if (state === 'RECOMMENDED') {
@@ -673,7 +767,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 };
 
                 const evalContext = {
-                  status: formData.status,
+                  semanticClassification: workflowStages.find(stage => stage.id === formData.workflowStageId)?.semanticClassification ?? null,
                   title: formData.title,
                   objective: formData.objective,
                   summary: formData.summary,
@@ -693,71 +787,71 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   <>
                     <button
                       type="button"
-                      onClick={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('research_gaps') : undefined}
-                      disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : gapsCheck.state === 'UNAVAILABLE' ? `Requer: ${gapsCheck.missing}` : aiLoading ? "Ação em andamento" : "Pesquisar Lacunas"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(gapsCheck.state, isPremiumMode)} ${(!isPremiumMode || gapsCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('research_gaps') : undefined}
+                      disabled={gapsCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={gapsCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={gapsCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={gapsCheck.state === 'UNAVAILABLE' ? `Requer: ${gapsCheck.missing}` : aiLoading ? "Ação em andamento" : "Pesquisar Lacunas"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(gapsCheck.state)} ${(gapsCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Sparkles className="w-3.5 h-3.5 inline mr-1" />
-                      Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${gapsCheck.missing})`} {gapsCheck.state === 'RECOMMENDED' && '⭐'}
+                      Pesquisar Lacunas {(gapsCheck.state === 'UNAVAILABLE') && `(Falta ${gapsCheck.missing})`}
                     </button>
                     <button
                       type="button"
-                      onClick={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('plain_language') : undefined}
-                      disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : simplifyCheck.state === 'UNAVAILABLE' ? `Requer: ${simplifyCheck.missing}` : aiLoading ? "Ação em andamento" : "Simplificar Linguagem"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(simplifyCheck.state, isPremiumMode)} ${(!isPremiumMode || simplifyCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('plain_language') : undefined}
+                      disabled={simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={simplifyCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={simplifyCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={simplifyCheck.state === 'UNAVAILABLE' ? `Requer: ${simplifyCheck.missing}` : aiLoading ? "Ação em andamento" : "Simplificar Linguagem"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(simplifyCheck.state)} ${(simplifyCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      🗣️ Simplificar Linguagem {(simplifyCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${simplifyCheck.missing})`} {simplifyCheck.state === 'RECOMMENDED' && '⭐'}
+                      🗣️ Simplificar Linguagem {(simplifyCheck.state === 'UNAVAILABLE') && `(Falta ${simplifyCheck.missing})`} {simplifyCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
                     </button>
                     <button
                       type="button"
-                      onClick={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('validate_inclusivity') : undefined}
-                      disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : aiLoading ? "Ação em andamento" : "Validar Inclusividade"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(inclusivityCheck.state, isPremiumMode)} ${(!isPremiumMode || inclusivityCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('validate_inclusivity') : undefined}
+                      disabled={inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={inclusivityCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={inclusivityCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={inclusivityCheck.state === 'UNAVAILABLE' ? `Requer: ${inclusivityCheck.missing}` : aiLoading ? "Ação em andamento" : "Validar Inclusividade"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(inclusivityCheck.state)} ${(inclusivityCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      🤝 Validar Inclusividade {(inclusivityCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && '⭐'}
+                      🤝 Validar Inclusividade {(inclusivityCheck.state === 'UNAVAILABLE') && `(Falta ${inclusivityCheck.missing})`} {inclusivityCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
                     </button>
 
                     <button
                       type="button"
-                      onClick={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_alt_text') : undefined}
-                      disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : altTextCheck.state === 'UNAVAILABLE' ? `Requer: ${altTextCheck.missing}` : aiLoading ? "Ação em andamento" : "Gerar Alt Text WCAG"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(altTextCheck.state, isPremiumMode)} ${(!isPremiumMode || altTextCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_alt_text') : undefined}
+                      disabled={altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={altTextCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={altTextCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={altTextCheck.state === 'UNAVAILABLE' ? `Requer: ${altTextCheck.missing}` : aiLoading ? "Ação em andamento" : "Gerar Alt Text WCAG"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(altTextCheck.state)} ${(altTextCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      ♿ Alt Text WCAG {(altTextCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${altTextCheck.missing})`} {altTextCheck.state === 'RECOMMENDED' && '⭐'}
+                      ♿ Alt Text WCAG {(altTextCheck.state === 'UNAVAILABLE') && `(Falta ${altTextCheck.missing})`} {altTextCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
                     </button>
                     <button
                       type="button"
-                      onClick={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_seo') : undefined}
-                      disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : seoCheck.state === 'UNAVAILABLE' ? `Requer: ${seoCheck.missing}` : aiLoading ? "Ação em andamento" : "Otimizar Meta Tags SEO"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(seoCheck.state, isPremiumMode)} ${(!isPremiumMode || seoCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('generate_seo') : undefined}
+                      disabled={seoCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={seoCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={seoCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={seoCheck.state === 'UNAVAILABLE' ? `Requer: ${seoCheck.missing}` : aiLoading ? "Ação em andamento" : "Otimizar Meta Tags SEO"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(seoCheck.state)} ${(seoCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      🔍 Otimizar Meta Tags SEO {(seoCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${seoCheck.missing})`} {seoCheck.state === 'RECOMMENDED' && '⭐'}
+                      🔍 Otimizar Meta Tags SEO {(seoCheck.state === 'UNAVAILABLE') && `(Falta ${seoCheck.missing})`} {seoCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
                     </button>
                     <button
                       type="button"
-                      onClick={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('editorial_review') : undefined}
-                      disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
-                      aria-disabled={!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading}
-                      tabIndex={isPremiumMode && editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
-                      title={!isPremiumMode ? "Recurso Premium" : editorialCheck.state === 'UNAVAILABLE' ? `Requer: ${editorialCheck.missing}` : aiLoading ? "Ação em andamento" : "Revisão Editorial"}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${getButtonStyles(editorialCheck.state, isPremiumMode)} ${(!isPremiumMode || editorialCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? () => handleAiAction('editorial_review') : undefined}
+                      disabled={editorialCheck.state === 'UNAVAILABLE' || aiLoading}
+                      aria-disabled={editorialCheck.state === 'UNAVAILABLE' || aiLoading}
+                      tabIndex={editorialCheck.state !== 'UNAVAILABLE' && !aiLoading ? 0 : -1}
+                      title={editorialCheck.state === 'UNAVAILABLE' ? `Requer: ${editorialCheck.missing}` : aiLoading ? "Ação em andamento" : "Revisão Editorial"}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg border min-h-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 motion-reduce:transition-none transition-all ${getButtonStyles(editorialCheck.state)} ${(editorialCheck.state === 'UNAVAILABLE' || aiLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      📋 Revisão Editorial {(editorialCheck.state === 'UNAVAILABLE' && isPremiumMode) && `(Falta ${editorialCheck.missing})`} {editorialCheck.state === 'RECOMMENDED' && '⭐'}
+                      📋 Revisão Editorial {(editorialCheck.state === 'UNAVAILABLE') && `(Falta ${editorialCheck.missing})`} {editorialCheck.state === 'RECOMMENDED' && <span> — Recomendado</span>}
                     </button>
                   </>
                 );
@@ -800,7 +894,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               >
                 <div className="flex items-center justify-between font-bold text-indigo-600 mb-2 text-xs">
                   <span>
-                    Resultado da IA Local{aiLoading && <span className="ml-1 animate-pulse">●</span>}:
+                    Resultado da IA Local{aiLoading && <span aria-hidden="true" className="ml-1 animate-pulse motion-reduce:animate-none">●</span>}:
                   </span>
                   <button
                     type="button"
@@ -812,9 +906,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                   </button>
                 </div>
                 <div className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed font-sans prose prose-sm dark:prose-invert prose-indigo max-w-none prose-p:leading-relaxed prose-headings:font-bold prose-a:text-indigo-600 hover:prose-a:text-indigo-500">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <AiTextMarkdown>
                     {aiResponse}
-                  </ReactMarkdown>
+                  </AiTextMarkdown>
                 </div>
               </div>
             )}
@@ -860,9 +954,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
 
             {/* Add Custom Checklist Item */}
+            <div>
+            <label htmlFor={`${fieldId}-new-checklist`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Novo item de verificação</label>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
+                id={`${fieldId}-new-checklist`}
                 placeholder="Adicionar novo item de verificação..."
                 value={newChecklistLabel}
                 onChange={(e) => setNewChecklistLabel(e.target.value)}
@@ -877,6 +974,36 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
                 <span>Adicionar</span>
               </button>
             </div>
+            </div>
+
+            {/* Checklist Templates (Available to all tiers per Slice 6 contract) */}
+            {checklistTemplates.length > 0 && (
+              <div className="mt-4 bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+                <label htmlFor={`${fieldId}-template`} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Template de checklist</label>
+                <div className="flex items-center space-x-2">
+                <ShieldAlert className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                <select
+                  id={`${fieldId}-template`}
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="min-w-0 flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                >
+                  <option value="">Aplicar template salvo...</option>
+                  {checklistTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleApplyTemplate}
+                  disabled={!selectedTemplateId}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-white hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Aplicar
+                </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 5: History Log */}
@@ -897,9 +1024,11 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
             </div>
           )}
 
+          </fieldset>
         </form>
 
         {/* Footer */}
+        {saveError && <p role="alert" className="px-6 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</p>}
         <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between">
           <button
             type="button"
@@ -910,15 +1039,17 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
           </button>
 
           <button
-            onClick={handleSubmit}
+            type="submit"
+            form={`${fieldId}-form`}
+            disabled={saving}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/30 transition-all flex items-center gap-2 active:scale-95"
           >
             <Save className="w-4 h-4" />
-            <span>Salvar Pauta no CMS</span>
+            <span>{saving ? 'Salvando pauta...' : 'Salvar Pauta no CMS'}</span>
           </button>
         </div>
 
       </div>
-    </div>
+    </dialog>
   );
 };

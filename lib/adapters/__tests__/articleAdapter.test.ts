@@ -13,6 +13,7 @@ describe('Article Adapter', () => {
     publishDate: '2026-08-15',
     summary: 'A test article',
     objective: 'Testing',
+    analysisContent: 'Only article 123.\nSecond line.',
     keyword: 'test',
     persona: 'Developer',
     cta: 'Read more',
@@ -23,7 +24,9 @@ describe('Article Adapter', () => {
     notes: '',
     createdAt: '2026-08-15T12:00:00Z',
     updatedAt: '2026-08-15T12:00:00Z',
-    completedAt: null
+    completedAt: null,
+    workflowStageId: 'stage-ideia',
+    categoryId: 'cat-123'
   };
 
   const dbChecklists: DbChecklistItem[] = [
@@ -41,6 +44,7 @@ describe('Article Adapter', () => {
     expect(article.id).toBe('art_123');
     expect(article.status).toBe('ideia');
     expect(article.tags).toEqual(['SEO', 'Tests']);
+    expect(article.analysisContent).toBe(dbArticle.analysisContent);
     
     // Checklist mapping checks
     expect(article.checklists).toHaveLength(2);
@@ -58,6 +62,7 @@ describe('Article Adapter', () => {
 
     expect(dbArt.id).toBe('art_123');
     expect(dbArt.tags).toBe(JSON.stringify(['SEO', 'Tests']));
+    expect(dbArt.analysisContent).toBe(article.analysisContent);
     
     // Checklist mapping checks
     expect(dbChk).toHaveLength(2);
@@ -78,5 +83,14 @@ describe('Article Adapter', () => {
     const rawData = fromArticleProps(article);
     expect(rawData.checklists).toEqual([]);
     expect(rawData.history).toEqual([]);
+  });
+
+  it('defaults legacy articles to empty content without borrowing another article\'s text', () => {
+    const first = toArticleProps(dbArticle, [], []);
+    const legacy: Article = { ...first, id: 'other', analysisContent: undefined };
+    const raw = fromArticleProps(legacy);
+    expect(raw.article.analysisContent).toBe('');
+    expect(toArticleProps(raw.article, [], []).analysisContent).toBe('');
+    expect(first.analysisContent).toBe('Only article 123.\nSecond line.');
   });
 });

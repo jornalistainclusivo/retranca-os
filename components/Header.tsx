@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { Article } from '@/types/editorial';
-import { useEntitlement } from '@/lib/contexts/EntitlementContext';
-import { exportArticlesJSON, importArticlesJSON, resetToSeedData } from '@/lib/storage';
+import React, { useRef, useState } from 'react';
+import { Article, WorkflowStage } from '@/types/editorial';
+import { exportArticlesJSON, resetToSeedData } from '@/lib/storage';
+import { importArticleFile, articleImportErrorMessage } from '@/lib/api/articleImport';
 import { 
   Search, 
   Plus, 
@@ -22,6 +22,7 @@ import {
 
 interface HeaderProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   darkMode: boolean;
@@ -35,6 +36,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   articles,
+  workflowStages,
   searchTerm,
   setSearchTerm,
   darkMode,
@@ -46,11 +48,16 @@ export const Header: React.FC<HeaderProps> = ({
   onArticlesUpdated,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isPremium: isPremiumMode } = useEntitlement();
+  const importRunning = useRef(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [storageStatus, setStorageStatus] = useState('');
+  const [storageError, setStorageError] = useState('');
 
   // Calculate overall metrics
   const total = articles.length;
-  const publishedCount = articles.filter(a => a.status === 'publicado').length;
+  const publishedCount = articles.filter(a =>
+    workflowStages.find(stage => stage.id === a.workflowStageId)?.lifecycleRole === 'PUBLICATION'
+  ).length;
   const overallPercentage = total > 0 ? Math.round((publishedCount / total) * 100) : 0;
 
   const handleImportClick = () => {
@@ -58,19 +65,33 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const updated = await importArticlesJSON(file);
-        onArticlesUpdated(updated);
-        alert('Pautas importadas com sucesso!');
-      } catch (err: any) {
-        alert(err.message || 'Erro ao importar arquivo.');
-      }
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file || importRunning.current) return;
+    importRunning.current = true;
+    setIsImporting(true);
+    setStorageError('');
+    setStorageStatus('Importando arquivo local...');
+    try {
+      const result = await importArticleFile(file);
+      onArticlesUpdated(result.articles);
+      setStorageStatus(`${result.imported} pauta(s) adicionada(s); ${result.skipped} pauta(s) já existente(s) preservada(s).`);
+    } catch (error: unknown) {
+      setStorageStatus('');
+      setStorageError(articleImportErrorMessage(error));
+    } finally {
+      input.value = '';
+      importRunning.current = false;
+      setIsImporting(false);
     }
   };
 
   const handleReset = () => {
+    if (typeof window !== 'undefined' && (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) {
+      setStorageStatus('');
+      setStorageError('A restauração de exemplos não está disponível no desktop. Suas pautas locais foram preservadas.');
+      return;
+    }
     if (confirm('Tem certeza que deseja restaurar as pautas originais? Suas alterações locais serão redefinidas.')) {
       const resetArticles = resetToSeedData();
       onArticlesUpdated(resetArticles);
@@ -134,15 +155,9 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* AI Assistant Button */}
               <button
-                onClick={isPremiumMode ? onOpenAiModal : undefined}
-                aria-disabled={!isPremiumMode}
-                tabIndex={isPremiumMode ? 0 : -1}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 shadow-2xs ${
-                  isPremiumMode 
-                    ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" 
-                    : "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
-                }`}
-                title={isPremiumMode ? "Assistente IA de Redação Acessível" : "Assistente IA (Recurso Premium)"}
+                onClick={onOpenAiModal}
+                className="px-3 py-1.5 min-h-6 text-xs font-semibold rounded-lg border transition-all motion-reduce:transition-none flex items-center gap-1.5 shadow-2xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                title="Assistente IA de Redação Acessível"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>IA Assistant</span>
@@ -158,19 +173,23 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {/* Storage Controls (Export, Import, Reset) */}
-              <div className="hidden sm:flex items-center space-x-1 pl-1 border-l border-slate-200 dark:border-slate-700">
+              <div role="group" aria-label="Arquivos locais de pautas" aria-busy={isImporting} className="flex flex-wrap items-center gap-1 pl-1 border-l border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => exportArticlesJSON(articles)}
+                  disabled={isImporting}
+                  aria-label="Exportar pautas para arquivo JSON local"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-                  title="Exportar dados em JSON (Backup offline)"
+                  title="Exportar pautas para arquivo JSON local"
                 >
                   <Download className="w-4 h-4" />
                 </button>
 
                 <button
                   onClick={handleImportClick}
+                  disabled={isImporting}
+                  aria-label="Importar pautas de arquivo JSON local"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-                  title="Importar dados JSON"
+                  title="Importar pautas locais, preservando as existentes"
                 >
                   <Upload className="w-4 h-4" />
                 </button>
@@ -179,11 +198,14 @@ export const Header: React.FC<HeaderProps> = ({
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept=".json"
+                  aria-label="Arquivo JSON de pautas locais"
                   className="hidden"
                 />
 
                 <button
                   onClick={handleReset}
+                  disabled={isImporting}
+                  aria-label="Restaurar pautas de exemplo no navegador"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Restaurar pautas iniciais"
                 >
@@ -192,6 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={() => setDarkMode(!darkMode)}
+                  aria-label="Alternar tema escuro/claro"
                   className="hidden md:flex p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors ml-1"
                   title="Alternar tema escuro/claro"
                 >
@@ -215,12 +238,16 @@ export const Header: React.FC<HeaderProps> = ({
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                aria-label="Limpar pesquisa de pautas"
+                className="absolute right-3 top-1/2 -translate-y-1/2 min-h-6 min-w-6 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 ✕
               </button>
             )}
           </div>
+
+          <p role="status" className="text-sm text-slate-700 dark:text-slate-200">{storageStatus}</p>
+          {storageError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{storageError}</p>}
 
           {/* Bottom Line: Global Progress Bar */}
           <div className="w-full bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/80">

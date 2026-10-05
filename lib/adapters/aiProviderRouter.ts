@@ -31,7 +31,7 @@ export const OllamaProvider: AiProvider = {
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
 
     if (!request.model) {
-      throw new Error("Phase 6.2: Seleção explícita de modelo pendente. Selecione um modelo Ollama em Developer Tools.");
+      throw new Error("Selecione um modelo Ollama em IA local antes de iniciar a geração.");
     }
 
     request.provider = 'OLLAMA';
@@ -40,7 +40,6 @@ export const OllamaProvider: AiProvider = {
   async cancelInference(jobId: string) {
     const ready = await ensureTauri();
     if (!ready || !tauriInvoke) throw new Error('Tauri runtime not available');
-    // Defect #5 / Condition #7: Document residual risk regarding Ollama cancellation
-    console.warn("cancelInference is not natively supported by the Ollama REST API yet. The Rust gateway drops the connection, but the model may continue generating in the background.");
+    await tauriInvoke('cancel_ollama_inference', { jobId });
   }
 };

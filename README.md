@@ -8,11 +8,21 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-A versão atual reflete a estabilização da Fase 6.3 no baseline principal (`main`).
-**Phase 6.3 integrated into main**
-**tag:** `v0.1.0-phase-6.3-editorial-ai-orchestration`
+A entrega da fase 6.4 está consolidada no [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), a partir da branch `feat/phase-6.4-pro-workflow-customization`. Em 04/10/2026, o responsável aprovou o fechamento limitado à integração do código em desenvolvimento e autorizou o merge após os quatro jobs passarem no HEAD final. O estado efetivo da integração e seus checks estão no PR. O escopo permanece congelado; novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta entrega, será preservado.
 
-Nesta fase, a orquestração segura de ferramentas de IA Editorial foi finalizada, isolando a interface de usuário da execução e validação da IA através de uma fronteira confiável em Rust. (Nota: Implementações legadas utilizando a API do Gemini como backend padrão de IA ou Cloud Run foram totalmente descontinuadas e substituídas por esta arquitetura local/desktop; qualquer menção a eles na base documental é puramente de caráter histórico).
+| Entrega / verificação | Estado atual |
+| --- | --- |
+| Fluxos dinâmicos, categorias e templates | Implementados na edição aberta, sem conta, assinatura ou ativação comercial ([ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md)). |
+| Texto completo por pauta, salvamento e importação preservadora | Implementados; checks desktop informados pelo responsável estão registrados e não precisam ser repetidos apenas para confirmação. |
+| Seis ações de IA local, cancelamento, fechamento e inventário de modelos | Implementados; aceites funcionais anteriores preservados. Não equivalem a avaliação completa da qualidade de IA. |
+| Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. Auditoria atual ainda registra sete entradas npm afetadas, além da pendência Linux `glib`. |
+| CI publicado | Os quatro jobs passaram em [`8fd28e1`, run 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825): frontend, Rust Windows/Linux e agregador `rust`. Essa revisão inclui o corretivo de fechamento. |
+| Rodada de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O responsável também aprovou os três checks delimitados no desktop com NVDA 2026.2 e teclado. |
+| PR, aceitação e merge | Gate B aprovado para a integração limitada de código. Publicação dos seis documentos, Ready e merge por merge commit autorizados, condicionado aos quatro jobs no novo HEAD. Validação ampla e distribuição permanecem pendentes; tag/release não autorizados. |
+
+O [candidato de fechamento](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md) é o ponto de entrada para resultados, limites, decisões propostas e o novo roteiro desktop. A [revisão de segurança](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) mantém seu intervalo imutável; a [correção de dependências](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md) registra o lock e as verificações anteriores. Os registros de IA/CMS/importação/inventário permanecem em `docs/testing`; seus aceites se aplicam às revisões e ambientes identificados.
+
+O baseline anterior desta entrega é a fase 6.3. A assistência atual usa uma fronteira confiável em Rust; APIs legadas de Gemini/Cloud Run foram removidas do fluxo. Menções históricas não representam a arquitetura implementada.
 
 ## 3. Editorial workflow
 
@@ -21,6 +31,8 @@ O fluxo de trabalho foi desenhado para maximizar a ergonomia cognitiva e a aten�
 ## 4. Local-first persistence
 
 O projeto opera sob o princípio local-first. O armazenamento de artigos, rascunhos e configurações ocorre primariamente no dispositivo do jornalista. A camada de persistência utiliza um banco de dados SQLite local, orquestrado e gerenciado por Drizzle ORM integrado nativamente através do Tauri SQL Plugin.
+
+Na implementação do ADR-014, **Salvar Pauta no CMS** inclui o texto completo daquela pauta. A atualização do SQLite para schema 2 cria um backup junto ao banco antes de acrescentar o campo; dados antigos começam com texto completo vazio. A aplicação dessa migração ao banco editorial exige confirmação separada antes de iniciar a nova versão. Fechar sem salvar descarta a edição do texto; a descrição visual continua temporária e vinculada à sua pauta.
 
 ## 5. Editorial AI
 
@@ -59,7 +71,14 @@ O stack moderno do Retranca OS baseia-se em tecnologias focadas em performance e
 - **TypeScript** (Tipagem estrita full-stack)
 - **SQLite** com **Tauri SQL Plugin** e **Drizzle ORM** (Persistência)
 
-## 9. Development prerequisites
+## 9. Platforms and development prerequisites
+
+| Sistema | Evidência disponível | Limite |
+| --- | --- | --- |
+| Windows | Operação desktop em desenvolvimento informada pelo responsável; Rust debug/release e frontend passam no CI identificado acima. | Instalador, instalação limpa, atualização e recuperação não validados nesta rodada. |
+| Linux | Rust debug/release passam no CI Ubuntu, com bibliotecas nativas e mock sidecar. A revisão estática das 442 fontes resolvidas não encontrou chamadas externas ao iterador afetado do `glib`. | Execução desktop humana, instalador e motor real não demonstrados por esse CI; `glib` 0.18.5 permanece afetado e exige manutenção compatível. |
+
+O CI verifica código e testes; não executa `tauri build`, instalação de bundles nem publicação de binários. Essas evidências não justificam prometer instaladores Windows/Linux prontos para distribuição. Uma tag de marco pode ser considerada depois do merge autorizado; não é necessária para integrar código. Release com binários depende de validação própria, decisão de licença e resolução dos riscos aplicáveis.
 
 - Node.js e NPM
 - Rust / Cargo
@@ -80,9 +99,13 @@ sudo apt install -y pkg-config build-essential curl wget file \
 ## 10. Development commands
 
 ```bash
-# Inicializar ambiente de desenvolvimento de desktop:
-npm run dev:desktop
+# Inicializar o desktop com os arquivos locais atuais:
+npx tauri dev
 ```
+
+O Tauri inicia o frontend automaticamente. Para IA real, mantenha o Ollama em execução, confira os modelos instalados com `ollama list` e selecione um deles no controle **IA local**. A seleção é válida durante a sessão; ao reiniciar o aplicativo, selecione novamente. Não é necessário fazer commit para visualizar alterações locais.
+
+`npm run dev:desktop` também inicia `scripts/dev/model-fixture-server.mjs`, um servidor de fixtures de provisionamento para desenvolvimento. Para verificar um modelo real já instalado no Ollama, use `npx tauri dev`. `npm run dev` isoladamente abre apenas o frontend web, sem o runtime nativo de inferência.
 
 **Sidecar binary (required by the build):**
 
@@ -112,6 +135,7 @@ Para verificar a integridade antes de cometer código (sempre exigida para pull 
 
 **Frontend Validation:**
 ```bash
+npx tsc --noEmit --incremental false
 npm run lint
 npm test
 npm run build
@@ -136,8 +160,8 @@ O diretório `/docs` é a espinha dorsal de conhecimento arquitetural do projeto
 
 ## 13. Immediate roadmap
 
-- **Phase 6.4:** Identity, Authentication & Entitlements Foundation
-- **Phase 6.5:** Production Provider & Model Experience
+- **Phase 6.4:** Escopo congelado para fechar os critérios de aceitação e integrar após autorização específica. Consulte o candidato de fechamento; novas funcionalidades seguirão em outra branch.
+- **Phase 6.5:** Production Provider & Model Experience. Preservar o incremento 1 já aceito; motor/modelo real, instalação e distribuição continuam no plano preliminar.
 
 ## 14. Governance
 

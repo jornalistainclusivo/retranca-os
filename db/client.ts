@@ -1,15 +1,17 @@
 import Database from '@tauri-apps/plugin-sql';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
+import { runPhase64Migration } from './migrations/phase64Migrate';
+import { invoke } from '@tauri-apps/api/core';
 
 let dbInstance: any = null;
+let dbInitialization: Promise<any> | null = null;
 
-export const getDb = async () => {
-  if (dbInstance) return dbInstance;
+const initializeDb = async () => {
   
   // Inicialização assíncrona do plugin nativo Tauri
-  const sqlite = await Database.load('sqlite:retranca.db');
+  const sqlite = await Database.get('sqlite:retranca.db');
   
-  // Garantia de migração (DDL) na inicialização
+  // Garantia de migração (DDL) na inicialização — existing tables
   await sqlite.execute(`
     CREATE TABLE IF NOT EXISTS articles (
       id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL,
@@ -37,7 +39,11 @@ export const getDb = async () => {
       icon TEXT NOT NULL, unlocked INTEGER NOT NULL, unlockedAt TEXT
     );
   `);
-  
+
+  // Run Phase 6.4 Migration (Backup, Expand, Backfill, Verify, Cutover)
+  await runPhase64Migration(sqlite);
+  await invoke('migrate_article_content');
+
   // Interceptador Drizzle -> Tauri
   dbInstance = drizzle(async (sql, params, method) => {
     try {
@@ -53,9 +59,20 @@ export const getDb = async () => {
       }
     } catch (e: any) {
       console.error('SQL Execution Error:', e);
-      return { rows: [] };
+      throw e;
     }
   });
 
   return dbInstance;
+};
+
+export const getDb = async () => {
+  if (dbInstance) return dbInstance;
+  if (!dbInitialization) {
+    dbInitialization = initializeDb().catch(error => {
+      dbInitialization = null;
+      throw error;
+    });
+  }
+  return dbInitialization;
 };

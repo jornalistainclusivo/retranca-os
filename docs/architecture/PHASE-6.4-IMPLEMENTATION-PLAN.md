@@ -1,0 +1,393 @@
+---
+jinc-spec-version: 1.1.0
+project-name: Retranca OS
+status: approved
+related-branch: docs/phase-6.4-product-access-monetization
+tech-stack: Tauri, Rust, TypeScript
+created-at: 2026-09-15
+updated-at: 2026-10-02
+---
+
+# Phase 6.4 Implementation Plan
+
+> **2026-09-30 amendment — open single edition:** [ADR-013](../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
+
+
+**PHASE 6.4 — IMPLEMENTATION PLAN — APPROVED BY HUMAN IMPLEMENTATION GATE**
+
+HUMAN IMPLEMENTATION GATE A APPROVED.
+PHASE 6.4 IMPLEMENTATION IS AUTHORIZED ON THE APPROVED FEATURE BRANCH.
+
+## Executive implementation objective
+
+### Current accessibility/runtime corrective — 2026-10-02
+
+The owner granted continued development/consolidation/publication/manual-CI autonomy within the current feature work, superseding historical per-action-confirmation wording below. Import source `b2860c617856fe8048d3ac219a38c713c7f69c4d` passed [exact-source CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37070928920), and the owner reported aggregate acceptance of the three import checks. Preserve earlier accepted CMS/AI/import observations.
+
+The next narrow corrective applies ADR-008 native provider authority and the existing dialog/recovery requirements to model provisioning: native dialog/keyboard/close controls, truthful non-desktop errors, post-download preflight readback and event cleanup. [Model provisioning UI validation](../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md) records 272 frontend tests, lint/types/build and isolated browser observations; the owner subsequently accepted its three desktop checks, while NVDA remains untested. No new engine, dependency, migration, CI/authentication change or actual model download is introduced. Phase 6.5 remains a draft; full Gate B and human merge/release Gates C/D remain open.
+
+The owner subsequently accepted the three notice/provider/layout checks and reported late keyboard access to the collapsed local-settings trigger. Its follow-up renders that single global control before page children, preserving visual placement and native provider/persistence behavior. The owner then confirmed entry/model choice but reported dismissal failure and missing X. The [current report's dismissal corrective](../testing/PHASE-6.4-MODEL-PROVISIONING-UI-VALIDATION.md#local-ai-settings-dismissal-corrective) records the named X, scoped Escape/focus return with foreground-dialog precedence, 274 frontend tests, lint/types/build and isolated pointer/keyboard checks. Retest only desktop X/Escape closure; this refines existing UI requirements without a new ADR decision. NVDA/full Gate B and production runtime decisions remain separate.
+
+### Current local import amendment — 2026-10-02
+
+[ADR-015](../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md) adds bounded local JSON import through native schema-2 SQLite transactions, preserving existing IDs and adding only new articles. The browser follows the same preservation policy; this is not a full database restore. Canonical bundled-sidecar path resolution is implemented, while real engine/model binding and installer acceptance remain open. No new migration, dependency or CI/authentication configuration is introduced.
+
+The owner authorized continued development/code consolidation/publication for this round; this supersedes earlier repeated commit/push confirmation wording within that scope, without authorizing actual data restoration, merge or release. Prior `0891740` passed [CI 37064072955](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37064072955); current checks and the partial canonical security result are recorded in [local import validation](../testing/PHASE-6.4-LOCAL-IMPORT-VALIDATION.md). Full Gate B remains pending. [Phase 6.5](PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) is a draft for review.
+
+### Resumption and narrow UI follow-up — 2026-10-02
+
+The owner authorized resumed development. The article-content corrective was separately authorized for commit/push and manual CI as `c03c928`; frontend, Rust Windows/Linux and the required Rust aggregate passed in [run 36940623994](https://github.com/jornalistainclusivo/retranca-os/actions/runs/36940623994), rechecked at the clean, synchronized resumption checkpoint. This supersedes pending-publication status in the historical preparation paragraphs below; full Gate B remains open.
+
+The [resumption report](../testing/PHASE-6.4-SLICE-8-RESUMPTION-VALIDATION.md) documents removal of the obsolete hardcoded footer model/conformance label, named article loading and reduced-motion/decorative-indicator corrections. It prepares the six-action desktop handoff with the installed `gemma4:latest`. These changes use existing ADR-008/013/014 and accessibility requirements; no new architecture decision, provider, dependency, migration or CI/authentication change is introduced. Commit/push still require separate confirmation. Preserve the prior owner content/cancellation acceptance; upcoming real-model and accessibility results remain distinct evidence.
+
+The owner subsequently reported all AI options working and identified a CMS-save failure. Its corrective uses unique creation IDs and preflight related-row ownership handling to repair the reproduced default-checklist collision, including partially saved drafts and retry identity, and removes only the requested Research Gaps recommendation suffix. Added regressions and an isolated production Drizzle/SQLite probe validate the save path. The owner then reported all three corrective desktop recovery/save/restart checks as passing (`1 OK, 2 OK, 3 OK`, 2026-10-02). No mass data rewrite or new migration is planned; local consolidation/publication still require separate confirmations. This acceptance does not close Gate B or the remaining accessibility/runtime boundaries.
+
+### Slice 8 follow-up — 2026-10-01
+
+The product owner authorized local consolidation of the prior checkpoint and continued implementation, reaffirming a new confirmation before each subsequent commit/push. The approved checkpoint is saved as `ac453e8`. Its follow-up implements native Ollama request cancellation, session lifecycle cleanup and modal dialog focus under the existing architecture; no dependency, migration, CI/authentication change or new provider is required. See the [cancellation/focus validation](../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md) for current local checks and the owner's three-step desktop acceptance (`1 ok; 2 ok; 3 ok`, 2026-10-01). The follow-up was saved as `8e22c18`, separately authorized for publication and passed Windows/Linux/frontend CI on that exact source commit. Documentation commit `543d033` was also separately authorized and published. Further commits/pushes still require confirmation. Gate B, merge and release remain pending; the historical sequence below is subject to ADR-013.
+
+### Remaining acceptance sequence — 2026-10-01
+
+The [Slice 8 acceptance closure plan](../testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-PLAN.md) defines the next evidence pass: all six real-model actions, remaining manual accessibility and error paths, packaged-runtime acceptance and independent technical/security review. Preserve accepted cancellation/keyboard evidence; repeat it only for a relevant change or regression. Gate B is required before PR readiness, followed by CI on the published revision and explicit human merge authorization. Phase 6.5 remains a separately specified production provider/model experience; unresolved acceptance gaps cannot silently become passing tests. No new runtime implementation or architecture decision is established by this planning checklist.
+
+### Article CMS content corrective — ADR-014, 2026-10-01
+
+Before continuing all-action acceptance, resolve the reported cross-article analysis text defect. The owner explicitly approved saving full text with each article. [ADR-014](../decisions/ADR-014-ARTICLE-CMS-CONTENT-PERSISTENCE.md) records the narrow persistence extension: article-owned `analysisContent`, explicit CMS save, adapter/browser compatibility and a native backup-backed transactional migration from schema 1 to 2. Saved text remains untrusted under ADR-008; visual descriptions stay session-only and article-scoped.
+
+Implementation and local checks are complete. The owner first confirmed closing the application to unblock compilation and clarified that A/B was not yet tested; later the owner reported all three content checks as passing (`1 OK; 2 OK; 3 OK`) and authorized continuing development. Preserve those distinct events. See the [content validation and three-step handoff](../testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). No new dependency, CI/authentication change, agent-run actual database mutation, commit or push is part of the completed preparation. Actual schema/backup files were not independently inspected. Review and consolidation are next; ask separately before each required migration/consolidation/publication action, without rerunning an already accepted migration.
+
+The requested image/text/document attachments are preserved as [product discovery](../specifications/ARTICLE-ATTACHMENTS-DISCOVERY.md). They require a defined file-storage/export scope and, for optional image inference, a separate capability contract. This correction does not implement binary attachments or expand the current alt-text evidence contract. Historical statements below that the open-edition change required no migration remain true for that earlier change; ADR-014 is the later content-specific extension.
+
+The [corrective review follow-up](../testing/PHASE-6.4-ARTICLE-CONTENT-REVIEW.md) records two low-severity imported-input render failures and their subsequent targeted fixes, plus save-session isolation. Final frontend checks passed (236 tests/20 files, lint/types/build). Native source is unchanged since its recorded debug/release checks. The frozen scan's canonical coverage remains partial; frontend discovery was independent, while native review was completed by the parent. This does not close full Gate B. Header JSON import/native restore and packaged SIDECAR resolution remain explicitly scoped acceptance gaps. After reviewing the prepared result, the owner explicitly authorized the local consolidation commit of its 32 files. Push still requires separate authorization.
+
+### Current execution amendment (2026-09-30)
+
+The current implementation follows ADR-013: one open edition, with no commercial gates. Slice 3's entitlement core is retired; Slice 4 retains native domain enforcement without commercial authorization; Slice 6 exposes customization to everyone; Slice 7 uses dynamic recommendation semantics and preserves native evidence/runtime requirements. The legacy feature branch name is retained. No new dependency, migration, CI change, commercial adapter, or authentication integration is required.
+
+See the [Slice 8 integration/hardening checkpoint](../testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md) and [saved Slice 7 validation](../testing/PHASE-6.4-SLICE-7-OPEN-EDITION-VALIDATION.md). Slice 8 automated gates passed locally; its remaining acceptance checks and Gates B/C/D are pending. Current release enforcement checks native domain/evidence rules and debug-only raw inference registration. Deleted entitlement/developer-premium tests are retired under ADR-013, not current acceptance criteria. The earlier ordered plan below records the original implementation sequence; its commercial criteria have been superseded.
+Original objective (historical, commercial portion superseded): implement dynamic workflow stages and commercial entitlement states following the Phase 6.4 architecture's five-state application entitlement model, cleanly separating semantic recommendation from the structural publication lifecycle role, without selecting a concrete commercial adapter.
+
+## Approved baseline / source of truth
+- ADR-008, ADR-009, ADR-010, ADR-013, ADR-014 (current); ADR-011/012 remain historical, superseded commercial decisions.
+- Phase 6.4 Software Design Document (SDD)
+- Phase 6.4 Technical Specification (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
+- Phase 6.4 Tauri IPC Contracts (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
+- Phase 6.4 Test Specification (RE-APPROVED NORMATIVE BASELINE — HUMAN SPEC GATE)
+
+The re-approved Spec revisions are the normative implementation baseline.
+
+## Scope
+- Domain and persistence schema migration to relational dynamic workflow and categories.
+- Entitlement lifecycle model in Rust (Unknown, FreeConfirmed, ProActive, ProTemporarilyUnverifiable, ProUnavailable).
+- Secure Tauri IPC boundaries.
+- Frontend dynamic integration preserving calendar, stats, and AI.
+- Customization UX for Pro users.
+
+## Non-goals
+- Selection or integration of a commercial entitlement provider, payment gateway, or auth mechanism.
+- Arbitrary UI redesign outside of workflow stage and category management.
+- Dropping legacy data.
+
+## Source-reality findings
+1. **`publicado`**: Hardcoded in `types/editorial.ts` (`ArticleStatus`) and heavily referenced in UI components (`Sidebar.tsx`, `StatsView.tsx`, `ListView.tsx`, `KanbanBoard.tsx`).
+   - `app/page.tsx` currently sets `completedAt` when moving to `publicado`.
+   - Leaving `publicado` currently preserves `completedAt`.
+   - Publication transition writes history.
+   - Entering `publicado` triggers motivational UI.
+   - Statistics/published counts and overdue logic depend on current publication status.
+2. **`completedAt`**: Exists as an optional string in `Article` interface and `db/schema.ts`, capturing the timestamp when the article moves to a publication lifecycle role.
+3. **`publishDate`**: Used extensively (`YYYY-MM-DD`) for scheduling, filtering, and organizing the `CalendarView` and `KanbanBoard` warnings. `publishDate` is not publication lifecycle authority.
+4. **Calendar**: `CalendarView.tsx` relies strictly on `publishDate` for positioning. Calendar publication styling/checkmark depends on publication state.
+5. **Statistics**: `StatsView.tsx` computes delayed logic based on publication status.
+6. **Filters**: Time filtering logic relies on `publishDate` and publication status (located primarily in `app/page.tsx`).
+7. **Browser/localStorage Fallback**: A local-storage fallback exists in `lib/storage.ts` storing current Free article data. It is an existing compatibility path, not merely a dev convenience. Plan parity is required for: default stages/categories, stable identities, publication lifecycle role, article transitions, migration/shim from legacy browser data, and Free baseline.
+8. **DEVELOPER_PREMIUM**: Already exists in `src-tauri/src/entitlements.rs` behind `#[cfg(debug_assertions)]`. The existing debug-only developer override may serve as a development / test decision fixture for exercising permitted PRO application paths. It MUST NOT be production entitlement evidence. Release builds MUST NOT establish ProActive from DEVELOPER_PREMIUM.
+
+## Dependency decisions
+- **Existing Dependencies**: The repository currently uses `drizzle-orm`, `tauri-plugin-sql`, `serde`, and native Rust capabilities.
+- **Stable-ID / UUID**: PROPOSE, but DO NOT install: Rust crate `uuid`. Slice 1 may update Cargo.toml only AFTER Human Implementation Gate and only if the dependency decision is accepted as part of the approved Implementation Plan. No Cargo change now.
+- **Deferred Provider**: Concrete commercial entitlement provider SDKs (concrete commercial entitlement provider — DEFERRED). No provider has been selected.
+
+## Implementation branch strategy
+Canonical future implementation branch: `feat/phase-6.4-pro-workflow-customization`.
+It MUST be created only AFTER Gate A passes (DO NOT create it now, DO NOT branch from main, DO NOT delete the documentation branch):
+1. Human Spec Re-Approval
+2. Human Implementation Plan Approval
+It MUST branch from the FINAL APPROVED Phase 6.4 documentation HEAD on `docs/phase-6.4-product-access-monetization`. origin/main remains an independently verified baseline/reference.
+
+## Ordered slices 0-8
+
+### SLICE 0 — Foundation & Tools Validation
+- **Purpose**: Ensure existing tools, test suites, and CI pass before starting.
+- **Upstream requirements**: N/A
+- **Dependencies on prior slices**: None.
+- **Existing files expected to change**: None.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: N/A
+- **Implementation steps**: Run full test suites locally.
+- **Tests to add/update**: None.
+- **Actual validation commands**: `npm run lint`, `npm run test`, `npm run lint:rs`, `npm run test:rs`
+- **Migration considerations**: None.
+- **Security considerations**: Ensure no local env contamination.
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: None.
+- **Expected user-visible effect**: None.
+- **Explicit non-goals**: Modifying any code.
+- **Exit criteria**: Clean CI run.
+- **Stop conditions**: Any failing test blocks progress.
+- **Atomic commit boundary**: None.
+
+### SLICE 1 — Domain + Persistence Foundation
+- **Purpose**: Upgrade database schema (`db/schema.ts` and `src-tauri` migrations) to support dynamic workflow stages and custom categories. MUST NOT replace/drop legacy `status` and `categoryTag` before safe migration. Creates domain/persistence foundation and EXPAND-compatible structures.
+- **Upstream requirements**: ADR-009, ADR-010, SDD Phase 6.4.
+- **Dependencies on prior slices**: Slice 0.
+- **Existing files expected to change**: `db/schema.ts`, `types/editorial.ts`, `src-tauri/Cargo.toml` (if uuid added).
+- **PROPOSED NEW FILES**: `src-tauri/migrations/002_dynamic_workflow.sql`.
+- **Responsibility of each affected/new file**: Define new relations, preserve legacy columns for migration window.
+- **Implementation steps**:
+  - Add `workflow_stages` and `categories` tables.
+  - Modify `articles` table to add nullable `workflow_stage_id` and `category_id` (foreign keys) alongside existing `status` and `categoryTag`.
+- **Tests to add/update**: DB schema unit tests in Rust.
+- **Actual validation commands**: `cargo test --manifest-path src-tauri/Cargo.toml --locked`.
+- **Migration considerations**: Ensure new schema can accept legacy data in Slice 2. Creates the expansion required.
+- **Security considerations**: Safe schema rollout, no data drops.
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: None.
+- **Expected user-visible effect**: None (backend only).
+- **Explicit non-goals**: Data migration.
+- **Exit criteria**: Migrations run successfully on a fresh database.
+- **Stop conditions**: Migration fails or breaks existing schema tests.
+- **Atomic commit boundary**: `feat(db): implement dynamic workflow schema`
+
+### SLICE 2 — Safe Migration
+- **Purpose**: Migrate existing legacy records to the new dynamic relational model safely. Performs: backup, expand, backfill, verify, cutover.
+- **Upstream requirements**: BR-MIG-001, BR-MIG-002, TEST-MIG-001..012.
+- **Dependencies on prior slices**: Slice 1.
+- **Existing files expected to change**: `src-tauri/src/models/`, `src-tauri/src/orchestrator.rs`.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Execution of migration transactions safely.
+- **Implementation steps**:
+  - BACKFILL: Insert exact legacy statuses (`ideia` through `publicado`) into `workflow_stages`.
+  - MAPPING: Update existing articles to point to the new IDs.
+  - VERIFY: Ensure exact matching, no unknown values, exactly one active publication-role stage.
+  - CUTOVER: Make new columns required. No destructive cutover before verify.
+  - FAIL CLOSED ONLY: If an unknown status is encountered, FAIL CLOSED ONLY.
+- **Tests to add/update**: Test `TEST-MIG-001` to `TEST-MIG-012`, plus publication lifecycle migration tests.
+- **Actual validation commands**: `cargo test --manifest-path src-tauri/Cargo.toml --locked`.
+- **Migration considerations**: Preserve all `checklist_items`. Legacy `publicado` maps to stage with `lifecycle_role = PUBLICATION` preserving Calendar and Stats. Handle postconditions, failure rollback, restart/retry, unknown values failing closed, and the publication-role invariant.
+- **Security considerations**: No data loss.
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: Migration logic here applies to Tauri SQL.
+- **Expected user-visible effect**: None.
+- **Explicit non-goals**: Modifying frontend components yet.
+- **Exit criteria**: Legacy app data loads seamlessly into the new structure.
+- **Stop conditions**: Verification step fails, rollback occurs.
+- **Atomic commit boundary**: `feat(db): backfill and migrate legacy articles`
+
+### SLICE 3 — Entitlement Application Core
+- **Purpose**: Implement the hybrid local-first entitlement states (`Unknown`, `FreeConfirmed`, `ProActive`, `ProTemporarilyUnverifiable`, `ProUnavailable`) in Rust.
+- **Upstream requirements**: ADR-011, ADR-012, SDD.
+- **Dependencies on prior slices**: None.
+- **Existing files expected to change**: `src-tauri/src/entitlements.rs`.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Define and validate entitlement domains.
+- **Implementation steps**:
+  - Update `EntitlementStatus` enum to support all 5 lifecycle states.
+  - Enforce protected-mutation authorization semantics: PERMIT `ProActive`, `ProTemporarilyUnverifiable`. DENY `FreeConfirmed`, `Unknown`, `ProUnavailable` (subject to normal domain/business validation).
+  - FreeConfirmed -> ProActive transition only when valid production PRO entitlement is established.
+  - Update `DEVELOPER_PREMIUM` logic to map to `ProActive` when enabled in debug mode, ensuring it never becomes production authority.
+- **Tests to add/update**: State transitions `FreeConfirmed -> ProActive`, Downgrade safe tests, Temporary unverifiability safe tests.
+- **Actual validation commands**: `cargo test --manifest-path src-tauri/Cargo.toml --locked`.
+- **Migration considerations**: None.
+- **Security considerations**: Release builds must strictly reject `DEVELOPER_PREMIUM` overrides (`get_entitlements` must not expose developer premium in release).
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: None.
+- **Expected user-visible effect**: None.
+- **Explicit non-goals**: Commercial entitlement provider integration, payment, auth, crypto proof, or revocation protocols.
+- **Exit criteria**: Rust logic correctly identifies Free vs Pro states and transitions.
+- **Stop conditions**: Entitlement states bleed into release inappropriately.
+- **Atomic commit boundary**: `feat(core): implement entitlement state machine`
+
+### SLICE 4 — Native Domain Operations + IPC
+- **Purpose**: Enforce authorization boundaries at the IPC level and include FULL approved IPC domain surface.
+- **Upstream requirements**: Phase 6.4 IPC Contracts.
+- **Dependencies on prior slices**: Slice 1, Slice 3.
+- **Existing files expected to change**: `src-tauri/src/orchestrator.rs`, `src-tauri/src/lib.rs`.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Expose and protect IPC commands.
+- **Implementation steps**:
+  - Add Tauri commands for FULL domain surface: workflow reads/mutations, categories, templates, ordinary article stage assignment, ordinary category assignment, template application, protected authorization, ProActive, ProTemporarilyUnverifiable, FreeConfirmed denial, Unknown denial, ProUnavailable denial, direct IPC bypass, publication-role transfer, canonical errors, transaction rollback.
+  - Wrap protected commands in entitlement checks (must be `ProActive` or `ProTemporarilyUnverifiable`).
+  - Implement the special safe-removal transaction where articles moved to the target remain continuously published, preserving `completedAt`. Do not implement a false publication exit/re-entry cycle.
+- **Tests to add/update**: Direct IPC bypass tests (verify IPC rejects unauthorized PRO mutations), assignment semantics tests.
+- **Actual validation commands**: `cargo test --manifest-path src-tauri/Cargo.toml --locked`.
+- **Migration considerations**: None.
+- **Security considerations**: Authorization must occur natively in Rust; UI hiding is insufficient. Direct IPC cannot bypass.
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: None.
+- **Expected user-visible effect**: None (backend only).
+- **Explicit non-goals**: Frontend UI adjustments.
+- **Exit criteria**: Tauri commands reject PRO actions if entitlement is Free. Protected mutations PERMIT on ProActive/ProTemporarilyUnverifiable, DENY on FreeConfirmed/Unknown/ProUnavailable.
+- **Stop conditions**: Any IPC command executes a protected mutation without checking authorization.
+- **Atomic commit boundary**: `feat(ipc): secure pro domain operations`
+
+### SLICE 5 — Frontend Dynamic Domain Integration
+- **Purpose**: Adapt the React frontend to consume dynamic stages and categories, covering actual affected paths.
+- **Upstream requirements**: SDD, IPC Contracts.
+- **Dependencies on prior slices**: Slice 1, Slice 2, Slice 4.
+- **Existing files expected to change**: `app/page.tsx`, `components/KanbanBoard.tsx`, `components/Sidebar.tsx`, `components/StatsView.tsx`, `components/ListView.tsx`, `components/CalendarView.tsx`, `lib/adapters/articleAdapter.ts`, `lib/storage.ts`.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Use dynamic records and new fields (like `lifecycle_role`).
+- **Implementation steps**:
+  - Refactor components to use dynamic stages instead of hardcoded strings.
+  - Map publication-state compatibility to `current stage lifecycle_role === PUBLICATION` (preserving Stats, Calendar visual checks).
+  - **Browser Fallback**: Provide a local-storage shim for dynamic stages implementing complete plan parity (identities, roles, migration). Plan a compatible browser representation for workflow stages, categories, lifecycle_role, stable IDs, legacy localStorage migration/shim, article stage/category references. Do not silently preserve only Article.status strings.
+- **Tests to add/update**: Vitest unit tests for Kanban column rendering with dynamic stages and `PUBLICATION` role handling, native/browser semantic parity tests.
+- **Actual validation commands**: `npm run test`.
+- **Migration considerations**: Browser fallback must properly migrate its local storage legacy structures.
+- **Security considerations**: None.
+- **Accessibility considerations**: Ensure columns maintain ARIA labels.
+- **Browser/localStorage considerations**: Shim must properly emulate the relational structure.
+- **Expected user-visible effect**: Kanban boards load stages dynamically.
+- **Explicit non-goals**: PRO customization UX.
+- **Exit criteria**: UI functions normally with dynamic data and correctly maps legacy states.
+- **Stop conditions**: UI regression or data loss in browser mode.
+- **Atomic commit boundary**: `feat(ui): integrate dynamic workflow stages`
+
+### SLICE 6 — PRO Customization UX
+- **Purpose**: Provide the interface for PRO users to modify their workflows.
+- **Upstream requirements**: UI/UX Contract, PRD ACs.
+- **Dependencies on prior slices**: Slice 3, Slice 5.
+- **Existing files expected to change**: `app/page.tsx` (Settings Modal / Views).
+- **PROPOSED NEW FILES**: `components/WorkflowEditor.tsx`.
+- **Responsibility of each affected/new file**: UI layer for invoking protected IPC commands.
+- **Implementation steps**:
+  - Create forms for adding/editing workflow stages, custom categories, and checklist templates.
+  - UX must preserve exactly-one publication role invariant. Removal workflow explicitly requires target, which receives role atomically.
+  - Enforce complete UI decision model for NEW protected structural configuration mutations: ENABLED for `ProActive` and `ProTemporarilyUnverifiable`; DENIED / mutation controls unavailable for `FreeConfirmed`, `Unknown`, and `ProUnavailable`.
+  - Preserve all downgrade/continuity guarantees: existing custom workflow configuration remains visible and usable for ordinary editorial work; downgrade never deletes/resets/remaps configuration; `FreeConfirmed` blocks NEW PRO configuration changes only; `Unknown` and `ProUnavailable` preserve data/config; `ProTemporarilyUnverifiable` continues existing configuration use/edit. Do not hide existing user content/configuration merely because protected mutation is denied.
+- **Tests to add/update**: UI rendering covering all authorization states: `ProActive` (protected controls enabled), `ProTemporarilyUnverifiable` (protected controls enabled under approved continuity semantics), `FreeConfirmed` (new protected configuration mutation denied; existing configuration remains visible/usable), `Unknown` (protected mutation denied; data/config preserved), and `ProUnavailable` (protected mutation denied; data/config preserved). Direct native IPC remains authoritative regardless of frontend state.
+- **Actual validation commands**: `npm run test`.
+- **Migration considerations**: None.
+- **Security considerations**: UI checks reflect but do not replace native IPC checks.
+- **Accessibility considerations**: Keyboard-operable target selection, clear confirmation copy, focus management, error announcement, reorder controls keyboard accessible.
+- **Browser/localStorage considerations**: Customization mock works correctly in browser fallback.
+- **Expected user-visible effect**: `ProActive` and `ProTemporarilyUnverifiable` may perform protected configuration mutations. `FreeConfirmed` may continue ordinary editorial work and use preserved configuration but cannot create NEW protected configuration changes. `Unknown` and `ProUnavailable` preserve existing data/configuration while denying protected mutations. Free discoverability is contextual/discreet. No mandatory login, no dark pattern, no destructive downgrade behavior.
+- **Explicit non-goals**: Actual checkout or billing UI.
+- **Exit criteria**: Customization UX is accessible, functional, and entitlement-aware.
+- **Stop conditions**: Accessibility violations detected.
+- **Atomic commit boundary**: `feat(ui): add workflow customization interface`
+
+### SLICE 7 — Phase 6.3 AI Semantic Integration
+- **Purpose**: Ensure Phase 6.3 AI contextual evaluation works with dynamic stages using `semantic_classification`.
+- **Upstream requirements**: Phase 6.4 AI Evaluation requirements.
+- **Dependencies on prior slices**: Slice 5.
+- **Existing files expected to change**: `lib/utils/aiActionEvaluator.ts`.
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Provide proper AI UX recommendations based on semantics, not lifecycle role.
+- **Implementation steps**:
+  - Semantic classification maps to recommendation UX only. Validated article evidence provides action availability.
+  - Ensure the six Phase 6.3 actions remain fully accessible in the Free baseline.
+  - Rust serves as authoritative evidence validation. Lifecycle role provides no AI action availability authority.
+- **Tests to add/update**: AI evaluation tests with custom stages and regression tests.
+- **Actual validation commands**: `npm run test`.
+- **Migration considerations**: None.
+- **Security considerations**: None.
+- **Accessibility considerations**: None.
+- **Browser/localStorage considerations**: Must work seamlessly in fallback.
+- **Expected user-visible effect**: AI suggestions remain accurate across custom workflow stages and do not regress.
+- **Explicit non-goals**: Altering AI prompts or models.
+- **Exit criteria**: AI suggestions perform perfectly with custom stages.
+- **Stop conditions**: AI actions incorrectly blocked on Free.
+- **Atomic commit boundary**: `feat(ai): map dynamic stages to ai evaluators`
+
+### SLICE 8 — Integration / Security / Release Hardening
+- **Purpose**: Final lockdown and verification.
+- **Upstream requirements**: Security NFRs.
+- **Dependencies on prior slices**: All prior slices.
+- **Existing files expected to change**: Entire workspace (via tests).
+- **PROPOSED NEW FILES**: None.
+- **Responsibility of each affected/new file**: Passing full suite.
+- **Implementation steps**:
+  - Verify release profile (`npm run test:rs:release`) rigorously blocks `DEVELOPER_PREMIUM`.
+  - Validate all data migrations, unknown legacy migrations failing closed only, and checklist history preservation.
+- **Tests to add/update**: E2E (meaning tool-neutral acceptance / integration coverage using the approved repository test stack unless a future Human Gate authorizes another framework). No Jest. No Playwright.
+- **Actual validation commands**: Full CI pipeline run (`npm run lint`, `npm run test`, `npm run lint:rs`, `npm run test:rs`, `npm run test:rs:release`). No Jest or Playwright invented.
+- **Migration considerations**: Final check.
+- **Security considerations**: Release build hardening.
+- **Accessibility considerations**: Final automated check.
+- **Browser/localStorage considerations**: Run frontend tests to ensure shim is intact.
+- **Expected user-visible effect**: Stable release.
+- **Explicit non-goals**: New feature work.
+- **Exit criteria**: All tests pass natively and in release configuration.
+- **Stop conditions**: Fail if any hardcoded legacy reference breaks compilation or if `DEVELOPER_PREMIUM` leaks to release.
+- **Atomic commit boundary**: `chore: release hardening and e2e validation`
+
+## Migration and recovery sequencing
+Backup -> Expand -> Backfill -> Verify -> Cutover. If Verify fails, the transaction rolls back gracefully. Unknown values fail closed safely, preventing data loss.
+
+## Security enforcement sequencing
+IPC boundary locks down structural mutations natively in Rust first, prior to UI updates. ProActive or ProTemporarilyUnverifiable permits; FreeConfirmed, Unknown, ProUnavailable denies.
+
+## Frontend integration sequencing
+Frontend adapts to dynamic reads before customization UI is exposed, guaranteeing read compatibility precedes mutation capability.
+
+## AI regression sequencing
+AI semantics update follows frontend integration, ensuring exactly the 6 Free AI actions remain universally available regardless of Pro structural configuration.
+
+## Accessibility verification
+Keyboard-operable target selection, focus management, error announcement, and reordering accessibility verified during Customization UX (Slice 6).
+
+## CI / release-build verification
+Full suite verification includes `npm run test:rs:release` ensuring mock `DEVELOPER_PREMIUM` is excluded from production binaries.
+
+## Rollback / recovery rules
+All native database mutations use transactions. Failure during migration, stage removal, or publication-role transfer results in atomic rollback.
+
+## Global stop conditions
+- approved Spec contradicts current source materially;
+- baseline frontend/Rust checks fail before Phase 6.4 changes;
+- migration would destroy or silently remap user data;
+- unknown legacy status/category encountered;
+- browser fallback cannot preserve required semantic parity;
+- exactly-one publication-role invariant cannot be maintained;
+- protected mutation can bypass native authorization;
+- DEVELOPER_PREMIUM leaks into production authority;
+- implementation requires selecting commercial entitlement provider;
+- implementation requires payment/auth/proof/crypto/storage/freshness/binding/revocation decisions;
+- an undocumented new dependency becomes necessary;
+- implementation requires modifying another repository.
+
+## Human gates
+- **PRE-GATE**: Human Spec Re-Approval (PASSED).
+- **GATE A**: Human Implementation Plan Approval (PASSED).
+- **GATE B**: Post-implementation technical/security review (PENDING). (Required before PR readiness).
+- **GATE C**: Human Merge Authorization (PENDING). (Required before merge).
+- **GATE D**: Release/tag authorization (NOT AUTHORIZED / PENDING EXPLICIT HUMAN DECISION).
+
+## Final Definition of Done
+- all 12 FRs satisfied.
+- all 3 NFRs satisfied.
+- all 11 ACs satisfied.
+- exactly one active publication role exists.
+- semantic PUBLISHED is independent from publication lifecycle.
+- safe role transfer implemented.
+- completedAt compatibility preserved.
+- publishDate independence maintained.
+- migration of known values succeeds.
+- unknown values fail closed.
+- checklist history preserved.
+- workflow customization works.
+- categories work.
+- checklist templates work.
+- downgrade is safe.
+- temporary unverifiability is safe.
+- Free -> PRO application transition covered.
+- direct IPC cannot bypass authorization.
+- release DEVELOPER_PREMIUM cannot grant production PRO.
+- six Phase 6.3 AI actions remain Free.
+- Rust evidence remains authoritative.
+- browser/localStorage parity preserved.
+- frontend validation passes.
+- Rust validation passes.
+- commercial entitlement adapter remains deferred.

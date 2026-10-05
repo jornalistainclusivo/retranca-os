@@ -58,3 +58,11 @@ Rejeitamos categoricamente a introdução de frameworks como LangChain, Flowise 
 ## Deferred Decisions
 * O mecanismo algorítmico exato de *escaping* e o tipo do parser para a Delimitação Segura (seja tags XML defensivas `<user_input>` ou estruturação JSON) ficam postergados para o detalhamento no Software Design Document (SDD) da Phase 6.3B.
 * A definição das políticas de _Fallback Provider_ ou de qual LLM específico orquestrará qual Ação, permanecem atreladas à gestão de Entitlements/Provisionamento fora deste ADR.
+
+## Implementation evidence — 2026-09-30
+
+[ADR-013](ADR-013-OPEN-SINGLE-EDITION.md) retires commercial entitlements while preserving this native orchestration boundary. The [Slice 8 checkpoint](../testing/PHASE-6.4-SLICE-8-HARDENING-VALIDATION.md) also treats generated output as untrusted at rendering: both AI modals preserve Markdown image descriptions as text, preventing automatic image loads without changing native prompts or provider selection. This is implementation hardening, not a new provider or authorization architecture. Ollama native cancellation and manual dialog accessibility remain acceptance gaps; they are not established by passing orchestration/rendering tests.
+
+## Implementation evidence — 2026-10-01
+
+The [Slice 8 cancellation/focus follow-up](../testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md) implements native job ownership and HTTP teardown acknowledgement. The new cancel command does not accept prompts/programs or bypass this ADR's orchestration/evidence boundary. Dialog/session changes release late listeners and request cancellation on close. Raw inference remains debug-only, and ADR-013's open-edition policy is unchanged. Native transport tests and browser focus evidence are recorded separately from pending actual-model desktop acceptance; server/GPU interruption, production packaging and comprehensive accessibility are not established.

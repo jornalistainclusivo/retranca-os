@@ -1,4 +1,25 @@
-import { Article, ChecklistItem, GovernanceDoc } from '@/types/editorial';
+import { Article, ChecklistItem, GovernanceDoc, WorkflowStage, CategoryEntity } from '@/types/editorial';
+import { STANDARD_WORKFLOW_IDS, STANDARD_CATEGORY_IDS } from '@/db/migrations/phase64StandardIds';
+
+export const DEFAULT_WORKFLOW_STAGES: WorkflowStage[] = [
+  { id: STANDARD_WORKFLOW_IDS.IDEIA, displayName: 'Ideia', orderIndex: 0, semanticClassification: 'IDEA', lifecycleRole: null, isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_WORKFLOW_IDS.PESQUISA, displayName: 'Pesquisa', orderIndex: 1, semanticClassification: 'RESEARCH', lifecycleRole: null, isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_WORKFLOW_IDS.PRODUCAO, displayName: 'Escrita', orderIndex: 2, semanticClassification: 'DRAFTING', lifecycleRole: null, isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_WORKFLOW_IDS.REVISAO, displayName: 'Revisão', orderIndex: 3, semanticClassification: 'REVIEW', lifecycleRole: null, isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_WORKFLOW_IDS.PUBLICADO, displayName: 'Publicado', orderIndex: 4, semanticClassification: 'PUBLISHED', lifecycleRole: 'PUBLICATION', isActive: true, createdAt: new Date().toISOString() },
+];
+
+export const DEFAULT_CATEGORIES: CategoryEntity[] = [
+  { id: STANDARD_CATEGORY_IDS.IA, name: 'IA', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.ACESSIBILIDADE, name: 'Acessibilidade', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.INCLUSAO, name: 'Inclusão', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.SEO, name: 'SEO', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.DOCS, name: 'Docs', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.BLOG, name: 'Blog', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.SOCIAL, name: 'Social', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+  { id: STANDARD_CATEGORY_IDS.LINGUAGEM_SIMPLES, name: 'Linguagem Simples', origin: 'standard', isActive: true, createdAt: new Date().toISOString() },
+];
+
 
 const createDefaultChecklist = (): ChecklistItem[] => [
   { id: 'chk_1', label: 'Pesquisa pronta e checagem de fatos', completed: true, category: 'pesquisa' },

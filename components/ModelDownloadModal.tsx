@@ -1,14 +1,60 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, AlertTriangle, CheckCircle2, Loader2, XCircle, HardDrive } from 'lucide-react';
+import { Download, AlertTriangle, Loader2, XCircle, HardDrive, X } from 'lucide-react';
 import type { ModelStatus, DownloadProgressEvent } from '@/types/ai';
+import { useModalDialog } from '@/lib/hooks/useModalDialog';
+import { subscribeModelDownloadProgress } from '@/lib/api/modelProvisioning';
 
 interface ModelDownloadModalProps {
   isOpen: boolean;
   modelStatus: ModelStatus;
   onStartDownload: () => void;
   onDismiss: () => void;
+  errorMessage?: string | null;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  return `${parseFloat((bytes / 1024 ** index).toFixed(1))} ${units[index]}`;
+}
+
+function ModelDownloadProgress() {
+  const [download, setDownload] = useState<DownloadProgressEvent>({ progress: 0, bytes_downloaded: 0, bytes_total: 0 });
+  useEffect(() => subscribeModelDownloadProgress(setDownload), []);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center space-x-3" role="status">
+        <Loader2 className="w-5 h-5 text-blue-600 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Baixando modelo...</span>
+      </div>
+      <div className="space-y-2">
+        <div
+          className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={download.progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Download do modelo"
+        >
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-300 ease-out motion-reduce:transition-none"
+            style={{ width: `${download.progress}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>{formatBytes(download.bytes_downloaded)} / {formatBytes(download.bytes_total)}</span>
+          <span className="font-bold text-blue-600 dark:text-blue-400">{download.progress}%</span>
+        </div>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Você pode fechar este aviso; o download continuará. Mantenha o aplicativo aberto até a conclusão e a verificação do modelo.
+      </p>
+    </div>
+  );
 }
 
 export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
@@ -16,71 +62,61 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
   modelStatus,
   onStartDownload,
   onDismiss,
+  errorMessage,
 }) => {
-  const [progress, setProgress] = useState(0);
-  const [bytesDownloaded, setBytesDownloaded] = useState(0);
-  const [bytesTotal, setBytesTotal] = useState(0);
+  const visible = isOpen && modelStatus !== 'READY';
+  const dialogRef = useModalDialog(visible, onDismiss);
 
-  // Listen for download-progress events from Tauri
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
-
-    const setupListener = async () => {
-      try {
-        const { listen } = await import('@tauri-apps/api/event');
-        unlisten = await listen('download-progress', (event) => {
-          const payload = event.payload as DownloadProgressEvent;
-          setProgress(payload.progress);
-          setBytesDownloaded(payload.bytes_downloaded);
-          setBytesTotal(payload.bytes_total);
-        }) as unknown as () => void;
-      } catch {
-        // Not in Tauri environment
-      }
-    };
-
-    if (modelStatus === 'DOWNLOADING') {
-      setupListener();
+    const dialog = dialogRef.current;
+    // A state change can remove the focused download/retry button.
+    if (visible && dialog?.open && !dialog.contains(document.activeElement)) {
+      dialog.querySelector<HTMLElement>('[data-dialog-initial-focus]')?.focus();
     }
+  }, [visible, modelStatus, dialogRef]);
 
-    return () => {
-      if (unlisten) unlisten();
-    };
-  }, [modelStatus]);
-
-  if (!isOpen) return null;
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-  };
+  if (!visible) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 m-0 border-0 w-full max-w-none h-full max-h-none overflow-y-auto bg-transparent backdrop:bg-slate-900/70 backdrop:backdrop-blur-sm hidden open:flex items-center justify-center p-4"
       aria-labelledby="model-download-title"
+      onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])');
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        const atHeading = document.activeElement?.hasAttribute('data-dialog-initial-focus');
+        // Keep boundary Tab presses in the notice rather than browser chrome.
+        if (event.shiftKey && (document.activeElement === first || atHeading)) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-md shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <span className="p-2.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               <HardDrive className="w-5 h-5" />
             </span>
-            <div>
-              <h2 id="model-download-title" className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Modelo de IA do Retranca
+            <div className="min-w-0 flex-1">
+              <h2 id="model-download-title" tabIndex={-1} data-dialog-initial-focus className="text-base font-bold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-blue-500">
+                Modelo embutido do Retranca
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Provisionamento do modelo para inferência offline
+                Download e verificação no aplicativo desktop
               </p>
             </div>
+            <button type="button" onClick={onDismiss} aria-label="Fechar aviso de modelo" className="shrink-0 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-blue-500">
+              <X className="w-5 h-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
 
@@ -93,8 +129,8 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
               <div className="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                 <Download className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-800 dark:text-amber-200">
-                  <p className="font-bold mb-1">Download necessário</p>
-                  <p>O modelo de IA do Retranca ainda não foi provisionado neste dispositivo. O download é necessário para executá-lo offline.</p>
+                  <p className="font-bold mb-1">Modelo embutido não instalado</p>
+                  <p>Este aviso trata do modelo embutido. Se você já usa um modelo no Ollama, pode fechar o aviso e continuar com sua configuração local.</p>
                 </div>
               </div>
               <button
@@ -108,55 +144,22 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 onClick={onDismiss}
                 className="w-full px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
-                Fechar (continuar sem Sidecar)
+                Fechar aviso
               </button>
             </div>
           )}
 
           {/* DOWNLOADING state */}
-          {modelStatus === 'DOWNLOADING' && (
-            <div className="space-y-4" aria-live="polite" aria-atomic="true">
-              <div className="flex items-center space-x-3">
-                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  Baixando modelo...
-                </span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="space-y-2">
-                <div
-                  className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={progress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Download do modelo: ${progress}% concluído`}
-                >
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  <span>{formatBytes(bytesDownloaded)} / {formatBytes(bytesTotal)}</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">{progress}%</span>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Não feche a aplicação durante o download. O modelo será verificado automaticamente após a conclusão.
-              </p>
-            </div>
-          )}
+          {modelStatus === 'DOWNLOADING' && <ModelDownloadProgress />}
 
           {/* VERIFYING state */}
           {modelStatus === 'VERIFYING' && (
             <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" aria-live="polite">
-              <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin motion-reduce:animate-none shrink-0" aria-hidden="true" />
               <div className="text-xs text-blue-800 dark:text-blue-200">
                 <p className="font-bold">Verificando integridade...</p>
                 <p>Validando assinatura Ed25519 e hash SHA-256 do modelo.</p>
+                <p className="mt-1">Você pode fechar este aviso. Mantenha o aplicativo aberto até a verificação terminar.</p>
               </div>
             </div>
           )}
@@ -188,7 +191,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-red-800 dark:text-red-200">
                   <p className="font-bold mb-1">Falha no provisionamento</p>
-                  <p>Ocorreu um erro durante o download ou a verificação do modelo. Tente novamente.</p>
+                  <p>{errorMessage || 'Ocorreu um erro durante o download ou a verificação do modelo. Tente novamente.'}</p>
                 </div>
               </div>
               <button
@@ -209,6 +212,6 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
 
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };

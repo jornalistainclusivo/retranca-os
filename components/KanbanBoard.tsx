@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Article, ArticleStatus } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
 import { 
   CheckCircle2, 
   Clock, 
@@ -15,67 +15,36 @@ import {
 
 interface KanbanBoardProps {
   articles: Article[];
+  workflowStages: WorkflowStage[];
   searchTerm: string;
   onSelectArticle: (article: Article) => void;
-  onUpdateArticleStatus: (id: string, newStatus: ArticleStatus) => void;
+  onUpdateArticleStage: (id: string, newStageId: string) => void;
   onToggleChecklist: (articleId: string, checklistId: string) => void;
 }
 
-const STATUS_COLUMNS: {
-  id: ArticleStatus;
-  title: string;
-  badgeBg: string;
-  badgeText: string;
-  leftBorder: string;
-  dotColor: string;
-}[] = [
-  {
-    id: 'ideia',
-    title: 'Ideia',
-    badgeBg: 'bg-slate-100 dark:bg-slate-800',
-    badgeText: 'text-slate-700 dark:text-slate-300',
-    leftBorder: 'border-l-4 border-l-slate-400',
-    dotColor: 'bg-slate-400',
-  },
-  {
-    id: 'pesquisa',
-    title: 'Pesquisa',
-    badgeBg: 'bg-blue-50 dark:bg-blue-950',
-    badgeText: 'text-blue-700 dark:text-blue-300',
-    leftBorder: 'border-l-4 border-l-blue-500',
-    dotColor: 'bg-blue-500',
-  },
-  {
-    id: 'escrita',
-    title: 'Escrita',
-    badgeBg: 'bg-yellow-50 dark:bg-amber-950',
-    badgeText: 'text-yellow-800 dark:text-amber-300',
-    leftBorder: 'border-l-4 border-l-yellow-500',
-    dotColor: 'bg-yellow-500',
-  },
-  {
-    id: 'revisao',
-    title: 'Revisão',
-    badgeBg: 'bg-orange-50 dark:bg-orange-950',
-    badgeText: 'text-orange-800 dark:text-orange-300',
-    leftBorder: 'border-l-4 border-l-orange-500',
-    dotColor: 'bg-orange-500',
-  },
-  {
-    id: 'publicado',
-    title: 'Publicado',
-    badgeBg: 'bg-emerald-50 dark:bg-emerald-950',
-    badgeText: 'text-emerald-800 dark:text-emerald-300',
-    leftBorder: 'border-l-4 border-l-emerald-500',
-    dotColor: 'bg-emerald-500',
-  },
-];
+const getColorClasses = (stage: WorkflowStage) => {
+  switch (stage.semanticClassification) {
+    case 'IDEA':
+      return { badgeBg: 'bg-slate-100 dark:bg-slate-800', badgeText: 'text-slate-700 dark:text-slate-300', leftBorder: 'border-l-4 border-l-slate-400', dotColor: 'bg-slate-400' };
+    case 'RESEARCH':
+      return { badgeBg: 'bg-blue-50 dark:bg-blue-950', badgeText: 'text-blue-700 dark:text-blue-300', leftBorder: 'border-l-4 border-l-blue-500', dotColor: 'bg-blue-500' };
+    case 'DRAFTING':
+      return { badgeBg: 'bg-yellow-50 dark:bg-amber-950', badgeText: 'text-yellow-800 dark:text-amber-300', leftBorder: 'border-l-4 border-l-yellow-500', dotColor: 'bg-yellow-500' };
+    case 'REVIEW':
+      return { badgeBg: 'bg-orange-50 dark:bg-orange-950', badgeText: 'text-orange-800 dark:text-orange-300', leftBorder: 'border-l-4 border-l-orange-500', dotColor: 'bg-orange-500' };
+    case 'PUBLISHED':
+      return { badgeBg: 'bg-emerald-50 dark:bg-emerald-950', badgeText: 'text-emerald-800 dark:text-emerald-300', leftBorder: 'border-l-4 border-l-emerald-500', dotColor: 'bg-emerald-500' };
+    default:
+      return { badgeBg: 'bg-slate-100 dark:bg-slate-800', badgeText: 'text-slate-700 dark:text-slate-300', leftBorder: 'border-l-4 border-l-slate-400', dotColor: 'bg-slate-400' };
+  }
+};
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   articles,
+  workflowStages,
   searchTerm,
   onSelectArticle,
-  onUpdateArticleStatus,
+  onUpdateArticleStage,
   onToggleChecklist,
 }) => {
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -89,7 +58,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   // Helper to format date badge
   const getDateBadge = (art: Article) => {
-    if (art.status === 'publicado') {
+    const stage = workflowStages.find(s => s.id === art.workflowStageId);
+    if (stage?.lifecycleRole === 'PUBLICATION') {
       return (
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 flex items-center gap-1 font-mono">
           <CheckCircle2 className="w-3 h-3" /> Publicado
@@ -138,8 +108,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-6 h-[calc(100vh-140px)] min-h-[600px] snap-x">
-      {STATUS_COLUMNS.map((col) => {
-        const colArticles = articles.filter((a) => a.status === col.id);
+      {workflowStages.map((col) => {
+        const colArticles = articles.filter((a) => a.workflowStageId === col.id);
+        const styles = getColorClasses(col);
 
         return (
           <div
@@ -149,12 +120,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {/* Column Header */}
             <div className="flex items-center justify-between mb-3 px-1 shrink-0">
               <div className="flex items-center space-x-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${styles.dotColor}`} />
                 <h3 className="text-[11px] font-bold tracking-widest uppercase text-slate-700 dark:text-slate-300">
-                  {col.title}
+                  {col.displayName}
                 </h3>
               </div>
-              <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${col.badgeBg} ${col.badgeText}`}>
+              <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${styles.badgeBg} ${styles.badgeText}`}>
                 {colArticles.length}
               </span>
             </div>
@@ -163,7 +134,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
               {colArticles.length === 0 ? (
                 <div className="p-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-400">
-                  Nenhuma pauta em {col.title}
+                  Nenhuma pauta em {col.displayName}
                 </div>
               ) : (
                 colArticles.map((art) => {
@@ -172,7 +143,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   return (
                     <div
                       key={art.id}
-                      className={`bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-slate-200 dark:border-slate-800 ${col.leftBorder} shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all group`}
+                      className={`bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-slate-200 dark:border-slate-800 ${styles.leftBorder} shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all group`}
                     >
                       {/* Top Bar: Date + Category */}
                       <div className="flex items-center justify-between mb-2">
@@ -196,27 +167,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       {/* Status Selector Dots */}
                       <div className="mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                         <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">
-                          Status
+                          Etapa
                         </div>
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                          {STATUS_COLUMNS.map((sc) => {
-                            const isSelected = art.status === sc.id;
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto gap-1">
+                          {workflowStages.map((sc) => {
+                            const isSelected = art.workflowStageId === sc.id;
                             return (
                               <button
                                 key={sc.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onUpdateArticleStatus(art.id, sc.id);
+                                  onUpdateArticleStage(art.id, sc.id);
                                 }}
-                                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${
+                                className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all shrink-0 ${
                                   isSelected
                                     ? 'font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-700 shadow-2xs'
                                     : 'hover:text-slate-700 dark:hover:text-slate-300 opacity-60'
                                 }`}
-                                title={`Mover para ${sc.title}`}
+                                title={`Mover para ${sc.displayName}`}
                               >
                                 <span>{isSelected ? '●' : '○'}</span>
-                                <span className="hidden sm:inline">{sc.title.slice(0, 3)}</span>
+                                <span className="hidden sm:inline truncate max-w-[40px]">{sc.displayName.slice(0, 3)}</span>
                               </button>
                             );
                           })}
