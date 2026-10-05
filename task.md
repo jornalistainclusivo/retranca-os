@@ -7,9 +7,11 @@
 - [x] Correct CMS labels, template name and Calendar native keyboard opener; preserve values, callbacks, provider and persistence contracts.
 - [x] Candidate frontend: 289 tests / 26 files, types, lint and static build passed. Isolated Chrome labels/template/Calendar Enter/Space/Escape focus return and sampled 320 CSS px CMS reflow passed.
 - [x] Record current residual security triage, proposed integration boundary and Windows/Linux evidence limits; update README around current state.
-- [ ] Owner desktop/NVDA acceptance and explicit decision on remaining manual/runtime evidence and Linux glib risk; Gate B stays open.
-- [x] Owner explicitly authorized commit/push of the 11 reviewed files and Draft PR on 2026-10-04; final published-source checks and actual desktop/NVDA results remain pending.
-- [ ] Separate specific merge authorization; optional tag/release remains separately gated. New features belong to another branch.
+- [x] Owner accepted the three bounded desktop/NVDA 2026.2 checks: CMS names/editing, template keyboard application and retested Calendar script.
+- [x] Published corrective `8fd28e1` and Draft [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5); [CI 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825) passed all four jobs on that exact SHA.
+- [x] Investigate locked Linux source callers: all 442 resolved package sources searched; the affected glib iterator/entry point appears only within glib. Proposed upstream GTK-chain update Wry #1843 remains unreleased/open; keep package maintenance and distribution gates explicit.
+- [x] Owner approved the bounded source-integration boundary on 2026-10-04; Gate B closes for code integration only. Broader manual accessibility and packaged-runtime validation remain open before distribution. Publishing the six documentation updates and Ready status are authorized.
+- [x] Owner specifically authorized merge commit after all four jobs pass on the final published HEAD. Actual completion is tracked in PR #5; tag/release remain separately gated. New features belong to another branch.
 
 Current entry point and bounded handoff: [closure candidate](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md). Subsequent sections retain historical results and authorizations; they do not turn unverified checks into passes.
 

@@ -8,7 +8,7 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-Em 04/10/2026, a fase 6.4 está publicada na branch `feat/phase-6.4-pro-workflow-customization` e ainda não foi integrada à `main`. O escopo está congelado para fechamento: corrigir barreiras existentes, registrar decisões sobre riscos, reunir evidências e preparar o PR. Novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta branch, será preservado.
+A entrega da fase 6.4 está consolidada no [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), a partir da branch `feat/phase-6.4-pro-workflow-customization`. Em 04/10/2026, o responsável aprovou o fechamento limitado à integração do código em desenvolvimento e autorizou o merge após os quatro jobs passarem no HEAD final. O estado efetivo da integração e seus checks estão no PR. O escopo permanece congelado; novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta entrega, será preservado.
 
 | Entrega / verificação | Estado atual |
 | --- | --- |
@@ -16,13 +16,13 @@ Em 04/10/2026, a fase 6.4 está publicada na branch `feat/phase-6.4-pro-workflow
 | Texto completo por pauta, salvamento e importação preservadora | Implementados; checks desktop informados pelo responsável estão registrados e não precisam ser repetidos apenas para confirmação. |
 | Seis ações de IA local, cancelamento, fechamento e inventário de modelos | Implementados; aceites funcionais anteriores preservados. Não equivalem a avaliação completa da qualidade de IA. |
 | Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. Auditoria atual ainda registra sete entradas npm afetadas, além da pendência Linux `glib`. |
-| CI publicado | Os quatro jobs passaram em [`7e9702b`, run 37212420511](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37212420511): frontend, Rust Windows/Linux e agregador `rust`. |
-| Rodada local de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O novo diff exige publicação e CI próprios. |
-| Aceitação e merge | Gate B aberto: aceite desktop/NVDA e decisão explícita sobre riscos/evidências restantes. Merge, tag e release exigem autorizações específicas. |
+| CI publicado | Os quatro jobs passaram em [`8fd28e1`, run 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825): frontend, Rust Windows/Linux e agregador `rust`. Essa revisão inclui o corretivo de fechamento. |
+| Rodada de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O responsável também aprovou os três checks delimitados no desktop com NVDA 2026.2 e teclado. |
+| PR, aceitação e merge | Gate B aprovado para a integração limitada de código. Publicação dos seis documentos, Ready e merge por merge commit autorizados, condicionado aos quatro jobs no novo HEAD. Validação ampla e distribuição permanecem pendentes; tag/release não autorizados. |
 
 O [candidato de fechamento](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md) é o ponto de entrada para resultados, limites, decisões propostas e o novo roteiro desktop. A [revisão de segurança](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) mantém seu intervalo imutável; a [correção de dependências](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md) registra o lock e as verificações anteriores. Os registros de IA/CMS/importação/inventário permanecem em `docs/testing`; seus aceites se aplicam às revisões e ambientes identificados.
 
-O baseline integrado na `main` continua sendo a fase 6.3. A assistência atual usa uma fronteira confiável em Rust; APIs legadas de Gemini/Cloud Run foram removidas do fluxo. Menções históricas não representam a arquitetura implementada.
+O baseline anterior desta entrega é a fase 6.3. A assistência atual usa uma fronteira confiável em Rust; APIs legadas de Gemini/Cloud Run foram removidas do fluxo. Menções históricas não representam a arquitetura implementada.
 
 ## 3. Editorial workflow
 
@@ -76,7 +76,7 @@ O stack moderno do Retranca OS baseia-se em tecnologias focadas em performance e
 | Sistema | Evidência disponível | Limite |
 | --- | --- | --- |
 | Windows | Operação desktop em desenvolvimento informada pelo responsável; Rust debug/release e frontend passam no CI identificado acima. | Instalador, instalação limpa, atualização e recuperação não validados nesta rodada. |
-| Linux | Rust debug/release passam no CI Ubuntu, com bibliotecas nativas e mock sidecar. | Execução desktop humana, instalador e motor real não demonstrados por esse CI; `glib` continua em revisão. |
+| Linux | Rust debug/release passam no CI Ubuntu, com bibliotecas nativas e mock sidecar. A revisão estática das 442 fontes resolvidas não encontrou chamadas externas ao iterador afetado do `glib`. | Execução desktop humana, instalador e motor real não demonstrados por esse CI; `glib` 0.18.5 permanece afetado e exige manutenção compatível. |
 
 O CI verifica código e testes; não executa `tauri build`, instalação de bundles nem publicação de binários. Essas evidências não justificam prometer instaladores Windows/Linux prontos para distribuição. Uma tag de marco pode ser considerada depois do merge autorizado; não é necessária para integrar código. Release com binários depende de validação própria, decisão de licença e resolução dos riscos aplicáveis.
 

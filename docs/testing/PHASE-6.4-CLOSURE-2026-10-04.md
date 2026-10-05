@@ -1,6 +1,6 @@
 # Phase 6.4 closure candidate — 2026-10-04
 
-Status: scope frozen; local corrective validated; Gate B and merge acceptance pending.
+Status: scope frozen; bounded code acceptance approved (Gate B); owner authorized documentation publication, Ready and merge commit after four successful jobs on the final HEAD. Distribution remains unaccepted; tag/release are not authorized.
 
 ## Frozen delivery and current revision
 
@@ -39,7 +39,7 @@ The normative references consulted on 2026-10-04 are [WCAG 2.2 1.3.1](https://ww
 
 Restricted initial runs failed before meaningful validation: Vitest cache rename `EPERM`, SWC workspace canonicalization access denied and PowerShell filesystem initialization stalls. Authorized unrestricted retries passed. The test warning about a future Vite native config loader remains recorded. The first browser harness attempts used an unavailable Edge path and then an incorrectly normalized Windows static-server root; the repaired harness used installed Chrome. Selecting an unopened native select with Enter initially submitted the form's required-field validation; the successful script used Space to open the select, then arrow keys and Enter. These harness failures are not passing product checks.
 
-Rust was not rerun for this frontend/documentation-only change. The prior exact-source CI supplies Windows/Linux native check/test evidence; the next PR must run its existing matrix on the final published revision. No migration, model download or installer was executed.
+Rust was not rerun for this frontend/documentation-only change. The prior exact-source CI supplies Windows/Linux native check/test evidence; the next PR must run its existing matrix on the final published revision. No migration, model download or Retranca installer was executed.
 
 ## Residual security triage and proposed decisions
 
@@ -56,11 +56,13 @@ A fresh `npm audit --json` returned exit 1 on 2026-10-04: seven affected-package
 | `eslint-config-next` | `not_actionable` for current application / medium | Development configuration propagates the same parser metadata. Do not accept npm's proposed downgrade to Next 14 as a compatible fix. |
 | `fast-glob` 3.3.1 | `not_actionable` for current application / medium | Developer root-directory glob consumer; current flat config uses fixed ignores and does not set `settings.next.rootDir`. No untrusted product input boundary established. |
 | `micromatch` | `not_actionable` for current application / medium | Installed `index.js` imports `braces`; pattern exposure inherits the tooling boundary above. This is not a claim that arbitrary patterns are safe. |
-| `glib` 0.18.5 / Dependabot #20 | `needs_review` / medium; review rank 1 | [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) affects VariantStrIter and is patched in 0.20.0. Cargo.lock retains it through GTK 0.18/WebKitGTK. No direct app `VariantStrIter` or `str_iter` caller was found; indirect Linux callers and optimized packaged execution remain unverified. No forced isolated major replacement is proposed. |
+| `glib` 0.18.5 / Dependabot #20 | Package correction remains open; no caller found in the current locked Linux source graph / medium | [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) affects VariantStrIter and is patched in 0.20.0. The follow-up below searched all 442 resolved Linux package sources for the actual entry point `array_iter_str` and iterator type; matches were confined to glib itself. The package remains affected, and packaged Linux execution is unverified. No forced isolated major replacement is proposed. The earlier structured `needs_review` receipt is retained as its original snapshot. |
 
 Retained structured result: standalone Codex Security `artifacts/phase64-closure-2026-10-04/residual-triage.json`. No dynamic exploit validation was performed. Verdicts address demonstrated product applicability, not global package safety or alert dismissal. Re-triage if a Node service, SVG generation, external glob input or another deployment surface is introduced.
 
-**Owner decision required:** the recommendation is to allow source integration after the bounded desktop accessibility checks and final PR CI, while keeping Linux glib as an explicit accepted residual risk and release blocker. Its owner is the product owner; the next maintenance branch must investigate compatible Tauri/GTK remediation and Linux runtime reachability before any distributed binary. Until that decision is explicitly accepted, glib remains open in Gate B. A Windows-only conclusion does not settle Linux.
+**Technical recommendation after the follow-up:** proceed toward integration of the reviewed source, with the bounded desktop checks and exact-source CI now passing. The glib package remains affected, but the specific Rust API has no application or downstream caller in the locked Linux source graph. This supports a limited integration recommendation; it does not prove zero risk or remediation. Do not introduce an unsupported major override or unreleased native chain merely to clear the alert. Keep the alert and maintenance item open, investigate a compatible upstream correction in the next maintenance branch, and validate packaged Linux behavior before binary distribution.
+
+**Owner-approved integration boundary — 2026-10-04:** after the technical recommendation and the three accepted desktop checks, the owner replied “Autorizar a integração limitada e o merge condicionado ao CI”. This explicitly authorizes publishing these six documentation updates, updating PR #5, changing Draft to Ready and merging into `main` by merge commit only after all four jobs pass on the new HEAD. It also approves the adjusted Phase 6.4 acceptance boundary: source integration for development, while broader error/status announcements, zoom, contrast, reduced motion and installer/runtime validation remain open before distribution. Gate B is closed for this bounded code-integration scope, not for full accessibility conformance or production distribution. The earlier unexplained risk proposal was not accepted by itself; this later evidence-backed decision supersedes its pending status. Tag/release are excluded.
 
 ## Integration versus distribution
 
@@ -83,6 +85,28 @@ Previously accepted AI, CMS save/isolation/restart, import, settings dismissal a
 
 Report `1/2/3: pass or exact failure`, and identify whether NVDA was used. Keyboard-only acceptance is distinct from screen-reader acceptance. Broader workflow/error announcements, zoom, contrast and reduced-motion evidence remains unrecorded; if these mandatory criteria are deferred, the owner must explicitly approve the bounded integration boundary. Deferral is not a passing test or WCAG conformance.
 
+## Subsequent Windows/NVDA checkpoint — 2026-10-04
+
+The authorized corrective was published as `8fd28e1f007cd0b46441b6b165361d819855b913` and [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5) was opened in Draft. The original revision inventory above is the pre-publication snapshot. [PR CI 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825) completed successfully on that exact SHA: `frontend`, `rust (windows-latest)`, `rust (ubuntu-latest)` and required aggregate `rust`. GitHub reported the open Draft PR as mergeable, with merge state `clean`. This follow-up changes documentation only; any subsequently published HEAD still requires its own checks.
+
+At the owner's request, NVDA 2026.2 was installed from NV Access and started in Portuguese with add-ons disabled. The downloaded installer matched the [official release announcement's SHA-256](https://www.nvaccess.org/post/nvda-2026-2/), `f3f8d29974a88d687b3c4809be192219ec579c5bdabcda5aaf53635288bca824`; Authenticode status was `Valid`, signer NV Access Limited, and the installed executable reported product version 2026.2. Installation returned code 0 and did not enable NVDA during Windows sign-in. WinGet's older 2026.1.1 listing was not used. The [NVDA user guide](https://download.nvaccess.org/documentation/userGuide.html#SpeechViewer) documents the Speech Viewer for reviewing spoken announcements.
+
+| Bounded desktop check | Current evidence |
+| --- | --- |
+| 1 — CMS field names and editing | Owner reported: “Todos os nomes estão corretos e os campos funcionam”, in response to the NVDA/keyboard script. Human-reported pass; the agent did not independently hear the speech output. |
+| 2 — Template name and keyboard application | Owner subsequently confirmed: “Sim, o template também funcionou com NVDA e teclado”. Human-reported pass of the named-selector/application script. |
+| 3 — Calendar activation, focus return and month names | After asking how Tab navigation works, the owner reported: “Na verdade eu fiz os testes agora de novo e deram certos. Funciona.” Accept the bounded Calendar script as human-reported passing; individual key/announcement transcripts were not supplied. |
+
+The desktop was started with `npx tauri dev`; the native development build completed and the frontend returned HTTP 200. After that development session ended, the owner requested reopening it and the full Tauri/Next session was restarted. A supplemental Windows automation helper failed to initialize, including one reset/retry, with `failed to write kernel assets` / Windows error 3. This is a tooling limitation, not a failing product accessibility check. No UI source was changed during the owner tests. All three bounded checks are accepted; broader manual criteria remain open. The owner may stop NVDA after this handoff; no repetition of these accepted checks is requested.
+
+An independent read-only review of corrective `8fd28e1` found no confirmed new behavior, security or accessibility defect in the label associations, retained template application, native Calendar buttons or existing dialog focus restoration. The review executed no app/test/build and does not amend the earlier sealed Codex Security scan. It confirmed that the broader manual criteria in the original closure plan need an explicit bounded integration decision; the three accepted corrective checks do not prove those additional criteria.
+
+### Further Linux glib source evidence
+
+The locked Linux tree was resolved without changing manifests or the lock. A static search of all 442 resolved package source directories found `VariantStrIter` / `array_iter_str` only in glib's implementation, re-export, documentation and tests; no application or downstream dependency caller was found. The affected 0.18.5 implementation still passes immutable `&p` to the mutating C function. This narrows the uncertainty about source callers but does not establish packaged Linux runtime acceptance or remove the affected package.
+
+The [Tauri maintainer discussion](https://github.com/tauri-apps/tauri/issues/12048#issuecomment-2563773461) treats this issue as apparently inapplicable to Tauri, while acknowledging the dependency problem. The later upstream [Wry PR #1843](https://github.com/tauri-apps/wry/pull/1843) was still open when checked: it updates the GTK chain and raises the Rust minimum to 1.92, with dependent upstream work pending. An isolated glib major override or unreleased upstream branch is not a verified compatible correction. The later owner authorization above accepts bounded source integration using this evidence, while retaining the affected package and distribution gates.
+
 ## Exit checklist
 
 - [x] Freeze scope and preserve accepted checks.
@@ -90,8 +114,10 @@ Report `1/2/3: pass or exact failure`, and identify whether NVDA was used. Keybo
 - [x] Apply and locally validate the three scoped accessibility corrections.
 - [x] Record one static result per residual package input, including unresolved Linux glib.
 - [x] Prepare current README, candidate evidence and PR text.
-- [ ] Owner accepts the new desktop/NVDA checks, or explicitly records a limited source-integration decision with the remaining mandatory evidence open.
-- [ ] Owner accepts the residual security/runtime boundary proposed above; no automatic Gate B closure.
+- [x] Owner accepted all three bounded desktop/NVDA checks; preserve these reports and their limits.
+- [x] Independent read-only review of the published corrective found no confirmed new defect; retain the separate sealed-scan scope and remaining manual criteria.
+- [x] Owner explicitly accepted the evidence-backed source-integration boundary; Gate B closes only for that limited scope. Affected packages and distribution acceptance remain open.
 - [x] Owner explicitly authorized commit/push of the 11 reviewed files and creation of a Draft PR on 2026-10-04; this does not accept the desktop checks or authorize merge/tag/release.
-- [ ] Final published-source PR checks pass; review the current diff/mergeability and close Gate B only against the agreed criteria.
-- [ ] Obtain specific merge authorization (Gate C); optional tag/release remains separately gated (Gate D).
+- [x] Published corrective `8fd28e1` passed all four PR CI jobs; open Draft PR was mergeable with merge state `clean`.
+- [x] Final documentation diff reviewed; owner authorized publication of the six documentation updates and Ready status. The new published HEAD requires its own four successful PR jobs before merge.
+- [x] Specific merge-commit authorization received (Gate C), conditional on final-HEAD CI. Actual completion is recorded by PR #5; optional tag/release remains separately gated (Gate D).
