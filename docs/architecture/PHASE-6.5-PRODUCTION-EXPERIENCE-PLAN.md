@@ -2,7 +2,13 @@
 
 Date: 2026-10-02. Status: draft for product/architecture review, not an approved specification or completed phase.
 
-## Current integrated baseline / continuation — 2026-10-05
+## Current integrated baseline / continuation — 2026-10-06
+
+[PR #6](https://github.com/jornalistainclusivo/retranca-os/pull/6) integrated accepted Increments 2 and 3 as `1b7de720ff8f87060cd2f945b8c65ec598679471`, preserving Phase 6.4 and Increment 1. All four jobs passed [PR CI #24](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37519377568) on policy `5f3a5e4` and [main CI #25](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37523157693) on that merge. The authorized annotated tag `milestone-phase-6.5-increments-2-3` is published on the same merge. The [integration receipt](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) records identities and limits; no installer release or full-phase acceptance is implied.
+
+The owner authorized continuing after CI #25. Start the [Increment 4 runtime evidence preparation](../specifications/phase-6.5/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE.md) on `codex/phase-6.5-runtime-pilot`, collecting actual native metadata before representative synthetic inference and installed Windows/Linux validation. The owner chose exact existing `gemma4:latest` for this first metadata observation. This developer-only collector reuses existing authority and leaves production/UI/storage/settings unchanged. [Increment 4 validation](../testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md) records its own checks; previous CI cannot validate the new probe. This is a bounded next delivery within Phase 6.5, not a new engine choice or approval of the entire draft.
+
+## Historical baseline and provider preparation — 2026-10-05
 
 Phase 6.4 was merged through [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5) into `main` as `37b272c1ae048c5aa004211fd9d09178bd41709c`. All four jobs passed [main CI 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721) on that merge SHA. The accepted Increment 1 is included and must be preserved. Continue from that baseline in `codex/phase-6.5-production-provider-contract`; [resumption evidence](../testing/PHASE-6.5-RESUMPTION-2026-10-05.md) records the checks and boundaries.
 
@@ -54,4 +60,4 @@ Preserve Phase 6.4's open single edition (ADR-013), article-owned text (ADR-014)
 
 ## Next review
 
-Preserve the accepted [Increment 3 handoff](../testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md), published Increment 2 CI and earlier diagnostic/generation/CMS checks. The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. Complete the owner-authorized source integration and milestone sequence in the [integration checkpoint](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md), verifying each resulting revision and CI run. Actual-daemon synthetic evaluation, exact runtime/model identity, installer/license/runtime integrity and a real preferred embedded engine remain separate gates.
+Preserve the completed [source integration/milestone](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) and accepted diagnostic/generation/CMS/startup checks. The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. Complete [Increment 4 metadata preparation](../specifications/phase-6.5/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE.md), then specify and evaluate representative synthetic actual-daemon cases through native orchestration. Exact runtime/model identity, installed Windows/Linux recovery, licensing/runtime integrity, broader accessibility and a real preferred embedded engine remain separately evidenced gates.

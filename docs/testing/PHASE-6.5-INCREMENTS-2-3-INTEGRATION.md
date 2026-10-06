@@ -12,6 +12,8 @@ The baseline is integrated `main` at `37b272c1ae048c5aa004211fd9d09178bd41709c`,
 
 ## Candidate and evidence boundaries
 
+Completion receipt — 2026-10-06: consolidation `5f3a5e4829119466dae66cac016f4ec436c1aa6c` was published and passed all four jobs of [PR CI #24](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37519377568). [PR #6](https://github.com/jornalistainclusivo/retranca-os/pull/6) merged as `1b7de720ff8f87060cd2f945b8c65ec598679471`, with a tree identical to that reviewed source. GitHub API verified all four jobs of [main CI #25](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37523157693) successful on the exact merge SHA. The annotated `milestone-phase-6.5-increments-2-3` tag was published; its object `a794672b5420f32b74279d1dbeef55058e7a42d0` targets that merge. Local main was fast-forwarded and clean/synchronized before creating `codex/phase-6.5-runtime-pilot` for the next increment. All four authorized source-integration steps are complete. The preparation statements below are historical gates, not outstanding actions. No installer release was created.
+
 - Preserve the exact session model choice, Rust editorial authority, fresh per-generation readiness, cancellation and local editorial persistence.
 - Normal builds support independently installed Ollama. Synthetic sidecar/provisioning require explicit debug fixtures; the default bundle omits that executable. The real embedded engine remains a preferred future delivery.
 - Increment 3 local checks and owner acceptance are recorded in its [validation report](PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md). No executable code changes are planned during consolidation; documentation records acceptance, authority and the integration rationale.

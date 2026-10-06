@@ -1,4 +1,18 @@
-# Current work — Phase 6.5 Increment 3 production provider policy
+# Current work — Phase 6.5 Increment 4 runtime evidence preparation
+
+- [x] Verify PR #6 merged as `1b7de720ff8f87060cd2f945b8c65ec598679471` and all four successful jobs in main CI #25 on that exact SHA.
+- [x] Publish the authorized annotated `milestone-phase-6.5-increments-2-3` tag; GitHub tag object `a794672b5420f32b74279d1dbeef55058e7a42d0` targets the integrated merge. No installer release/version bump.
+- [x] Owner authorized the next development step; create `codex/phase-6.5-runtime-pilot` from clean integrated main.
+- [x] Prepare the [metadata specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE.md), reusing ADR-016/008 authority without changing production behavior.
+- [x] Implement developer Rust inventory/readiness observations with explicit exact model choice, JSON output and fail-closed exit codes. No Tauri/database startup, prompt/inference/download or new dependency.
+- [x] Owner selected `gemma4:latest` for one read-only metadata observation; do not substitute/download a model.
+- [x] Verify final formatting, 5 Windows example tests, release type checking, actual catalog and owner-selected model metadata. Permitted query reports server `0.35.1` and `READY / LOCAL_REQUEST_ENFORCED` for `gemma4:latest`; keep raw observations/digests local and record failed sandbox attempts separately in [validation](docs/testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md).
+- [x] Finish documentation checks: 114 existing local link targets, tracked diff whitespace and the three new files' whitespace/conflict/final-newline checks. No new-source CI is claimed.
+- [ ] Specify later synthetic inference/cancellation cases, attempt/time limits and human quality review before running them; installed Windows/Linux, licensing, accessibility and future embedded engine remain separate.
+- [x] Owner explicitly authorized the local commit of this 10-file metadata round on 2026-10-06, with message `feat(phase-6.5): add local runtime metadata probe`. Keep observations, model digests and editorial data ignored/local.
+- [ ] Obtain separate push/manual CI authority for this round. Earlier four-step authorization covered the completed Increments 2–3 milestone; no new-source remote CI is claimed.
+
+# Previous checkpoint — Phase 6.5 Increment 3 production provider policy
 
 - [x] Verify UI CI #23 on published `34bf047781e63e2f55f82600b99cff9686204b82`; preserve accepted desktop checks.
 - [x] Owner authorized continuing development and confirmed the app was already closed.
@@ -7,7 +21,7 @@
 - [x] Complete final local verification and record scoped results in [validation](docs/testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md): 350 frontend tests, types/lint/static build, Rust format and 128 tests in each default debug/release profile, 85 in each explicit-feature debug/release sample, 11 isolated compiled settings checks, 126 local documentation targets and diff whitespace.
 - [x] Owner accepted all three bounded normal-startup/CMS-without-AI/guidance-model-diagnostic checks (`1 OK; 2 OK; 3 OK`, 2026-10-05).
 - [x] Owner explicitly authorized the four source-integration steps: documentation/commit, push/CI, reviewed PR/merge and an appropriately chosen technical milestone tag. Distribution release remains outside that scope.
-- [ ] Complete and verify the authorized source-integration sequence; use the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) and the PR/CI/tag identities for resulting evidence. Preserve branch protection and existing accepted checks.
+- [x] Complete and verify the authorized source-integration sequence; the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) records exact PR/CI/merge/tag identities. Preserve branch protection and existing accepted checks.
 - [ ] Retain runtime/model pilot, Windows/Linux installed packages, licensing and future embedded-engine delivery as separate gates.
 
 No real article/database/model file was inspected or changed by the agent. Existing local files and owner Ollama configuration remain outside Git. No dependency, schema or CI configuration change is included.
@@ -38,7 +52,7 @@ No real article/database/model file was inspected or changed by the agent. Exist
 - [ ] Retain exact runtime/model identity and broader pilot evidence as separate gates.
 - [ ] Retain separate dependency maintenance, licensing, preference persistence, attachments, packaged Windows/Linux and release gates. Do not reopen accepted scripts or introduce these features implicitly.
 
-Current entry: [Increment 2 readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI is implemented and locally validated through automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05. UI publication and exact-source CI subsequently passed above; broader desktop/NVDA remain pending. Neither part of Increment 2 is integrated into `main` yet. Runtime identity and broader distribution acceptance remain open; no merge/tag/release is authorized. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
+Historical Increment 2 checkpoint: [readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI passed automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05; UI publication and exact-source CI subsequently passed. At that checkpoint, Increment 2 integration and merge/tag/release authority were still pending. PR #6, main CI #25 and the published technical milestone supersede that earlier source-integration state, as recorded at the top. Runtime identity and broader desktop/NVDA/distribution acceptance remain open. Sections below retain historical scope.
 
 ## Closure candidate — 2026-10-04
 
