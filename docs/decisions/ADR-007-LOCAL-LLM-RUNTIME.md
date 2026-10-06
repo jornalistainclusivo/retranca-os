@@ -40,3 +40,5 @@ While `llama.cpp` is the superior engine for consumer hardware, embedding it dir
 ## Subsequent bounded provider direction — 2026-10-05
 
 [ADR-016](ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md) records the owner's accepted external local Ollama path for the first production delivery. This supersedes this ADR's first-delivery provider choice only; an embedded engine remains the owner's preferred future delivery and subprocess isolation remains its recorded architectural basis. No real sidecar/model implementation, installer or release is accepted by this sequencing decision.
+
+The [Increment 3 production policy](../specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-PROVIDER-POLICY.md) makes this sequencing explicit: normal builds route through external Ollama, reject the synthetic sidecar/provisioning and do not bundle it. Fixtures require explicit debug opt-in and have a separate helper app identity. No claim above about an intended real engine is evidence that the current mock consumes models or frees Ollama server/GPU resources.

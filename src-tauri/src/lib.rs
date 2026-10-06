@@ -6,6 +6,7 @@ pub mod models;
 pub mod ollama_gateway;
 pub mod orchestrator;
 pub mod phase64;
+pub mod provider_policy;
 pub mod provisioning;
 pub mod sidecar_path;
 

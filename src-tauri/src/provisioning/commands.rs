@@ -4,6 +4,7 @@ use super::ollama::{check_ollama_capabilities, OllamaStatus};
 use super::security::{
     atomic_install, get_trust_anchor, verify_file_hash, verify_manifest_signature,
 };
+use crate::provider_policy::{require_development_fixtures, DEV_FIXTURES_ENABLED};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{mpsc, Mutex};
@@ -12,23 +13,12 @@ use tokio::sync::{mpsc, Mutex};
 /// A chave é o `job_id`.
 pub struct DownloadRegistry(pub Mutex<std::collections::HashMap<String, mpsc::Sender<()>>>);
 
-pub fn get_manifest_url() -> String {
-    #[cfg(not(debug_assertions))]
-    {
-        option_env!("PROD_MODEL_MANIFEST_URL")
-            .expect("PROD_MODEL_MANIFEST_URL env var must be set during release build")
-            .to_string()
-    }
-    #[cfg(debug_assertions)]
-    {
-        if let Some(url) = option_env!("DEV_MODEL_MANIFEST_URL") {
-            url.to_string()
-        } else if let Some(url) = option_env!("PROD_MODEL_MANIFEST_URL") {
-            url.to_string()
-        } else {
-            "http://127.0.0.1:3142/manifest.json".to_string()
-        }
-    }
+pub fn get_manifest_url() -> Result<String, String> {
+    require_development_fixtures()?;
+    Ok(option_env!("DEV_MODEL_MANIFEST_URL")
+        .or(option_env!("PROD_MODEL_MANIFEST_URL"))
+        .unwrap_or("http://127.0.0.1:3142/manifest.json")
+        .to_string())
 }
 
 #[derive(serde::Serialize)]
@@ -37,6 +27,7 @@ pub struct PreflightResult {
     model_exists: bool,
     ollama: OllamaStatus,
     sidecar_ready: bool,
+    development_fixtures_enabled: bool,
     selected_provider: String,
 }
 
@@ -52,7 +43,34 @@ pub async fn preflight_check(app: AppHandle) -> Result<PreflightResult, String> 
 
     let hw = check_hardware(&app_data_dir);
 
-    // Verificar se o modelo já existe lendo o manifest local
+    // Normal builds do not inspect or hash a legacy synthetic model.
+    let model_exists = if DEV_FIXTURES_ENABLED {
+        fixture_model_exists(&app_data_dir).await
+    } else {
+        false
+    };
+
+    let ollama = check_ollama_capabilities().await;
+    let bundled_sidecar_exists = DEV_FIXTURES_ENABLED
+        && tauri::utils::platform::current_exe()
+            .ok()
+            .and_then(|executable| crate::sidecar_path::resolve_bundled_sidecar(&executable).ok())
+            .is_some();
+    let sidecar_ready = model_exists && bundled_sidecar_exists;
+
+    let selected_provider = determine_provider(&ollama, sidecar_ready);
+
+    Ok(PreflightResult {
+        hardware: hw,
+        model_exists,
+        ollama,
+        sidecar_ready,
+        development_fixtures_enabled: DEV_FIXTURES_ENABLED,
+        selected_provider,
+    })
+}
+
+async fn fixture_model_exists(app_data_dir: &std::path::Path) -> bool {
     let local_manifest_path = app_data_dir.join("manifest.json");
     let mut model_exists = false;
 
@@ -86,22 +104,7 @@ pub async fn preflight_check(app: AppHandle) -> Result<PreflightResult, String> 
         }
     }
 
-    let ollama = check_ollama_capabilities().await;
-    let bundled_sidecar_exists = tauri::utils::platform::current_exe()
-        .ok()
-        .and_then(|executable| crate::sidecar_path::resolve_bundled_sidecar(&executable).ok())
-        .is_some();
-    let sidecar_ready = model_exists && bundled_sidecar_exists;
-
-    let selected_provider = determine_provider(&ollama, sidecar_ready);
-
-    Ok(PreflightResult {
-        hardware: hw,
-        model_exists,
-        ollama,
-        sidecar_ready,
-        selected_provider,
-    })
+    model_exists
 }
 
 #[tauri::command]
@@ -110,6 +113,8 @@ pub async fn download_model(
     registry: tauri::State<'_, DownloadRegistry>,
     job_id: String,
 ) -> Result<(), String> {
+    // Deny before app-data access, job registration, trust-anchor use or network.
+    let manifest_url = get_manifest_url()?;
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -129,7 +134,7 @@ pub async fn download_model(
     let result = execute_download_pipeline(
         app.clone(),
         job_id.clone(),
-        get_manifest_url(),
+        manifest_url,
         app_data_dir,
         cancel_rx,
     )
@@ -236,12 +241,11 @@ async fn execute_download_pipeline(
 }
 
 pub fn determine_provider(ollama: &OllamaStatus, sidecar_ready: bool) -> String {
-    if ollama.reachable && !ollama.models.is_empty() {
-        "OLLAMA".to_string()
-    } else if sidecar_ready {
+    if DEV_FIXTURES_ENABLED && sidecar_ready && (!ollama.reachable || ollama.models.is_empty()) {
         "SIDECAR".to_string()
     } else {
-        "NONE".to_string()
+        // Route selection is not readiness. Every generation checks the daemon.
+        "OLLAMA".to_string()
     }
 }
 
@@ -278,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_provider_selection_case_c() {
-        // Case C: Sidecar NOT READY, Ollama reachable, Ollama has zero models => NONE
+        // An empty catalog retains the supported route, never grants dispatch.
         let ollama = OllamaStatus {
             detected: true,
             endpoint: "http://127.0.0.1:11434".to_string(),
@@ -286,12 +290,12 @@ mod tests {
             models: vec![],
         };
         let sidecar_ready = false;
-        assert_eq!(determine_provider(&ollama, sidecar_ready), "NONE");
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "OLLAMA");
     }
 
     #[test]
     fn test_provider_selection_case_d() {
-        // Case D: Sidecar NOT READY, Ollama unreachable => NONE
+        // Starting Ollama later must not leave a cached NONE route.
         let ollama = OllamaStatus {
             detected: false,
             endpoint: "http://127.0.0.1:11434".to_string(),
@@ -299,12 +303,12 @@ mod tests {
             models: vec![],
         };
         let sidecar_ready = false;
-        assert_eq!(determine_provider(&ollama, sidecar_ready), "NONE");
+        assert_eq!(determine_provider(&ollama, sidecar_ready), "OLLAMA");
     }
 
     #[test]
     fn test_provider_selection_sidecar_fallback() {
-        // Sidecar READY, Ollama unreachable => SIDECAR
+        // Sidecar presence only matters in an explicitly enabled debug fixture.
         let ollama = OllamaStatus {
             detected: false,
             endpoint: "http://127.0.0.1:11434".to_string(),
@@ -312,6 +316,22 @@ mod tests {
             models: vec![],
         };
         let sidecar_ready = true;
-        assert_eq!(determine_provider(&ollama, sidecar_ready), "SIDECAR");
+        assert_eq!(
+            determine_provider(&ollama, sidecar_ready),
+            if DEV_FIXTURES_ENABLED {
+                "SIDECAR"
+            } else {
+                "OLLAMA"
+            }
+        );
+    }
+
+    #[test]
+    fn manifest_source_is_unavailable_outside_explicit_debug_fixtures() {
+        let result = get_manifest_url();
+        assert_eq!(result.is_ok(), DEV_FIXTURES_ENABLED);
+        if !DEV_FIXTURES_ENABLED {
+            assert!(result.unwrap_err().starts_with("UNSUPPORTED_CAPABILITY:"));
+        }
     }
 }

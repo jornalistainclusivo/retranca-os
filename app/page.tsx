@@ -24,6 +24,8 @@ import { MotivationalModal } from "@/components/MotivationalModal";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
 import { ModelDownloadModal } from "@/components/ModelDownloadModal";
 import {
+  canProvisionDevelopmentModel,
+  DevelopmentProvisioningDisabledError,
   downloadLocalModel,
   ModelProvisioningUnavailableError,
   provisionedModelStatus,
@@ -134,7 +136,7 @@ export default function Home() {
             setModelStatus(provisionedModelStatus(caps));
 
             // Use provider selection from the Rust backend directly.
-            // The backend enforces: ollama.reachable && !ollama.models.is_empty() → OLLAMA
+            // OLLAMA is the normal supported route, not a cached readiness grant.
             // Do NOT override selected_provider in the frontend.
             setCapabilities(caps);
             setSelectedProvider(caps.selected_provider);
@@ -447,6 +449,7 @@ export default function Home() {
   }).length;
 
   const showDownloadModal =
+    canProvisionDevelopmentModel(capabilities) &&
     modelStatus !== "READY" && !isDownloadModalDismissed;
 
   if (!isMounted) return null;
@@ -602,10 +605,11 @@ export default function Home() {
 
       <ModelDownloadModal
         isOpen={showDownloadModal}
+        developmentFixturesEnabled={canProvisionDevelopmentModel(capabilities)}
         modelStatus={modelStatus}
         errorMessage={modelDownloadError}
         onStartDownload={async () => {
-          if (downloadInProgressRef.current) return;
+          if (!canProvisionDevelopmentModel(capabilities) || downloadInProgressRef.current) return;
           downloadInProgressRef.current = true;
           setModelDownloadError(null);
           setModelStatus("DOWNLOADING");
@@ -615,7 +619,7 @@ export default function Home() {
             setSelectedProvider(caps.selected_provider);
             setModelStatus(provisionedModelStatus(caps));
           } catch (error) {
-            setModelDownloadError(error instanceof ModelProvisioningUnavailableError ? error.message : null);
+            setModelDownloadError(error instanceof ModelProvisioningUnavailableError || error instanceof DevelopmentProvisioningDisabledError ? error.message : null);
             setModelStatus("FAILED");
           } finally {
             downloadInProgressRef.current = false;

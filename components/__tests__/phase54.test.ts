@@ -6,10 +6,25 @@ import { ModelDownloadModal } from '@/components/ModelDownloadModal';
 import type { ModelStatus } from '@/types/ai';
 
 const render = (modelStatus: ModelStatus, isOpen = true, errorMessage?: string) => renderToStaticMarkup(
-  React.createElement(ModelDownloadModal, { modelStatus, isOpen, errorMessage, onStartDownload: () => {}, onDismiss: () => {} }),
+  React.createElement(ModelDownloadModal, { developmentFixturesEnabled: true, modelStatus, isOpen, errorMessage, onStartDownload: () => {}, onDismiss: () => {} }),
 );
 
 describe('Model provisioning dialog rendering', () => {
+  it.each<ModelStatus>(['MISSING', 'DOWNLOADING', 'VERIFYING', 'INCOMPATIBLE', 'FAILED'])('hides %s unless development fixtures are explicitly enabled', modelStatus => {
+    for (const developmentFixturesEnabled of [undefined, false]) {
+      const html = renderToStaticMarkup(React.createElement(ModelDownloadModal, {
+        developmentFixturesEnabled, modelStatus, isOpen: true, onStartDownload: () => {}, onDismiss: () => {},
+      }));
+      expect(html).toBe('');
+    }
+  });
+  it('identifies the opt-in model and output as synthetic testing', () => {
+    const html = render('MISSING');
+    expect(html).toContain('Modelo de teste do Retranca');
+    expect(html).toContain('arquivos e respostas sintéticos');
+    expect(html).toContain('Baixar arquivo de teste');
+    expect(html).not.toContain('Modelo embutido do Retranca');
+  });
   it.each<ModelStatus>(['MISSING', 'DOWNLOADING', 'VERIFYING', 'INCOMPATIBLE', 'FAILED'])('%s has a native named dialog and a visible close control', status => {
     const html = render(status);
     expect(html).toContain('<dialog');

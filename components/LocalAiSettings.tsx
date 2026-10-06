@@ -185,7 +185,7 @@ export const LocalAiSettings: React.FC = () => {
               </select>
             </div>
             <p className="text-xs text-neutral-300 leading-tight">
-              Selecione um modelo disponível no Ollama instalado neste computador.
+              Nesta versão, a IA usa o Ollama instalado neste computador e um modelo escolhido por você. Selecione um modelo disponível na lista. O motor embutido está previsto para uma etapa futura.
             </p>
             <button
               type="button"

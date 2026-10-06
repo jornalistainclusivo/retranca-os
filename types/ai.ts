@@ -100,6 +100,7 @@ export interface LocalAiCapabilities {
   model_exists: boolean;
   ollama: OllamaStatus;
   sidecar_ready: boolean;
+  development_fixtures_enabled: boolean;
   selected_provider: ProviderType;
 }
 

@@ -33,7 +33,7 @@ Environment: Windows checkout, existing dependencies and locked native baseline.
 | Isolated compiled-component browser fixture | **pass** — 11 behavioral checks on the actual bundled component/context/bridge with controlled synthetic IPC; keyboard, stale responses/errors/finally, recovery, selection preservation, 320-pixel sample and teardown. Not real-daemon or reader evidence. |
 | Three new owner desktop UI checks | **pass — owner-reported** on 2026-10-05: diagnostic, keyboard recheck with selection/focus retention, refresh and Escape/reopen behavior. See bounded acceptance below; no independent desktop trace was collected. |
 | Broader desktop/NVDA/installed-daemon identity and pilot | **not-tested** in this UI round; earlier functional acceptance remains preserved. |
-| New UI publication/CI | **not-tested** — source remains unpublished; native baseline CI is not evidence for these changes. |
+| New UI publication/CI | **pass** — separately authorized commit/push/dispatch, published UI source `34bf047781e63e2f55f82600b99cff9686204b82`, all four jobs of [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428) completed successfully. Applies to this UI revision, not later Increment 3 changes. |
 
 Initial sandbox Vitest attempts failed on temporary-cache rename with zero tests; the explicitly permitted retries passed. The first sandbox Next build failed before configuration loading on Windows path canonicalization/access denied; the permitted retry passed. An initial effect-started synchronous state update failed the hooks lint rule; checks now start in user actions and valid inventory completion, avoiding a rule suppression. The existing future Vite native-config loader warning remains.
 
@@ -91,6 +91,12 @@ Commit message: `feat(phase-6.5): expose local AI readiness diagnostics`. The pa
 
 This authorization covers the local commit. UI push, manual CI dispatch, PR/merge, tag and release remain separate actions. The new revision's remote CI must be verified independently; previous native CI cannot certify it.
 
+## Published UI and exact-source CI — 2026-10-05
+
+The owner separately authorized the UI push and manual CI dispatch after local consolidation. Commit `34bf047781e63e2f55f82600b99cff9686204b82` (`feat(phase-6.5): expose local AI readiness diagnostics`) is synchronized with its remote feature branch. On the owner's successful-CI return, the GitHub API confirmed [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428) `completed / success` on that exact SHA and branch, with frontend, Rust Windows, Rust Ubuntu and the required Rust aggregate successful. Preserve this evidence and the accepted three desktop checks; do not rerun them solely for confirmation. Neither native nor UI Increment 2 is integrated into main.
+
+The owner authorized subsequent development and confirmed the app was already closed. The [Increment 3 policy](../specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-PROVIDER-POLICY.md) records its separate source/validation boundary. Prior commit/push/CI authorizations do not cover this new increment or grant merge/release. Earlier authorization paragraphs above retain their historical checkpoint scope.
+
 ## Remaining gates
 
-The three new diagnostic/retry/focus desktop checks are owner-accepted, and local consolidation is explicitly authorized above. UI push, manual CI, PR/merge, tag and release still require their own scope/authorization. Exact runtime/model identity and representative synthetic pilot remain separate from the earlier bounded generation acceptance. Real embedded engine, dependency maintenance, persisted preferences, attachments, code/runtime/model licensing and installed Windows/Linux packages remain separately specified work.
+The three new diagnostic/retry/focus desktop checks are owner-accepted, and the published UI has passed exact-source CI above. New Increment 3 consolidation/publication/CI, PR/merge, tag and release require their own scope/authorization. Exact runtime/model identity and representative synthetic pilot remain separate from the earlier bounded generation acceptance. Real embedded engine, dependency maintenance, persisted preferences, attachments, code/runtime/model licensing and installed Windows/Linux packages remain separately specified work.

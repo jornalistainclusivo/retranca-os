@@ -1,4 +1,18 @@
-# Current work — Phase 6.5 Increment 2 readiness UI and recovery
+# Current work — Phase 6.5 Increment 3 production provider policy
+
+- [x] Verify UI CI #23 on published `34bf047781e63e2f55f82600b99cff9686204b82`; preserve accepted desktop checks.
+- [x] Owner authorized continuing development and confirmed the app was already closed.
+- [x] Specify [production policy](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-PROVIDER-POLICY.md) under accepted ADR-016/008.
+- [x] Implement normal Ollama routing, explicit debug fixtures, native sidecar/download denial, omitted default test binary and truthful provisioning/settings UI.
+- [x] Complete final local verification and record scoped results in [validation](docs/testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md): 350 frontend tests, types/lint/static build, Rust format and 128 tests in each default debug/release profile, 85 in each explicit-feature debug/release sample, 11 isolated compiled settings checks, 126 local documentation targets and diff whitespace.
+- [x] Owner accepted all three bounded normal-startup/CMS-without-AI/guidance-model-diagnostic checks (`1 OK; 2 OK; 3 OK`, 2026-10-05).
+- [x] Owner explicitly authorized the four source-integration steps: documentation/commit, push/CI, reviewed PR/merge and an appropriately chosen technical milestone tag. Distribution release remains outside that scope.
+- [ ] Complete and verify the authorized source-integration sequence; use the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) and the PR/CI/tag identities for resulting evidence. Preserve branch protection and existing accepted checks.
+- [ ] Retain runtime/model pilot, Windows/Linux installed packages, licensing and future embedded-engine delivery as separate gates.
+
+No real article/database/model file was inspected or changed by the agent. Existing local files and owner Ollama configuration remain outside Git. No dependency, schema or CI configuration change is included.
+
+# Previous checkpoint — Phase 6.5 Increment 2 readiness UI and recovery
 
 ## Integrated baseline and new continuation — 2026-10-05
 
@@ -20,11 +34,11 @@
 - [x] Pass 11 checks of the actual compiled component/bridge with synthetic IPC in isolated Chrome 154.0.8037.98: stale replies, retry/focus, refresh/selection/error handling, close/reopen, foreground-dialog precedence, clearing choice, sampled 320 × 568 viewport bounds, browser restriction and pending unmount. Inspect screenshots and record scope in the [UI validation report](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md); browser fixtures do not establish actual daemon or reader behavior.
 - [x] Record owner acceptance of the three new diagnostic/recheck/focus desktop checks (`1 OK; 2 OK; 3 OK`, 2026-10-05). Preserve the accepted native handoff; do not request repetition solely for confirmation.
 - [x] Owner explicitly authorized the local Git commit of the 13 UI-round files on 2026-10-05, with message `feat(phase-6.5): expose local AI readiness diagnostics`.
-- [ ] Obtain separate UI push/manual-CI authorization, then verify exact published UI-source CI. Native CI above does not validate subsequent UI source.
+- [x] Owner separately authorized UI push/manual CI; all four jobs of [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428) passed exact published UI `34bf047781e63e2f55f82600b99cff9686204b82`. This does not validate later Increment 3 changes.
 - [ ] Retain exact runtime/model identity and broader pilot evidence as separate gates.
 - [ ] Retain separate dependency maintenance, licensing, preference persistence, attachments, packaged Windows/Linux and release gates. Do not reopen accepted scripts or introduce these features implicitly.
 
-Current entry: [Increment 2 readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI is implemented and locally validated through automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05. Broader desktop/NVDA and UI publication/CI remain pending. Neither part of Increment 2 is integrated into `main` yet. Runtime identity and broader distribution acceptance remain open; no merge/tag/release is authorized. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
+Current entry: [Increment 2 readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI is implemented and locally validated through automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05. UI publication and exact-source CI subsequently passed above; broader desktop/NVDA remain pending. Neither part of Increment 2 is integrated into `main` yet. Runtime identity and broader distribution acceptance remain open; no merge/tag/release is authorized. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
 
 ## Closure candidate — 2026-10-04
 
