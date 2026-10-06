@@ -331,6 +331,10 @@ pub async fn get_ollama_models() -> Result<Vec<String>, String> {
 }
 
 #[cfg(test)]
+#[path = "../tests/support/phase65_native_runtime_pilot.rs"]
+mod live_runtime_pilot;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::{Read, Write};

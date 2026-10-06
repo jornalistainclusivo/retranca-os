@@ -1,4 +1,16 @@
-# Current work — Phase 6.5 Increment 4 runtime evidence preparation
+# Current work — Phase 6.5 Increment 4 bounded native runtime pilot
+
+- [x] Verify all four successful jobs of [CI #26](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37530233063) on published metadata `82d1a0007c3d04e3e1375870f946ddac0709006a`; preserve the clean/synchronized branch at resumption and earlier accepted desktop checks.
+- [x] Owner authorized continuing development; prepare the [native pilot specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-NATIVE-PILOT.md) and separate [validation](docs/testing/PHASE-6.5-INCREMENT-4-NATIVE-PILOT-VALIDATION.md).
+- [x] Implement an ignored, explicitly opted-in native test with three frozen synthetic cases, unchanged model/authority, registered cancellation, recovery, local output retention and bounded stop rules. No production function body, dependency, IPC, UI, schema, model/daemon preference or workflow change.
+- [x] Pass five non-daemon harness tests in both Windows debug and release profiles; the live test remains ignored by default. Formatting passes. Existing provisioning warnings remain separate.
+- [x] Complete one actual Windows debug sequence in 94.639 seconds: `PL-01` completed, `CANCEL-01` cancelled after its first fragment with teardown acknowledged, `RECOVER-01` completed. All three have released registries, preserved synthetic source files and stable sampled identity; no retries. Record model `gemma4:latest`, runtime `0.35.1` and exact scope in validation; raw metadata/outputs remain ignored/local.
+- [x] Record the owner's `1 OK, 2 OK` on 2026-10-06: both completed synthetic suggestions accepted against the two bounded checks; `CANCEL-01` remains an unreviewed partial suggestion. Preserve the original execution ledger and retain a separate local human-review receipt; do not repeat generation or earlier UI/CMS checks.
+- [x] Finish documentation/diff checks: 132 existing local link targets, clean tracked whitespace and three new files without whitespace/conflict/final-newline findings. Confirm all raw pilot captures ignored by Git.
+- [x] Owner explicitly authorized the local commit of this prepared 11-file native-pilot round on 2026-10-06: `Sim, autorizo criar o commit local.` Use `test(phase-6.5): add bounded native runtime pilot`; exclude generated outputs, raw metadata and editorial data. ADR-016 records the current evidence without changing its provider direction.
+- [ ] Obtain separate native-pilot push/manual CI/merge authority and verify each resulting checkpoint; metadata publication/CI authorization does not publish or validate the later harness.
+
+# Previous checkpoint — Phase 6.5 Increment 4 runtime metadata preparation
 
 - [x] Verify PR #6 merged as `1b7de720ff8f87060cd2f945b8c65ec598679471` and all four successful jobs in main CI #25 on that exact SHA.
 - [x] Publish the authorized annotated `milestone-phase-6.5-increments-2-3` tag; GitHub tag object `a794672b5420f32b74279d1dbeef55058e7a42d0` targets the integrated merge. No installer release/version bump.
@@ -8,9 +20,9 @@
 - [x] Owner selected `gemma4:latest` for one read-only metadata observation; do not substitute/download a model.
 - [x] Verify final formatting, 5 Windows example tests, release type checking, actual catalog and owner-selected model metadata. Permitted query reports server `0.35.1` and `READY / LOCAL_REQUEST_ENFORCED` for `gemma4:latest`; keep raw observations/digests local and record failed sandbox attempts separately in [validation](docs/testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md).
 - [x] Finish documentation checks: 114 existing local link targets, tracked diff whitespace and the three new files' whitespace/conflict/final-newline checks. No new-source CI is claimed.
-- [ ] Specify later synthetic inference/cancellation cases, attempt/time limits and human quality review before running them; installed Windows/Linux, licensing, accessibility and future embedded engine remain separate.
+- [x] Specify later synthetic inference/cancellation cases, attempt/time limits and human quality review in the new bounded native pilot; installed Windows/Linux, licensing, accessibility and future embedded engine remain separate.
 - [x] Owner explicitly authorized the local commit of this 10-file metadata round on 2026-10-06, with message `feat(phase-6.5): add local runtime metadata probe`. Keep observations, model digests and editorial data ignored/local.
-- [ ] Obtain separate push/manual CI authority for this round. Earlier four-step authorization covered the completed Increments 2–3 milestone; no new-source remote CI is claimed.
+- [x] Owner separately authorized metadata push and manual CI; publish `82d1a0007c3d04e3e1375870f946ddac0709006a` and verify all four successful jobs of CI #26 on that exact SHA. This CI does not validate the later native pilot harness; merge/release remain separately gated.
 
 # Previous checkpoint — Phase 6.5 Increment 3 production provider policy
 

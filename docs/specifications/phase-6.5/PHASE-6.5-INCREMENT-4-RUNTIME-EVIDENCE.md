@@ -32,6 +32,8 @@ No inference is executed by this metadata delivery. The later pilot must define 
 
 ## Boundaries and next gates
 
+Metadata delivery checkpoint — 2026-10-06: `82d1a0007c3d04e3e1375870f946ddac0709006a` was committed, pushed and manually validated after separate owner authorization. All four jobs of [CI #26](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37530233063) passed that exact source. The owner authorized the next bounded development step, specified in the [native runtime pilot](PHASE-6.5-INCREMENT-4-NATIVE-PILOT.md). Its opt-in test composes shared native functions without adding inference to this read-only CLI; metadata CI does not validate the later harness.
+
 No frontend/IPC/production readiness change, dependency, lockfile, schema, engine replacement, cloud preference, CI configuration or installer is included. No new ADR is needed for this consumer of existing authority. New-round commit/push/CI/merge/release requires its own explicit scope; the earlier authorization covered the Increments 2–3 milestone.
 
 Windows checkout metadata is one operational sample. Installed Windows/Linux startup, persistence/recovery, actual synthetic inference/cancellation, runtime/model licensing and identity/integrity, relevant NVDA/zoom/contrast and residual dependency maintenance remain open. A real embedded engine is still the preferred future delivery, requiring its own specific engine/protocol/model-binding decision. Results belong in the [validation report](../../testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md).

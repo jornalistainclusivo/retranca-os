@@ -16,6 +16,8 @@ O [Incremento 3](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-
 
 A próxima entrega, [Incremento 4](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE.md), está em `codex/phase-6.5-runtime-pilot`: um coletor Rust de metadados reutiliza a autoridade nativa para observar inventário e prontidão do modelo escolhido. Ele não recebe textos, gera respostas, baixa modelos ou abre o banco editorial. Sua [validação](docs/testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md) separa compilação, consulta local e evidência ainda necessária de inferência/qualidade/instalação. Identidade operacional completa, piloto representativo, licenças e distribuição Windows/Linux continuam pendentes.
 
+O coletor foi publicado em `82d1a00`, com os quatro jobs do [CI #26](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37530233063) aprovados após autorizações separadas. A rodada seguinte executou um [piloto nativo delimitado](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-NATIVE-PILOT.md) com `gemma4:latest`, três casos sintéticos e limites de geração/cancelamento/recuperação. O [registro do piloto](docs/testing/PHASE-6.5-INCREMENT-4-NATIVE-PILOT-VALIDATION.md) distingue os três resultados operacionais aprovados e o aceite informado pelo responsável das duas respostas completas em 2026-10-06; o trecho cancelado permanece sem revisão editorial. O teste fica desativado por padrão; respostas geradas permanecem locais. O CI do coletor não valida essa rodada posterior.
+
 | Entrega / verificação | Estado atual |
 | --- | --- |
 | Fluxos dinâmicos, categorias e templates | Implementados na edição aberta, sem conta, assinatura ou ativação comercial ([ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md)). |
