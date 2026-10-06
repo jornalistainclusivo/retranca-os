@@ -1,4 +1,44 @@
-# Current work — Phase 6.4 closure (scope frozen)
+# Current work — Phase 6.5 Increment 3 production provider policy
+
+- [x] Verify UI CI #23 on published `34bf047781e63e2f55f82600b99cff9686204b82`; preserve accepted desktop checks.
+- [x] Owner authorized continuing development and confirmed the app was already closed.
+- [x] Specify [production policy](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-PROVIDER-POLICY.md) under accepted ADR-016/008.
+- [x] Implement normal Ollama routing, explicit debug fixtures, native sidecar/download denial, omitted default test binary and truthful provisioning/settings UI.
+- [x] Complete final local verification and record scoped results in [validation](docs/testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md): 350 frontend tests, types/lint/static build, Rust format and 128 tests in each default debug/release profile, 85 in each explicit-feature debug/release sample, 11 isolated compiled settings checks, 126 local documentation targets and diff whitespace.
+- [x] Owner accepted all three bounded normal-startup/CMS-without-AI/guidance-model-diagnostic checks (`1 OK; 2 OK; 3 OK`, 2026-10-05).
+- [x] Owner explicitly authorized the four source-integration steps: documentation/commit, push/CI, reviewed PR/merge and an appropriately chosen technical milestone tag. Distribution release remains outside that scope.
+- [ ] Complete and verify the authorized source-integration sequence; use the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) and the PR/CI/tag identities for resulting evidence. Preserve branch protection and existing accepted checks.
+- [ ] Retain runtime/model pilot, Windows/Linux installed packages, licensing and future embedded-engine delivery as separate gates.
+
+No real article/database/model file was inspected or changed by the agent. Existing local files and owner Ollama configuration remain outside Git. No dependency, schema or CI configuration change is included.
+
+# Previous checkpoint — Phase 6.5 Increment 2 readiness UI and recovery
+
+## Integrated baseline and new continuation — 2026-10-05
+
+- [x] Verify merged [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), `main`/`origin/main` at `37b272c1ae048c5aa004211fd9d09178bd41709c`, and all four successful jobs in [main CI 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721).
+- [x] Preserve accepted Phase 6.5 Increment 1 and the completed 6.4 source-integration gate; retain broader accessibility/distribution limits.
+- [x] Create `codex/phase-6.5-production-provider-contract` from fetched `origin/main`, preserving the previous clean branch/history.
+- [x] Prepare [ADR-016](docs/decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md) and the proposed [Increment 2 readiness contract/matrix](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md), following the existing draft plan.
+- [x] Owner accepted external local Ollama for the first production path and explicitly retained an embedded engine as the preferred future delivery. Record the bounded ADR-007 amendment; no particular embedded engine, download or distribution is approved.
+- [x] Record owner-preferred Gemma 4/DeepSeek candidates as informal experience; preserve model choice. Exact current tags/variants and comparative quality/latency remain to be verified in a later synthetic pilot.
+- [x] Define the supported native contract from pinned Ollama 0.35.1 source: bounded metadata, textual completion, trusted daemon and per-request `:local` enforcement; no process-attestation/digest-pinning claim.
+- [x] Implement query/registration, shared bounded catalog and fresh checks before every Ollama generation; preserve native prompt authority and cancellation during metadata/streaming.
+- [x] Validate Rust debug/release and obtain focused independent read-only review; record results in the [native validation report](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md).
+- [x] Record owner-reported completed simplification without perceived inconsistencies, earlier cancellation and original CMS text preservation; the three bounded functional checks are accepted and should not be repeated solely for confirmation. AI suggestions remain temporary; exact runtime/model identity and broader quality/accessibility evidence were not supplied.
+- [x] Owner explicitly authorized the local Git commit of the 14 prepared native-round files on 2026-10-05; resulting commit `d944a114f935cbab7222068c22fe22bc26f12fb1`, message `feat(phase-6.5): enforce native local AI readiness`.
+- [x] Owner separately authorized the native-round push and manual CI dispatch. Verify all four successful jobs in [CI 37356369629](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37356369629) on exact published native commit `d944a114f935cbab7222068c22fe22bc26f12fb1` and the same feature branch.
+- [x] Owner authorized the next development step and confirmed the app was already closed before interface edits. This closure confirmation protects unsaved work; it is not a functional test.
+- [x] Implement the [readiness UI/recovery specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md), invalidating stale results while preserving exact session selection and focus.
+- [x] Pass local automated verification: 338 frontend tests / 27 files, including 49 new bridge fixtures; types, lint and Next.js 16.3.4 static build. Retain the existing `.eslintignore` migration warning; no Rust/dependency/schema/CI configuration change.
+- [x] Pass 11 checks of the actual compiled component/bridge with synthetic IPC in isolated Chrome 154.0.8037.98: stale replies, retry/focus, refresh/selection/error handling, close/reopen, foreground-dialog precedence, clearing choice, sampled 320 × 568 viewport bounds, browser restriction and pending unmount. Inspect screenshots and record scope in the [UI validation report](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md); browser fixtures do not establish actual daemon or reader behavior.
+- [x] Record owner acceptance of the three new diagnostic/recheck/focus desktop checks (`1 OK; 2 OK; 3 OK`, 2026-10-05). Preserve the accepted native handoff; do not request repetition solely for confirmation.
+- [x] Owner explicitly authorized the local Git commit of the 13 UI-round files on 2026-10-05, with message `feat(phase-6.5): expose local AI readiness diagnostics`.
+- [x] Owner separately authorized UI push/manual CI; all four jobs of [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428) passed exact published UI `34bf047781e63e2f55f82600b99cff9686204b82`. This does not validate later Increment 3 changes.
+- [ ] Retain exact runtime/model identity and broader pilot evidence as separate gates.
+- [ ] Retain separate dependency maintenance, licensing, preference persistence, attachments, packaged Windows/Linux and release gates. Do not reopen accepted scripts or introduce these features implicitly.
+
+Current entry: [Increment 2 readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI is implemented and locally validated through automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05. UI publication and exact-source CI subsequently passed above; broader desktop/NVDA remain pending. Neither part of Increment 2 is integrated into `main` yet. Runtime identity and broader distribution acceptance remain open; no merge/tag/release is authorized. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
 
 ## Closure candidate — 2026-10-04
 
@@ -138,7 +178,7 @@ See the [Slice 8 checkpoint and contributor handoff](docs/testing/PHASE-6.4-SLIC
 - [ ] Full independent review (Gate B); the successful corrective CI does not close it.
 - [x] Requested image/text/document utilities preserved in attachment discovery; no upload implementation or binary-storage architecture approved.
 
-Current corrective report and AntiGravity handoff: [article content validation](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Functional owner acceptance and authorized consolidation/publication/CI are recorded; full independent review remains before broader closure.
+Current corrective report and AntiGravity handoff: [article content validation](docs/testing/PHASE-6.4-ARTICLE-CONTENT-VALIDATION.md). Functional owner acceptance and authorized publication/CI are recorded; full independent review remains before broader closure.
 
 ### Resumption — 2026-10-02
 
@@ -164,7 +204,7 @@ The [acceptance closure plan](docs/testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-
 - [ ] Complete remaining recoverable evidence/runtime failure checks.
 - [ ] Complete desktop accessibility checks beyond the accepted keyboard smoke.
 - [ ] Resolve packaged-runtime acceptance scope and complete independent technical/security review (Gate B).
-- [ ] After separately authorized consolidation/publication, prepare PR readiness and verify its published revision through the existing CI.
+- [ ] After separately authorized publication, prepare PR readiness and verify its published revision through the existing CI.
 - [ ] Obtain human merge authorization (Gate C); define and approve Phase 6.5 specifications before its implementation. Release/tag requires separate Gate D authorization.
 
 ## Historical Phase 5 checklist

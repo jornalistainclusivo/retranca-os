@@ -8,6 +8,7 @@ import { subscribeModelDownloadProgress } from '@/lib/api/modelProvisioning';
 
 interface ModelDownloadModalProps {
   isOpen: boolean;
+  developmentFixturesEnabled?: boolean;
   modelStatus: ModelStatus;
   onStartDownload: () => void;
   onDismiss: () => void;
@@ -59,12 +60,13 @@ function ModelDownloadProgress() {
 
 export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
   isOpen,
+  developmentFixturesEnabled = false,
   modelStatus,
   onStartDownload,
   onDismiss,
   errorMessage,
 }) => {
-  const visible = isOpen && modelStatus !== 'READY';
+  const visible = developmentFixturesEnabled === true && isOpen && modelStatus !== 'READY';
   const dialogRef = useModalDialog(visible, onDismiss);
 
   useEffect(() => {
@@ -108,10 +110,10 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
             </span>
             <div className="min-w-0 flex-1">
               <h2 id="model-download-title" tabIndex={-1} data-dialog-initial-focus className="text-base font-bold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-blue-500">
-                Modelo embutido do Retranca
+                Modelo de teste do Retranca
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Download e verificação no aplicativo desktop
+                Simulação explícita de desenvolvimento
               </p>
             </div>
             <button type="button" onClick={onDismiss} aria-label="Fechar aviso de modelo" className="shrink-0 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-blue-500">
@@ -129,8 +131,8 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
               <div className="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                 <Download className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-800 dark:text-amber-200">
-                  <p className="font-bold mb-1">Modelo embutido não instalado</p>
-                  <p>Este aviso trata do modelo embutido. Se você já usa um modelo no Ollama, pode fechar o aviso e continuar com sua configuração local.</p>
+                  <p className="font-bold mb-1">Arquivo de teste não instalado</p>
+                  <p>Este modo usa arquivos e respostas sintéticos para testar o aplicativo. Não é um motor de IA. Para gerar textos reais, use seu modelo no Ollama em IA local.</p>
                 </div>
               </div>
               <button
@@ -138,7 +140,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 className="w-full px-4 py-2.5 text-sm font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 active:scale-[0.98]"
               >
                 <Download className="w-4 h-4" />
-                <span>Iniciar Download do Modelo</span>
+                <span>Baixar arquivo de teste</span>
               </button>
               <button
                 onClick={onDismiss}
@@ -171,7 +173,7 @@ export const ModelDownloadModal: React.FC<ModelDownloadModalProps> = ({
                 <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                 <div className="text-xs text-red-800 dark:text-red-200">
                   <p className="font-bold mb-1">Hardware incompatível</p>
-                  <p>Este dispositivo não atende aos requisitos mínimos para execução do modelo de IA distribuído pelo Retranca (mínimo 8 GB RAM, arquitetura x86_64 com AVX2 ou aarch64).</p>
+                  <p>Este dispositivo não atende aos critérios do provisionamento de teste (mínimo 8 GB RAM, arquitetura x86_64 com AVX2 ou aarch64). Isso não avalia a capacidade do seu modelo no Ollama.</p>
                   <p className="mt-1">Outros provedores de IA local (como Ollama) ainda podem ser utilizados, caso estejam disponíveis.</p>
                 </div>
               </div>

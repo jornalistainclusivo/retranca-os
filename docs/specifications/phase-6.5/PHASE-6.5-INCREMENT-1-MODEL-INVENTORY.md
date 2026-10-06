@@ -4,6 +4,8 @@ Date: 2026-10-03. Status: implemented, owner desktop handoff accepted (`1 ok; 2 
 
 ## Verified entry checkpoint
 
+Integration update — 2026-10-05: this increment is included in `main` merge `37b272c1ae048c5aa004211fd9d09178bd41709c` through [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5). All four jobs passed [main CI 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721). The [6.4 closure](../../testing/PHASE-6.4-CLOSURE-2026-10-04.md) closes Gate B for bounded code integration; comprehensive accessibility and distribution remain open. Preserve the accepted behavior below in the [new continuation](../../testing/PHASE-6.5-RESUMPTION-2026-10-05.md). This update adds no implementation or runtime-test claim.
+
 The owner accepted both desktop X/Escape checks. [CI 37080317950](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37080317950) completed successfully on application source `08218bf6c05d510904686d3a89c56d7bfe8826ae`: frontend, Rust Windows, Rust Linux and the stable required Rust aggregate. This is not CI on later documentation or this increment. The last published handoff is `bb7b82064d32df26fa9bbab59e60cabedc4cbc9f`.
 
 The CI annotation concerns `actions/checkout@v4` and `actions/setup-node@v4` declaring Node 20 while the runner executes them with Node 24. The [GitHub deprecation notice](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/) was consulted on 2026-10-03. Updating Actions and the frontend Node version is a separate CI change requiring review/authorization; no workflow change is part of this increment.
@@ -37,4 +39,4 @@ The provider's [GET /api/tags documentation](https://docs.ollama.com/api/tags) s
 
 ## Remaining architecture and acceptance work
 
-The complete Phase 6.4 accessibility scope and independent Gate B remain open. Phase 6.5 still needs a reviewed production-provider decision reconciling ADR-007 with current Ollama selection, local/remote model provenance, capability enforcement, persisted preferences and Windows/Linux packaged acceptance. Shipping a new engine, changing phase acceptance, migration, CI configuration, merge or release are separate actions. Preserve real articles, models and credentials locally and the open single edition.
+Broader accessibility and distribution acceptance remain open; the subsequent 6.4 closure accepted Gate B only for bounded code integration and PR #5 completed that merge. Phase 6.5 still needs a reviewed production-provider decision reconciling ADR-007 with current Ollama selection, local/remote model provenance, capability enforcement, persisted preferences and Windows/Linux packaged acceptance. Shipping a new engine, changing phase acceptance, migration, CI configuration, future merge or release are separate actions. Preserve real articles, models and credentials locally and the open single edition.

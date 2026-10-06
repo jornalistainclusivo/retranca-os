@@ -18,7 +18,7 @@ const LEGACY_STATUSES: [&str; 5] = ["ideia", "pesquisa", "escrita", "revisao", "
 fn request(action: &str, status: &str, valid: bool) -> AiOrchestrationRequest {
     let text = if valid { "Evidence" } else { " \t\n " };
     serde_json::from_value(json!({
-        "job_id": "phase64-ai", "action": action, "provider": "SIDECAR", "model": null,
+        "job_id": "phase64-ai", "action": action, "provider": "OLLAMA", "model": "synthetic-fixture:latest",
         "context": {
             "articleId": "custom-stage-article", "editorialStatus": status, "categoryTag": "Blog",
             "metadata": { "title": text, "objective": text, "summary": text, "keyword": text },
@@ -44,7 +44,24 @@ fn test_ai_001_evidence_valid_actions_ignore_legacy_status() {
             let plan =
                 resolve_dispatch_plan(req.job_id, &req.action, &req.provider, req.model, prompt)
                     .unwrap();
-            assert!(matches!(plan, DispatchPlan::Sidecar { .. }));
+            // A dispatch plan is not a live readiness or generation claim.
+            assert!(matches!(plan, DispatchPlan::Ollama { .. }));
+        }
+    }
+}
+
+#[test]
+fn sidecar_requests_for_valid_editorial_actions_require_explicit_debug_fixtures() {
+    for action in ACTIONS {
+        let req = request(action, "escrita", true);
+        validate_prerequisites(&req).unwrap();
+        let projected = project_context(&req.action, req.context);
+        let (budgeted, _) = apply_budget(&req.action, projected).unwrap();
+        let prompt = assemble_prompt(&req.action, &budgeted);
+        let plan = resolve_dispatch_plan(req.job_id, &req.action, "sIdEcAr", req.model, prompt);
+        assert_eq!(plan.is_ok(), app_lib::provider_policy::DEV_FIXTURES_ENABLED);
+        if let Err(error) = plan {
+            assert!(error.starts_with("UNSUPPORTED_CAPABILITY:"));
         }
     }
 }

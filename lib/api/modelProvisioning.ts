@@ -12,6 +12,18 @@ export class ModelProvisioningUnavailableError extends Error {
   }
 }
 
+export class DevelopmentProvisioningDisabledError extends Error {
+  constructor() {
+    super('O modelo de teste não está disponível nesta versão. Use um modelo instalado no Ollama em IA local.');
+    this.name = 'DevelopmentProvisioningDisabledError';
+  }
+}
+
+/** Missing or legacy policy must not offer a synthetic model as a real engine. */
+export function canProvisionDevelopmentModel(capabilities: LocalAiCapabilities | null | undefined): boolean {
+  return capabilities?.development_fixtures_enabled === true;
+}
+
 export function provisionedModelStatus(capabilities: LocalAiCapabilities): ModelStatus {
   if (!capabilities.hardware.local_ai_supported) return 'INCOMPATIBLE';
   return capabilities.model_exists ? 'READY' : 'MISSING';
@@ -22,6 +34,8 @@ export async function downloadLocalModel(onVerifying: () => void): Promise<Local
   if (!isDesktopRuntime()) throw new ModelProvisioningUnavailableError();
 
   const { invoke } = await import('@tauri-apps/api/core');
+  const policy = await invoke<LocalAiCapabilities>('preflight_check');
+  if (!canProvisionDevelopmentModel(policy)) throw new DevelopmentProvisioningDisabledError();
   const { listen } = await import('@tauri-apps/api/event');
   let active = true;
   const unlisten = await listen('download-verifying', () => {

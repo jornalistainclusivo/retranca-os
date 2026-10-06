@@ -41,6 +41,7 @@ pub async fn start_inference_internal(
     program: impl AsRef<std::ffi::OsStr>,
     args: Vec<String>,
 ) -> Result<(), String> {
+    crate::provider_policy::require_development_fixtures()?;
     // Reject duplicate job IDs without blocking long
     {
         let map = registry.0.lock().map_err(|e| e.to_string())?;

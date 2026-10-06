@@ -488,6 +488,7 @@ pub fn resolve_dispatch_plan(
             prompt,
         })
     } else if provider_upper == "SIDECAR" {
+        crate::provider_policy::require_development_fixtures()?;
         Ok(DispatchPlan::Sidecar {
             job_id,
             program: "llama-sidecar".to_string(),
@@ -877,8 +878,12 @@ mod tests {
             "SIDECAR",
             None, // should not require model
             "prompt".to_string(),
-        )
-        .unwrap();
+        );
+        if !crate::provider_policy::DEV_FIXTURES_ENABLED {
+            assert!(plan.unwrap_err().contains("UNSUPPORTED_CAPABILITY"));
+            return;
+        }
+        let plan = plan.unwrap();
         match plan {
             DispatchPlan::Sidecar {
                 job_id,

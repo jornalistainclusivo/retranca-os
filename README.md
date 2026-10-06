@@ -8,17 +8,24 @@ Retranca OS é uma plataforma desktop voltada para a produção, organização e
 
 ## 2. Current project state
 
-A entrega da fase 6.4 está consolidada no [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), a partir da branch `feat/phase-6.4-pro-workflow-customization`. Em 04/10/2026, o responsável aprovou o fechamento limitado à integração do código em desenvolvimento e autorizou o merge após os quatro jobs passarem no HEAD final. O estado efetivo da integração e seus checks estão no PR. O escopo permanece congelado; novas funcionalidades seguirão em outra branch. O incremento 1 da fase 6.5, já implementado e aceito nesta entrega, será preservado.
+A base desta entrega integra a fase 6.4 e o Incremento 1 da 6.5 pelo [PR #5](https://github.com/jornalistainclusivo/retranca-os/pull/5), commit `37b272c`, com os quatro jobs do [CI daquela main](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721) aprovados. Os Incrementos 2 e 3 seguem em `codex/phase-6.5-production-provider-contract`, com integração e marco técnico explicitamente autorizados pelo responsável em 05/10/2026. O [checkpoint de integração](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) delimita a entrega e os critérios de revisão/CI/merge/tag; cada conclusão exige o registro correspondente no GitHub.
+
+O Incremento 2 nativo foi publicado em `d944a11` e a interface em `34bf047781e63e2f55f82600b99cff9686204b82`; todos os quatro jobs da revisão da interface passaram no [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428), conferido pela API do GitHub em 05/10/2026. Seus aceites desktop delimitados estão registrados na [validação da interface](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md). Esse CI antecede a política do Incremento 3 e não valida suas alterações.
+
+O [Incremento 3](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-3-PRODUCTION-PROVIDER-POLICY.md) aplica o caminho de produção aceito: Ollama instalado pela pessoa, modelo escolhido por ela, sem fallback para o motor de testes. O uso normal não oferece seu download e a configuração padrão não inclui o executável sintético. A **preferência futura por motor embutido** permanece no [ADR-016](docs/decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md). O [relatório desta rodada](docs/testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md) registra verificações locais e os três checks desktop aceitos pelo responsável. A tag planejada `milestone-phase-6.5-increments-2-3` identifica apenas esse marco de código, após merge e CI; não muda a versão `0.1.0` dos manifests. Identidade do servidor/modelo, piloto amplo, licenças e distribuição Windows/Linux permanecem pendentes; nenhuma release com instaladores é incluída.
 
 | Entrega / verificação | Estado atual |
 | --- | --- |
 | Fluxos dinâmicos, categorias e templates | Implementados na edição aberta, sem conta, assinatura ou ativação comercial ([ADR-013](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md)). |
 | Texto completo por pauta, salvamento e importação preservadora | Implementados; checks desktop informados pelo responsável estão registrados e não precisam ser repetidos apenas para confirmação. |
 | Seis ações de IA local, cancelamento, fechamento e inventário de modelos | Implementados; aceites funcionais anteriores preservados. Não equivalem a avaliação completa da qualidade de IA. |
-| Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. Auditoria atual ainda registra sete entradas npm afetadas, além da pendência Linux `glib`. |
-| CI publicado | Os quatro jobs passaram em [`8fd28e1`, run 37243860825](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37243860825): frontend, Rust Windows/Linux e agregador `rust`. Essa revisão inclui o corretivo de fechamento. |
+| Prontidão nativa da 6.5 | Publicada em `d944a11` na branch de desenvolvimento, com CI aprovado. Cada geração Ollama verifica servidor `0.35.1`, modelo/capacidade e exige `:local`; versões não auditadas e dados não verificáveis bloqueiam o envio. O responsável informou sucesso nos três checks funcionais: simplificação completa, cancelamento e preservação do texto original. Depende de um daemon confiável; não comprova hardware, qualidade nem identidade atômica do modelo. |
+| Diagnóstico e recuperação na IA local | Implementado e validado localmente: comunica verificação, resultado, falha e nova tentativa, preserva a seleção e descarta respostas antigas. Passaram 338 testes, tipos, lint, build estático e 11 checks do componente compilado no Chrome isolado com IPC sintético. Os três checks desktop foram aprovados pelo responsável em 05/10/2026; CI #23 aprovado na revisão publicada `34bf047`; NVDA amplo pendente; não integrado na `main`. |
+| Dependências | Firebase de desenvolvimento não utilizado removido; Vitest/UI 4.1.11 e js-yaml 4.3.2. A auditoria npm registrada em 04/10/2026 apontou sete entradas afetadas; a pendência Linux `glib` permanece separada. Nenhuma nova auditoria é alegada nesta rodada. |
+| CI integrado | Os quatro jobs passaram em [`37b272c`, run 37248233721](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37248233721): frontend, Rust Windows/Linux e agregador `rust`. Esse merge inclui o corretivo de fechamento e o Incremento 1. |
+| CI nativo do Incremento 2 | Os quatro jobs passaram em [`d944a11`, run 37356369629](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37356369629), conferido pela API do GitHub. A execução se aplica ao commit publicado; não valida alterações posteriores nem um instalador. |
 | Rodada de fechamento | Rótulos do CMS/template e abertura do calendário por teclado corrigidos. Passaram 289 testes, tipos, lint, build e amostra de teclado/reflow no Chrome isolado. O responsável também aprovou os três checks delimitados no desktop com NVDA 2026.2 e teclado. |
-| PR, aceitação e merge | Gate B aprovado para a integração limitada de código. Publicação dos seis documentos, Ready e merge por merge commit autorizados, condicionado aos quatro jobs no novo HEAD. Validação ampla e distribuição permanecem pendentes; tag/release não autorizados. |
+| PR, aceitação e merge | PR #5 integrado; Gate B aprovado para aquela integração limitada de código e Gate C concluído. Os Incrementos 2 e 3 têm aceite delimitado e autorização explícita de consolidação/CI/PR/merge/tag, sujeitos à revisão e aos checks da nova revisão. Validação ampla e release distribuível permanecem pendentes. |
 
 O [candidato de fechamento](docs/testing/PHASE-6.4-CLOSURE-2026-10-04.md) é o ponto de entrada para resultados, limites, decisões propostas e o novo roteiro desktop. A [revisão de segurança](docs/security/PHASE-6.4-GATE-B-REVIEW-2026-10-03.md) mantém seu intervalo imutável; a [correção de dependências](docs/testing/PHASE-6.4-RESUMPTION-2026-10-04.md) registra o lock e as verificações anteriores. Os registros de IA/CMS/importação/inventário permanecem em `docs/testing`; seus aceites se aplicam às revisões e ambientes identificados.
 
@@ -48,7 +55,7 @@ A Inteligência Artificial atua como um supervisor assíncrono durante a produç
 
 A arquitetura de IA local implementa mitigação estrutural contra injeções de prompt e limites de uso: a separação entre contexto e prompt trata os dados editoriais do CMS como não-confiáveis, mantendo a política de ação do sistema isolada do conteúdo. O uso de escapes protege os delimitadores estruturais, porém isso NÃO garante imunidade semântica contra interpretação adversarial pelo LLM:
 - **Rust-authoritative editorial orchestration:** O frontend atua estritamente coletando UX e conteúdo; o backend em Rust (`src-tauri/`) cria a política de contexto, valida a matriz de pré-requisitos, impõe limites (context budgeting) e engloba o payload com as instruções estáticas e o output esperado de maneira segura.
-- **Ollama / local runtime capability & Sidecar architecture:** A arquitetura provê compatibilidade com modelos hospedados via Ollama ou executáveis sidecar locais. O frontend **não** chama o Ollama diretamente (porta 11434 não é acessada via frontend); todo o IPC transita de forma controlada via Tauri.
+- **Ollama como caminho normal:** Rust verifica cada geração usando o servidor/modelo local suportado; o frontend acessa a IA por IPC Tauri. O sidecar atual emite respostas sintéticas e fica restrito ao modo explícito de testes, sem ser incluído no pacote padrão. O motor embutido real permanece previsto para uma entrega futura.
 
 **Invariantes de infraestrutura e provedores:**
 - Ollama capability != provider selection
@@ -105,17 +112,17 @@ npx tauri dev
 
 O Tauri inicia o frontend automaticamente. Para IA real, mantenha o Ollama em execução, confira os modelos instalados com `ollama list` e selecione um deles no controle **IA local**. A seleção é válida durante a sessão; ao reiniciar o aplicativo, selecione novamente. Não é necessário fazer commit para visualizar alterações locais.
 
-`npm run dev:desktop` também inicia `scripts/dev/model-fixture-server.mjs`, um servidor de fixtures de provisionamento para desenvolvimento. Para verificar um modelo real já instalado no Ollama, use `npx tauri dev`. `npm run dev` isoladamente abre apenas o frontend web, sem o runtime nativo de inferência.
+`npm run dev:desktop` inicia apenas o ambiente explícito de fixtures sintéticas: servidor de provisionamento, feature `dev-fixtures` e configuração `src-tauri/tauri.fixture.conf.json`, com identidade e diretório de dados separados. Ele não abre suas pautas do ambiente normal. Para usar seu Ollama e suas pautas, use `npx tauri dev`. `npm run dev` isoladamente abre apenas o frontend web, sem o runtime nativo de inferência.
 
-**Sidecar binary (required by the build):**
+**Sidecar binary (explicit developer fixtures only):**
 
-O `tauri.conf.json` declara `externalBin: ["bin/llama-sidecar"]`, e o Tauri resolve essa entrada acrescentando o *target triple* da máquina. Se o artefato correspondente não existir, o build script aborta antes de a janela ser criada:
+O `tauri.conf.json` padrão declara `externalBin: []`: o desktop normal e seu build não exigem nem incluem o mock. A configuração explícita de fixtures declara `externalBin: ["bin/llama-sidecar"]`; só nesse modo o Tauri precisa do artefato com o *target triple* da máquina. Se ele estiver ausente, o build de fixtures falha com:
 
 ```
 resource path `bin/llama-sidecar-<target-triple>` doesn't exist
 ```
 
-O repositório versiona apenas o artefato de Windows. Em outras plataformas, compile o `mock-sidecar/` incluído no projeto:
+O repositório preserva o artefato de teste de Windows. Para exercitar fixtures em outras plataformas, compile o `mock-sidecar/` incluído no projeto:
 
 ```bash
 cargo build --release --manifest-path mock-sidecar/Cargo.toml
@@ -123,7 +130,7 @@ cp mock-sidecar/target/release/mock-sidecar \
    "src-tauri/bin/llama-sidecar-$(rustc -vV | grep '^host: ' | cut -d' ' -f2)"
 ```
 
-(Nota: o mock emite tokens fixos via stdout e serve apenas para satisfazer o build e exercitar o streaming. Ele não executa inferência real — para isso, utilize o provider Ollama conforme a seção 6).
+(Nota: o mock emite tokens fixos via stdout e serve apenas para exercitar testes de streaming/provisionamento. Não executa inferência real. Rust rejeita esse caminho em release mesmo com a feature solicitada; o uso normal de IA permanece no Ollama, com verificação a cada geração).
 
 **Local state:**
 
@@ -160,8 +167,8 @@ O diretório `/docs` é a espinha dorsal de conhecimento arquitetural do projeto
 
 ## 13. Immediate roadmap
 
-- **Phase 6.4:** Escopo congelado para fechar os critérios de aceitação e integrar após autorização específica. Consulte o candidato de fechamento; novas funcionalidades seguirão em outra branch.
-- **Phase 6.5:** Production Provider & Model Experience. Preservar o incremento 1 já aceito; motor/modelo real, instalação e distribuição continuam no plano preliminar.
+- **Phase 6.4:** Integrada na main pelo PR #5, com aceitação limitada ao código. Manutenção de dependências, acessibilidade ampla e distribuição seguem explicitamente pendentes.
+- **Phase 6.5:** Production Provider & Model Experience. Preservar o Incremento 1; primeiro caminho com Ollama instalado pela pessoa, mantendo motor embutido como preferência futura. Detalhar prontidão/proveniência/capacidade antes de alterar comportamento; instalação e distribuição exigem evidência própria.
 
 ## 14. Governance
 

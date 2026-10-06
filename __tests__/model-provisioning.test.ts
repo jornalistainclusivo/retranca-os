@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   downloadLocalModel,
+  canProvisionDevelopmentModel,
+  DevelopmentProvisioningDisabledError,
   ModelProvisioningUnavailableError,
   provisionedModelStatus,
   subscribeModelDownloadProgress,
@@ -16,12 +18,14 @@ const capabilities: LocalAiCapabilities = {
   model_exists: true,
   ollama: { detected: true, endpoint: 'http://localhost:11434', reachable: true, models: ['synthetic-test-model'] },
   sidecar_ready: true,
+  development_fixtures_enabled: true,
   selected_provider: 'OLLAMA',
 };
 
 describe('Native model provisioning lifecycle', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    invoke.mockResolvedValue(capabilities);
     vi.stubGlobal('window', { __TAURI_INTERNALS__: {} });
   });
   afterEach(() => vi.unstubAllGlobals());
@@ -45,8 +49,8 @@ describe('Native model provisioning lifecycle', () => {
 
     expect(await downloadLocalModel(onVerifying)).toEqual(capabilities);
     expect(onVerifying).toHaveBeenCalledOnce();
-    expect(invoke.mock.calls.map(call => call[0])).toEqual(['download_model', 'preflight_check']);
-    expect(invoke.mock.calls[0][1].jobId).toMatch(/^download_[\da-f-]+$/);
+    expect(invoke.mock.calls.map(call => call[0])).toEqual(['preflight_check', 'download_model', 'preflight_check']);
+    expect(invoke.mock.calls[1][1].jobId).toMatch(/^download_[\da-f-]+$/);
     expect(unlisten).toHaveBeenCalledOnce();
     listen.mock.calls[0][1]({ payload: undefined });
     expect(onVerifying).toHaveBeenCalledOnce();
@@ -56,17 +60,37 @@ describe('Native model provisioning lifecycle', () => {
     const unlisten = vi.fn();
     listen.mockResolvedValue(unlisten);
     invoke.mockImplementation(async (command: string) => {
-      if (command === failedCommand) throw new Error('Synthetic native failure');
+      if (command === failedCommand && invoke.mock.calls.length > 1) throw new Error('Synthetic native failure');
+      return capabilities;
     });
     await expect(downloadLocalModel(vi.fn())).rejects.toThrow('Synthetic native failure');
     expect(unlisten).toHaveBeenCalledOnce();
-    if (failedCommand === 'download_model') expect(invoke).toHaveBeenCalledOnce();
+    if (failedCommand === 'download_model') expect(invoke).toHaveBeenCalledTimes(2);
   });
 
   it('does not start a native download when verification subscription fails', async () => {
     listen.mockRejectedValue(new Error('Synthetic subscription failure'));
     await expect(downloadLocalModel(vi.fn())).rejects.toThrow('Synthetic subscription failure');
-    expect(invoke).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith('preflight_check');
+  });
+
+  it.each([null, undefined, {}, { ...capabilities, development_fixtures_enabled: false }, { ...capabilities, development_fixtures_enabled: 'true' }])('blocks provisioning with missing/disabled/invalid native policy: %j', async policy => {
+    invoke.mockResolvedValue(policy);
+    expect(canProvisionDevelopmentModel(policy as LocalAiCapabilities | null | undefined)).toBe(false);
+    await expect(downloadLocalModel(vi.fn())).rejects.toBeInstanceOf(DevelopmentProvisioningDisabledError);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith('preflight_check');
+    expect(listen).not.toHaveBeenCalled();
+  });
+
+  it('keeps a failed policy query recoverable without starting or subscribing', async () => {
+    invoke.mockRejectedValueOnce(new Error('Synthetic policy failure'));
+    await expect(downloadLocalModel(vi.fn())).rejects.toThrow('Synthetic policy failure');
+    expect(listen).not.toHaveBeenCalled();
+    const unlisten = vi.fn();
+    listen.mockResolvedValue(unlisten);
+    expect(await downloadLocalModel(vi.fn())).toEqual(capabilities);
+    expect(invoke.mock.calls.map(call => call[0])).toEqual(['preflight_check', 'preflight_check', 'download_model', 'preflight_check']);
+    expect(unlisten).toHaveBeenCalledOnce();
   });
 
   it('derives model state from native hardware/model facts independently of provider choice', () => {

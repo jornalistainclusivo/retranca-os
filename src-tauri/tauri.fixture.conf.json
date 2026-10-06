@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Retranca Test Fixtures",
+  "identifier": "com.jornalistainclusivo.retranca.fixtures",
+  "app": {
+    "windows": [{ "title": "Retranca — Synthetic Test Fixtures" }]
+  },
+  "bundle": {
+    "active": false,
+    "externalBin": ["bin/llama-sidecar"]
+  }
+}
