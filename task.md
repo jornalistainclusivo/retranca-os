@@ -1,4 +1,16 @@
-# Current work — Phase 6.5 Increment 5 startup review and Início — 2026-10-07
+# Current work — Phase 6.5 consolidation after dependency maintenance — 2026-10-07
+
+- [x] Confirm all four jobs of [main CI #31](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37695557140) passed on `5f7ba349acafe2dc45b9bbadd3271bac4440d86a`, the authorized merge of dependency PR #7.
+- [x] Confirm published Phase 6.5 source `71d25c088887231001329ae3d9fc659dcc6ad5a5` passed all four jobs of [CI #28](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37657094508). Preserve the three Increment 4–5 commits and both accepted Windows pilot checkpoints.
+- [x] Obtain explicit owner authorization for incorporating main into `codex/phase-6.5-runtime-pilot` with one local merge commit. Push and manual CI remain separate gates.
+- [x] Reconcile the sole README conflict by retaining integrated readiness/diagnostics, accepted pilot source and the new dependency checkpoint. Update stale publication/CI wording; do not claim a rebuilt installed pilot or full security closure.
+- [x] Complete source/dependency preservation, 131 local Markdown target checks and whitespace/conflict-marker guards; align the root installation with the reviewed lock (540 packages, explicit Node 24.19.0), pass types, eight focused regressions and isolated pilot configuration check. Prepare the explicitly authorized local merge commit; its final identity is retained in a local ignored receipt.
+- [ ] Obtain separate push and exact combined-source CI authorization, then review the accepted Increment 4–5 source for its own PR/main integration decision. Existing CI #28/#31 results do not validate the new combined Git revision.
+- [ ] Complete remaining packaged cancellation/recovery, manual accessibility, installed Linux, licensing/security/signing and public distribution gates through separately bounded increments. Do not repeat accepted model or installer scripts solely for confirmation.
+
+Current consolidation evidence: [resumption record](docs/testing/PHASE-6.5-POST-SECURITY-CONSOLIDATION.md). Earlier checkpoints below retain their original verification dates and are superseded for publication/CI only by this current evidence.
+
+# Previous checkpoint — Phase 6.5 Increment 5 startup review and Início — 2026-10-07
 
 - [x] Verify current Git/remote baseline and four passed CI #27 jobs; preserve all 11 pending package-source files and previously accepted model/installed checks.
 - [x] Record review A–D as distribution blockers, with the original owner `1 OK; 2 OK; 3 OK` retained as bounded acceptance.
@@ -9,7 +21,7 @@
 - [x] Build and retain a fresh unsigned Windows NSIS pilot with separate identity, hashes and receipt. See [current validation and three owner checks](docs/testing/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME-VALIDATION.md); no installed app, owner data or model execution by the agent.
 - [x] Record the owner's `1 OK; 2 OK; 3 OK` on 2026-10-07 for the final corrective installed Windows pilot: Início/creation, visibility/counts/restart and category customization. Preserve existing unresolved records until an explicit owner repair/removal; bounded acceptance is not a publication or distribution authorization.
 - [x] Record separate owner authorization on 2026-10-07 for the local commit of the 41 reviewed packaging/corrective source files: `Sim, autorizo. pode criar o commit.` Use `fix(phase-6.5): correct startup and add home experience`; exclude owner data, raw captures and binaries.
-- [ ] Obtain separate push/manual CI/integration/distribution authorization. The accepted round remains local until publication; CI #27 covers only published `6d0a4f3`.
+- [x] Publish the separately authorized corrective source as `71d25c0` and verify all four successful CI #28 jobs. The earlier CI #27 covers only `6d0a4f3`; main integration and distribution remain separate gates.
 
 # Previous checkpoint — Phase 6.5 Increment 5 isolated Windows packaged pilot
 
@@ -257,6 +269,17 @@ The [acceptance closure plan](docs/testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-
 - [ ] Resolve packaged-runtime acceptance scope and complete independent technical/security review (Gate B).
 - [ ] After separately authorized publication, prepare PR readiness and verify its published revision through the existing CI.
 - [ ] Obtain human merge authorization (Gate C); define and approve Phase 6.5 specifications before its implementation. Release/tag requires separate Gate D authorization.
+
+## Dependency maintenance candidate — 2026-10-07
+
+- [x] Owner authorized bounded dependency treatment with skills and subagents; isolated `codex/security-dependencies` from main `1b7de720ff8f87060cd2f945b8c65ec598679471` without switching or modifying the Phase 6.5 workspace.
+- [x] Prepare seven original alert version corrections: Next/aligned ESLint, sharp, source-map-js, scoped typography parser, two brace-expansion families and rustls. Preserve optional platform metadata and the original tempfile/getrandom edge.
+- [x] Add eight bounded typography/parser regression tests; compare complete legitimate typography output and exercise class/ID resource behavior independently.
+- [x] Document [ADR-018](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md): glib remains unresolved; the additional braces chain has five affected npm entries with no compatible published patch. Do not downgrade Next ESLint or force an incompatible native graph.
+- [x] Complete branch-baseline checks: 358 frontend tests/28 files and 128 Rust Windows tests in each debug/release profile; types, lint, build, formatting and locked checks passed. Integration with Phase 6.5 passed 372 frontend tests/30 files and 141 Rust tests in each profile, with one ignored test. Preserve shared-lock audit failure (five high affected entries) and fresh candidate review interruption by usage limit; the implementer completed a separate final pass, not full independent acceptance.
+- [x] Owner explicitly authorized the local commit of the eight reviewed source/documentation files on 2026-10-07. Push, existing CI, PR/merge and publication remain separate authorization gates; upstream findings and incomplete independent acceptance are preserved.
+- [x] Complete the resumed original independent candidate-review cycle and verify all four jobs of security CI #29/#30 on `ad6d84c`; integrate authorized PR #7 into main as `5f7ba34` and verify all four main CI #31 jobs. These source checks do not resolve upstream findings or accept installed Linux runtime.
+- [ ] Close unresolved upstream glib/braces findings through supported updates and fresh relevant evidence before claiming complete remediation.
 
 ## Historical Phase 5 checklist
 

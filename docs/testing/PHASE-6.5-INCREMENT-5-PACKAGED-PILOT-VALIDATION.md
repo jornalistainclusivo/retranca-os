@@ -1,6 +1,8 @@
 # Phase 6.5 Increment 5 — Packaged pilot validation
 
-Date: 2026-10-06 (America/Sao_Paulo). Scope: the [isolated Windows packaged pilot](../specifications/phase-6.5/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT.md). Status: focused helper/configuration checks passed and one local Windows x64 release executable/NSIS candidate was built. Owner installation/data/restart/packaged inference remain pending. No actual packaged runtime or public release is claimed.
+Date: 2026-10-06 (America/Sao_Paulo); source checkpoint updated 2026-10-07. Scope: the [isolated Windows packaged pilot](../specifications/phase-6.5/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT.md). Status: local builds and both original/corrective owner-reported bounded installed Windows checkpoints are accepted. The combined packaging/corrective source was published as `71d25c0` and all four CI #28 jobs passed; main source integration and broader distribution remain separate. Historical candidate receipts below retain their original scope.
+
+Current source checkpoint: [CI #28 / run 37657094508](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37657094508) was verified through authenticated API on `71d25c088887231001329ae3d9fc659dcc6ad5a5`, with successful frontend, Windows/Linux Rust and aggregate jobs. The authorized [dependency consolidation](PHASE-6.5-POST-SECURITY-CONSOLIDATION.md) preserves package/application identity, helper/configuration source and earlier installed acceptance; it does not update the installed executable. Raw receipts, owner data and model output remain local and excluded from Git. No repeat inference or installer acceptance is required merely to restate the existing evidence.
 
 ## Verified baseline and authority
 

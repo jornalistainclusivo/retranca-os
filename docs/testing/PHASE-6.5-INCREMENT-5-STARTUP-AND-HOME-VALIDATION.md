@@ -1,6 +1,8 @@
 # Phase 6.5 Increment 5 — Startup and Início corrective validation
 
-Date: 2026-10-07 (America/Sao_Paulo). Status: implemented and validated locally; the owner accepted the three corrective installed Windows pilot checks. New-source publication/CI and broader distribution gates remain pending. Authority: [ADR-017](../decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) and the [corrective specification](../specifications/phase-6.5/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME.md).
+Date: 2026-10-07 (America/Sao_Paulo). Status: implemented, accepted in the three bounded installed Windows checks, published as `71d25c0` and validated by all four CI #28 jobs. Main integration and broader distribution remain separate. Authority: [ADR-017](../decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) and the [corrective specification](../specifications/phase-6.5/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME.md).
+
+Current source checkpoint: authenticated API confirms [CI #28 / run 37657094508](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37657094508) passed frontend, Rust Windows, Rust Linux and required Rust aggregate on `71d25c088887231001329ae3d9fc659dcc6ad5a5`, branch `codex/phase-6.5-runtime-pilot`. Separate dependency maintenance is integrated into main `5f7ba34`, with all four CI #31 jobs passed. The owner authorized incorporating that main into the pilot branch; the [consolidation record](PHASE-6.5-POST-SECURITY-CONSOLIDATION.md) distinguishes this source update from the unchanged installed candidate below. Preserve accepted installer/model checks; no new installed binary or combined-source CI is claimed. Earlier pending publication/CI statements below retain their historical dates.
 
 ## Baseline, preservation and acceptance
 
