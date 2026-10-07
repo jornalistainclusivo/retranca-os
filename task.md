@@ -1,4 +1,28 @@
-# Current work — Phase 6.5 Increment 4 bounded native runtime pilot
+# Current work — Phase 6.5 Increment 5 startup review and Início — 2026-10-07
+
+- [x] Verify current Git/remote baseline and four passed CI #27 jobs; preserve all 11 pending package-source files and previously accepted model/installed checks.
+- [x] Record review A–D as distribution blockers, with the original owner `1 OK; 2 OK; 3 OK` retained as bounded acceptance.
+- [x] Record the separately accepted suggested-category editing decision in [ADR-017](docs/decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) and update contracts/specifications.
+- [x] Remove automatic sample startup, publish complete workspace snapshots with retry, expose unresolved records for explicit CMS repair, and align article labels/filter counts with stable IDs and local dates.
+- [x] Implement Início first in navigation, followed by Kanban/CMS/Calendar/Statistics/Notes/Settings; provide guidance, actions, recent saved work and shared achievements based on actual saved articles.
+- [x] Pass 364 frontend tests / 29 files, focused post-change tests, types/lint/static build, native domain/import tests in debug/release and 21 isolated compiled-browser checks, including text contrast and reduced motion.
+- [x] Build and retain a fresh unsigned Windows NSIS pilot with separate identity, hashes and receipt. See [current validation and three owner checks](docs/testing/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME-VALIDATION.md); no installed app, owner data or model execution by the agent.
+- [x] Record the owner's `1 OK; 2 OK; 3 OK` on 2026-10-07 for the final corrective installed Windows pilot: Início/creation, visibility/counts/restart and category customization. Preserve existing unresolved records until an explicit owner repair/removal; bounded acceptance is not a publication or distribution authorization.
+- [x] Record separate owner authorization on 2026-10-07 for the local commit of the 41 reviewed packaging/corrective source files: `Sim, autorizo. pode criar o commit.` Use `fix(phase-6.5): correct startup and add home experience`; exclude owner data, raw captures and binaries.
+- [ ] Obtain separate push/manual CI/integration/distribution authorization. The accepted round remains local until publication; CI #27 covers only published `6d0a4f3`.
+
+# Previous checkpoint — Phase 6.5 Increment 5 isolated Windows packaged pilot
+
+- [x] Verify all four successful jobs of [CI #27](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37537545421) on published native-pilot `6d0a4f3d83aefb45c8f78d5d5d70b9eac85b6ef7`; preserve the accepted daemon sample and two completed-output owner decisions.
+- [x] Owner authorized continued development; prepare [packaged pilot specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT.md) and separate [validation](docs/testing/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT-VALIDATION.md), preserving ADR-016/008 and normal data ownership.
+- [x] Prepare explicit pilot product/binary/identifier overlay and local build helper with fixed release arguments, separate Cargo target, ignored logs/receipts/artifacts and no installer/app/model execution.
+- [x] Pass five focused configuration/boundary tests, helper check, TypeScript and scoped lint. Retain the corrected test-extension and blocked sandbox attempts separately; no Vitest/CI configuration change or warning cleanup.
+- [x] Build one local Windows x64 release/NSIS candidate in 207.715 seconds and retain executable/installer with SHA-256, sizes and local receipt. Verify generated distinct installer metadata and `NotSigned` status. Final guard follow-up passed without changing the compiled application/configuration or rerunning the model; release compilation uses a separate ignored target directory and does not execute an installer or application.
+- [x] Complete final delivery checks: 126 existing local documentation targets, five clean new files and tracked diff whitespace; verify captured artifact/configuration hashes and ignored binary/receipt/target paths. The current 11-file round remains uncommitted.
+- [ ] Obtain owner-installed startup/data isolation, synthetic article restart persistence and one packaged-window inference observation. Linux, broader accessibility, signing/licensing/security and distribution remain separate.
+- [ ] Obtain new-round commit/push/manual CI/merge/release authorization against the completed package-source scope. CI #27 does not cover the new helper/overlay.
+
+# Previous checkpoint — Phase 6.5 Increment 4 bounded native runtime pilot
 
 - [x] Verify all four successful jobs of [CI #26](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37530233063) on published metadata `82d1a0007c3d04e3e1375870f946ddac0709006a`; preserve the clean/synchronized branch at resumption and earlier accepted desktop checks.
 - [x] Owner authorized continuing development; prepare the [native pilot specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-NATIVE-PILOT.md) and separate [validation](docs/testing/PHASE-6.5-INCREMENT-4-NATIVE-PILOT-VALIDATION.md).
@@ -8,7 +32,8 @@
 - [x] Record the owner's `1 OK, 2 OK` on 2026-10-06: both completed synthetic suggestions accepted against the two bounded checks; `CANCEL-01` remains an unreviewed partial suggestion. Preserve the original execution ledger and retain a separate local human-review receipt; do not repeat generation or earlier UI/CMS checks.
 - [x] Finish documentation/diff checks: 132 existing local link targets, clean tracked whitespace and three new files without whitespace/conflict/final-newline findings. Confirm all raw pilot captures ignored by Git.
 - [x] Owner explicitly authorized the local commit of this prepared 11-file native-pilot round on 2026-10-06: `Sim, autorizo criar o commit local.` Use `test(phase-6.5): add bounded native runtime pilot`; exclude generated outputs, raw metadata and editorial data. ADR-016 records the current evidence without changing its provider direction.
-- [ ] Obtain separate native-pilot push/manual CI/merge authority and verify each resulting checkpoint; metadata publication/CI authorization does not publish or validate the later harness.
+- [x] Owner separately authorized native-pilot push and manual CI; publish `6d0a4f3d83aefb45c8f78d5d5d70b9eac85b6ef7` and verify all four successful jobs of CI #27 on that exact SHA. Metadata CI alone did not cover this harness.
+- [ ] Obtain separate source merge/tag/release authority for Increment 4; continuation into packaging is development authority only.
 
 # Previous checkpoint — Phase 6.5 Increment 4 runtime metadata preparation
 

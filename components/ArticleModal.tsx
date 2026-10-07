@@ -248,6 +248,13 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
     e.preventDefault();
     const saveSession = saveSessionRef.current;
     if (saving || !saveSession || saveSession.signal.aborted) return;
+    const validStage = workflowStages.some(stage => stage.isActive && stage.id === formData.workflowStageId);
+    const validCategory = categories.some(category => category.isActive && category.id === formData.categoryId);
+    if (!validStage || !validCategory) {
+      setSaveError('Escolha uma etapa e uma categoria ativa antes de salvar. Seu texto continua aqui.');
+      document.getElementById(`${fieldId}-${validStage ? 'category' : 'stage'}`)?.focus();
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     // Add history log entry
@@ -510,10 +517,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </label>
               <select
                 id={`${fieldId}-stage`}
+                required
                 value={formData.workflowStageId || ''}
                 onChange={(e) => handleChange('workflowStageId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
+                {!workflowStages.some(stage => stage.id === formData.workflowStageId && stage.isActive) && <option value={formData.workflowStageId || ''} disabled>Escolha uma etapa ativa</option>}
                 {workflowStages.map((st) => (
                   <option key={st.id} value={st.id}>
                     {st.displayName}
@@ -529,10 +538,12 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({
               </label>
               <select
                 id={`${fieldId}-category`}
+                required
                 value={formData.categoryId || ''}
                 onChange={(e) => handleChange('categoryId', e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
+                {!categories.some(category => category.id === formData.categoryId && category.isActive) && <option value={formData.categoryId || ''} disabled>Escolha uma categoria ativa</option>}
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}

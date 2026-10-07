@@ -247,8 +247,8 @@ pub async fn assign_article_stage(
         details: serde_json::json!({}),
     })?;
 
-    let current_stage_id = article.get::<String, _>("workflow_stage_id");
-    if current_stage_id == request.workflow_stage_id {
+    let current_stage_id = article.get::<Option<String>, _>("workflow_stage_id");
+    if current_stage_id.as_deref() == Some(request.workflow_stage_id.as_str()) {
         tx.rollback().await.map_err(|_| CanonicalError {
             code: "ERR_DATABASE_FAILURE".into(),
             retryable: true,
@@ -1192,14 +1192,6 @@ pub async fn rename_category_internal(
         });
     }
 
-    if cat.unwrap().get::<String, _>("origin") == "standard" {
-        return Err(CanonicalError {
-            code: "ERR_INVALID_CATEGORY".into(),
-            retryable: false,
-            details: serde_json::json!({}),
-        });
-    }
-
     let name = request.name.trim().to_string();
     if name.is_empty() {
         return Err(CanonicalError {
@@ -1292,7 +1284,16 @@ pub async fn remove_category_internal(
     if cat.get::<i32, _>("is_active") == 0 {
         return Ok(SuccessResponse { success: true });
     }
-    if cat.get::<String, _>("origin") == "standard" {
+    let active_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM categories WHERE is_active = 1")
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| CanonicalError {
+                code: "ERR_DATABASE_FAILURE".into(),
+                retryable: true,
+                details: serde_json::json!({}),
+            })?;
+    if active_count <= 1 {
         return Err(CanonicalError {
             code: "ERR_INVALID_CATEGORY".into(),
             retryable: false,
@@ -1311,7 +1312,7 @@ pub async fn remove_category_internal(
                 details: serde_json::json!({}),
             })?;
 
-    if has_articles > 0 {
+    if has_articles > 0 || request.reassign_to_category_id.is_some() {
         if request.reassign_to_category_id.is_none() {
             return Err(CanonicalError {
                 code: "ERR_UNRESOLVED_CATEGORY_REFERENCE".into(),

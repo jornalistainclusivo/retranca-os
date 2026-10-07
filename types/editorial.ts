@@ -1,10 +1,11 @@
 export type ArticleStatus = 'ideia' | 'pesquisa' | 'escrita' | 'revisao' | 'publicado';
 
-export type CategoryTag = 'IA' | 'Acessibilidade' | 'Inclusão' | 'SEO' | 'Docs' | 'Blog' | 'Social' | 'Linguagem Simples';
+// Legacy display label; categoryId is the stable authority for editable categories.
+export type CategoryTag = string;
 
 export type TimeFilter = 'todas' | 'hoje' | 'semana' | 'mes' | 'atrasados';
 
-export type ActiveView = 'kanban' | 'lista' | 'calendario' | 'estatisticas' | 'documentos' | 'configuracoes';
+export type ActiveView = 'inicio' | 'kanban' | 'lista' | 'calendario' | 'estatisticas' | 'documentos' | 'configuracoes';
 
 // ──────────────────────────────────────────────────────
 // Phase 6.4: Domain Vocabulary

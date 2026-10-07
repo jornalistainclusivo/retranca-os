@@ -4,6 +4,8 @@
 
 Accepted — Human Architecture Decision
 
+2026-10-07 amendment: [ADR-017](ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) extends active-category editing to suggested and person-created categories in the open edition. Origin describes provenance, not edit permission. Rename retains stable identity; referenced removal requires a valid destination and preserves articles, with at least one active category retained. `CategoryTag` is now a display string; `categoryId` remains the authoritative entity reference. The relational persistence decision below is retained; historical commercial/protected-standard wording is superseded for current implementation.
+
 ## Context
 
 The current `CategoryTag` is a closed category domain/type, and checklist items are flat article-level structures. Phase 6.4 requires reusable configuration entities for both categories and checklist templates to allow PRO workflow customization. These entities must support renaming, reordering, and preservation across downgrades.

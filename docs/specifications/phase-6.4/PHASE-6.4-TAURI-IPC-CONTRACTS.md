@@ -11,6 +11,8 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Tauri IPC Contracts
 
+> **2026-10-07 amendment — category mutation parity:** Under [ADR-017](../../decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md), category origin no longer rejects `rename_category` or `remove_category`. Existing payloads and canonical errors remain; removal rejects the last active category with `ERR_INVALID_CATEGORY` and checks any supplied destination, requiring an active distinct target when articles are associated. Reassignment and deactivation remain transactional. Explicit stage assignment accepts an existing null stage reference for repair without guessing a destination. Article import accepts a nonempty category display label with an existing active category ID; unknown references remain rejected. No new command, permission or migration is added. Historical protected-standard expectations below are superseded by this amendment.
+
 > **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
 
 

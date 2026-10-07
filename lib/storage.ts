@@ -1,5 +1,6 @@
 import { Article, WorkflowStage, CategoryEntity } from "@/types/editorial";
 import { MAX_ARTICLE_IMPORT_BYTES, parseArticleImport } from './utils/articleImport';
+import { localDateKey } from './utils/editorialOverview';
 import {
   ALL_INITIAL_ARTICLES,
   DEFAULT_WORKFLOW_STAGES,
@@ -114,20 +115,16 @@ export const getStoredChecklistTemplates = (): any[] => {
 
 export const getStoredArticles = (): Article[] => {
   if (typeof window === "undefined") {
-    return migrateArticles(ALL_INITIAL_ARTICLES);
+    return [];
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      const migrated = migrateArticles(ALL_INITIAL_ARTICLES);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-      return migrated;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    const articles =
-      Array.isArray(parsed) && parsed.length > 0
-        ? parsed
-        : ALL_INITIAL_ARTICLES;
+    if (!Array.isArray(parsed)) throw new Error('ERR_ARTICLE_STORAGE_INVALID');
+    const articles = parsed;
 
     const migratedArticles = migrateArticles(articles);
 
@@ -144,7 +141,7 @@ export const getStoredArticles = (): Article[] => {
       throw e;
     }
     console.error("Error loading articles from localStorage", e);
-    return migrateArticles(ALL_INITIAL_ARTICLES);
+    throw e;
   }
 };
 
@@ -304,13 +301,13 @@ export const createNewArticle = (workflowStages: WorkflowStage[], categories: Ca
     return null;
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateKey();
   const articleId = `art_${crypto.randomUUID()}`;
   return {
     id: articleId,
     title: "",
     status: "ideia",
-    categoryTag: "Acessibilidade",
+    categoryTag: activeCats[0].name,
     workflowStageId: activeStages[0].id,
     categoryId: activeCats[0].id,
     tags: ["Acessibilidade", "Jornalismo"],

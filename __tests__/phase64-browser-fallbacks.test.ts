@@ -256,9 +256,12 @@ describe('Phase 6.4 Browser Fallback Parity', () => {
       await expect(createCategory('   ')).rejects.toThrow('Invalid category name');
     });
 
-    it('standard category protection', async () => {
-      await expect(renameCategory('cat_standard', 'Renamed')).rejects.toThrow('Cannot rename standard category');
-      await expect(removeCategory('cat_standard')).rejects.toThrow('ERR_INVALID_CATEGORY');
+    it('suggested categories are editable and the last active category is retained', async () => {
+      await renameCategory('cat_standard', 'Renamed');
+      expect(getStoredCategories().find(c => c.id === 'cat_standard')?.name).toBe('Renamed');
+      await removeCategory('cat_standard', 'cat_custom');
+      expect(getStoredCategories().find(c => c.id === 'cat_standard')?.isActive).toBe(false);
+      await expect(removeCategory('cat_custom')).rejects.toThrow('ERR_INVALID_CATEGORY');
     });
 
     it('category removal target validation', async () => {

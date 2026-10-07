@@ -19,6 +19,15 @@ describe('Local article import boundary', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.unstubAllGlobals());
 
+  it('accepts an edited category label with its stable ID, while rejecting unknown references and unmapped legacy labels', () => {
+    const renamed = { ...article(), categoryTag: 'Ciência e tecnologia' };
+    const parsed = parseArticleImport(JSON.stringify([renamed]));
+    expect(parsed[0].categoryTag).toBe('Ciência e tecnologia');
+    expect(mergeArticleImport([], parsed, DEFAULT_WORKFLOW_STAGES, DEFAULT_CATEGORIES).imported).toBe(1);
+    expect(() => mergeArticleImport([], [{ ...parsed[0], categoryId: 'missing' }], DEFAULT_WORKFLOW_STAGES, DEFAULT_CATEGORIES)).toThrow();
+    expect(() => parseArticleImport(JSON.stringify([{ ...renamed, categoryId: undefined }]))).toThrow('inválido');
+  });
+
   it('preserves every local field and skips matching IDs even when the file is newer', () => {
     const local = article('local');
     const incoming = [ { ...local, title: 'Replacement attempt', updatedAt: '2099-01-01', workflowStageId: 'unknown' }, article('new') ];

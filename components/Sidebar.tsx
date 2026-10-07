@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ActiveView, TimeFilter, Article, CategoryEntity, WorkflowStage } from '@/types/editorial';
+import { matchesTimeFilter } from '@/lib/utils/editorialOverview';
 import { 
   Kanban, 
   ListFilter, 
@@ -15,7 +16,8 @@ import {
   AlertCircle,
   Calendar,
   Layers,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,24 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   workflowStages,
 }) => {
   // Counts calculation
-  const todayStr = new Date().toISOString().slice(0, 10);
-
   const counts = {
     todas: articles.length,
-    hoje: articles.filter(a => a.publishDate === todayStr).length,
-    semana: articles.filter(a => {
-      const diff = (new Date(a.publishDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24);
-      return diff >= -1 && diff <= 7;
-    }).length,
-    mes: articles.filter(a => {
-      const artDate = new Date(a.publishDate);
-      const now = new Date();
-      return artDate.getMonth() === now.getMonth() && artDate.getFullYear() === now.getFullYear();
-    }).length,
-    atrasados: articles.filter(a => {
-      const isPub = workflowStages.find(s => s.id === a.workflowStageId)?.lifecycleRole === 'PUBLICATION';
-      return !isPub && a.publishDate < todayStr;
-    }).length,
+    hoje: articles.filter(a => matchesTimeFilter(a, 'hoje', workflowStages)).length,
+    semana: articles.filter(a => matchesTimeFilter(a, 'semana', workflowStages)).length,
+    mes: articles.filter(a => matchesTimeFilter(a, 'mes', workflowStages)).length,
+    atrasados: articles.filter(a => matchesTimeFilter(a, 'atrasados', workflowStages)).length,
   };
 
   const toggleCategory = (catId: string) => {
@@ -87,6 +77,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           Visões do OS
         </h2>
         <nav className="space-y-1">
+          <button type="button" onClick={() => setActiveView('inicio')} aria-current={activeView === 'inicio' ? 'page' : undefined}
+            className={`w-full flex items-center gap-2 px-3 py-2 min-h-10 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${activeView === 'inicio' ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+            <Home aria-hidden="true" className="w-4 h-4" /> Início
+          </button>
           <button
             onClick={() => setActiveView('kanban')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
@@ -142,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Estatísticas & Badges
+              Estatísticas e conquistas
             </span>
           </button>
 
@@ -231,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
-              Esta semana
+              Próximos 7 dias
             </span>
             <span className="text-[10px] font-mono opacity-80">{counts.semana}</span>
           </button>

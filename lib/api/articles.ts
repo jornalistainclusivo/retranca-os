@@ -418,11 +418,9 @@ export const createCategory = async (name: string): Promise<void> => {
 export const renameCategory = async (id: string, name: string): Promise<void> => {
   if (!isTauri()) {
     const cats = getStoredCategories();
-    const idx = cats.findIndex(c => c.id === id);
+    const idx = cats.findIndex(c => c.id === id && c.isActive);
+    if (idx === -1) throw new Error('ERR_INVALID_CATEGORY');
     if (idx !== -1) {
-      if (cats[idx].origin === 'standard') {
-        throw new Error('Cannot rename standard category');
-      }
       const trimmedName = name.trim();
       if (!trimmedName) throw new Error('Invalid category name');
       if (cats.some(c => c.isActive && c.id !== id && c.name.toLowerCase() === trimmedName.toLowerCase())) {
@@ -444,7 +442,7 @@ export const removeCategory = async (id: string, targetCategoryId?: string): Pro
     const idx = cats.findIndex(c => c.id === id);
     if (idx === -1 || !cats[idx].isActive) return;
 
-    if (cats[idx].origin === 'standard') {
+    if (cats.filter(c => c.isActive).length <= 1) {
       throw new Error('ERR_INVALID_CATEGORY');
     }
 
