@@ -207,6 +207,17 @@ The [acceptance closure plan](docs/testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-
 - [ ] After separately authorized publication, prepare PR readiness and verify its published revision through the existing CI.
 - [ ] Obtain human merge authorization (Gate C); define and approve Phase 6.5 specifications before its implementation. Release/tag requires separate Gate D authorization.
 
+## Dependency maintenance candidate — 2026-10-07
+
+- [x] Owner authorized bounded dependency treatment with skills and subagents; isolated `codex/security-dependencies` from main `1b7de720ff8f87060cd2f945b8c65ec598679471` without switching or modifying the Phase 6.5 workspace.
+- [x] Prepare seven original alert version corrections: Next/aligned ESLint, sharp, source-map-js, scoped typography parser, two brace-expansion families and rustls. Preserve optional platform metadata and the original tempfile/getrandom edge.
+- [x] Add eight bounded typography/parser regression tests; compare complete legitimate typography output and exercise class/ID resource behavior independently.
+- [x] Document [ADR-018](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md): glib remains unresolved; the additional braces chain has five affected npm entries with no compatible published patch. Do not downgrade Next ESLint or force an incompatible native graph.
+- [x] Complete branch-baseline checks: 358 frontend tests/28 files and 128 Rust Windows tests in each debug/release profile; types, lint, build, formatting and locked checks passed. Integration with Phase 6.5 passed 372 frontend tests/30 files and 141 Rust tests in each profile, with one ignored test. Preserve shared-lock audit failure (five high affected entries) and fresh candidate review interruption by usage limit; the implementer completed a separate final pass, not full independent acceptance.
+- [x] Owner explicitly authorized the local commit of the eight reviewed source/documentation files on 2026-10-07. Push, existing CI, PR/merge and publication remain separate authorization gates; upstream findings and incomplete independent acceptance are preserved.
+- [ ] Verify Linux and the exact published revision through authorized CI; neither prior Phase 6.5 CI nor local Windows results close this gate.
+- [ ] Close unresolved upstream glib/braces findings through supported updates and fresh relevant evidence before claiming complete remediation.
+
 ## Historical Phase 5 checklist
 
 Current follow-up evidence and AntiGravity script: [Slice 8 cancellation/focus validation](docs/testing/PHASE-6.4-SLICE-8-CANCELLATION-FOCUS-VALIDATION.md). Prior reports preserve their historical test counts and acceptance limits.
