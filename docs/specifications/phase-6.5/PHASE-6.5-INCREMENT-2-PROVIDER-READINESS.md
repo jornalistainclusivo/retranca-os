@@ -2,6 +2,10 @@
 
 Date: 2026-10-05. Status: the native portion is implemented, locally validated, functionally accepted within the bounded owner handoff and published as `d944a114f935cbab7222068c22fe22bc26f12fb1`; all four jobs passed [CI 37356369629](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37356369629) on that exact source. The [readiness UI integration](PHASE-6.5-INCREMENT-2-READINESS-UI.md) is implemented locally with automated checks passed and [separate browser observations/desktop handoff](../../testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md). The owner reported the three UI desktop checks passing on 2026-10-05 (`1 OK; 2 OK; 3 OK`). The separately authorized UI publication `34bf047781e63e2f55f82600b99cff9686204b82` passed all four jobs of [CI #23 / run 37389383428](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37389383428). Exact runtime/model identity evidence and distribution remain pending; native CI does not cover subsequent UI changes. [ADR-016](../../decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md) records accepted external local Ollama for the first production path and an embedded engine as the preferred future delivery. Preserve the accepted Increment 1. Native checks do not grant distribution/release acceptance. Actual commands, results and owner observations are recorded in the [native validation report](../../testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md).
 
+## Compatibility follow-up — 2026-10-08
+
+The native and renderer correction adds exactly server `0.40.1` while retaining `0.35.1`. It is locally validated on `codex/phase-6.5-packaged-recovery` from integrated main `0d2be58344323fb022942b8190465859651fac12`; publication/new-source CI remain pending. The owner reported all three bounded installed recovery checks passed on 2026-10-08; broader manual accessibility remains pending. [Increment 6 validation](../../testing/PHASE-6.5-INCREMENT-6-PACKAGED-RECOVERY-VALIDATION.md) separates synthetic tests, actual metadata-only readiness and the rebuilt package. Earlier dated results retain their original runtime/source scope.
+
 ## Baseline and preservation
 
 Start from merged `37b272c1ae048c5aa004211fd9d09178bd41709c` on `codex/phase-6.5-production-provider-contract`. The [resumption checkpoint](../../testing/PHASE-6.5-RESUMPTION-2026-10-05.md) records Git ancestry and current main CI. Preserve [Increment 1](PHASE-6.5-INCREMENT-1-MODEL-INVENTORY.md): explicit refresh/retry, exact installed tags, no implicit selection/download, choice retention within the session, focus restoration, foreground-dialog precedence and late-result invalidation. Do not repeat its accepted desktop script solely for confirmation.
@@ -25,7 +29,7 @@ Owner-reported model preference (2026-10-05): Gemma 4 currently used and DeepSee
 
 ## Native protocol and execution constraint
 
-The supported **server** version is exactly `0.35.1`, checked through `GET /api/version`; a matching CLI version alone is insufficient. Support is pinned to upstream commit [`b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce`](https://github.com/ollama/ollama/tree/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce). Other versions, including later releases, are blocked until separately audited and tested. No automatic update or downgrade occurs.
+The supported **server** versions are exactly `0.35.1` and `0.40.1`, checked through `GET /api/version`; a matching CLI version alone is insufficient. Source pins are [`b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce`](https://github.com/ollama/ollama/tree/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce) and [`cf2a313a298066d572c36812e5ad30a21c0db13b`](https://github.com/ollama/ollama/tree/cf2a313a298066d572c36812e5ad30a21c0db13b), respectively. Support is an exact audited set: `0.40.0`, unknown future versions, prereleases and modified strings remain blocked until separately reviewed and tested. No automatic update or downgrade occurs.
 
 1. Reject absent/invalid selection before network access. Input/catalog names must be nonempty, at most 256 UTF-16 units, and contain no whitespace/control characters.
 2. Consult server version, then bounded `GET /api/tags`. Resolve exact catalog membership first. Preserve the legacy `requested + ":latest"` alias only if exact membership is absent; do not alter the renderer's choice or invent a default.
@@ -35,7 +39,9 @@ The supported **server** version is exactly `0.35.1`, checked through `GET /api/
 
 In the pinned upstream implementation, the [model-reference parser](https://github.com/ollama/ollama/blob/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce/internal/modelref/modelref.go#L28-L47) interprets the final `:local` as `SourceLocal`, retaining the remaining catalog name, namespace and registry port. The [generation handler](https://github.com/ollama/ollama/blob/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce/server/routes.go#L329-L338) rejects remote configuration before proxy dispatch; the [show path](https://github.com/ollama/ollama/blob/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce/server/routes.go#L1523-L1555) also enforces local resolution. This per-request constraint is the positive evidence used here; absent remote markers are only an additional check. Nested cloud/local requests rejected upstream are not made compatible by stripping suffixes.
 
-The fixed production endpoint is `http://127.0.0.1:11434`. The Rust client disables proxies and redirects. No renderer endpoint, cloud toggle, process environment modification or `/api/status` dependency is accepted. The latter is [experimental in this version](https://github.com/ollama/ollama/blob/b0c1ca4f7549d7acdfa52a7dcffc934bc63a43ce/api/client.go#L479-L486); global cloud configuration is not needed to impose `SourceLocal` on this request.
+For `0.40.1`, the pinned [parser](https://github.com/ollama/ollama/blob/cf2a313a298066d572c36812e5ad30a21c0db13b/internal/modelref/modelref.go#L27-L45), [generation guard](https://github.com/ollama/ollama/blob/cf2a313a298066d572c36812e5ad30a21c0db13b/server/routes.go#L386-L391) and [show guard](https://github.com/ollama/ollama/blob/cf2a313a298066d572c36812e5ad30a21c0db13b/server/routes.go#L1761-L1764) preserve the same positive local-request constraint. Relevant version/catalog/show/generate shapes were checked; unrelated new cloud routes are not called. This is a bounded compatibility review, not a full upstream security audit.
+
+The fixed production endpoint is `http://127.0.0.1:11434`. The Rust client disables proxies and redirects. No renderer endpoint, cloud toggle, process environment modification or `/api/status` dependency is accepted. Global cloud configuration is not needed to impose `SourceLocal` on each supported request.
 
 ## IPC and states
 
@@ -62,7 +68,7 @@ This is the contract notation. The native published round added no frontend cons
 | --- | --- |
 | `NO_SELECTION` / `INVALID_MODEL` | Missing or invalid choice; block before consulting the daemon. |
 | `SERVER_UNREACHABLE` | Initial version request cannot connect; block and allow a later manual retry. |
-| `UNSUPPORTED_RUNTIME` | Server version differs from audited `0.35.1`; block without changing the daemon. |
+| `UNSUPPORTED_RUNTIME` | Server version is outside the exact audited set `0.35.1`, `0.40.1`; block without changing the daemon. |
 | `MODEL_MISSING` | Neither exact choice nor retained legacy alias is in the catalog; block without substitution. |
 | `REMOTE_MODEL` | Tags/show contain a remote marker; block before transmitting editorial content. |
 | `UNSUPPORTED_CAPABILITY` | No advertised textual completion; block. |

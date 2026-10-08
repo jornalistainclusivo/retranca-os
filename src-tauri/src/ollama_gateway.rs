@@ -342,12 +342,45 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     async fn ready_metadata(server: &mut mockito::ServerGuard, count: usize) -> Vec<mockito::Mock> {
+        ready_metadata_version(server, count, "0.35.1").await
+    }
+
+    async fn ready_metadata_version(
+        server: &mut mockito::ServerGuard,
+        count: usize,
+        version: &str,
+    ) -> Vec<mockito::Mock> {
         vec![
-            server.mock("GET", "/api/version").with_body(r#"{"version":"0.35.1"}"#).expect(count).create_async().await,
+            server.mock("GET", "/api/version").with_body(serde_json::json!({"version":version}).to_string()).expect(count).create_async().await,
             server.mock("GET", "/api/tags").with_body(serde_json::json!({"models":[{"name":"installed-test-model:latest","digest":"a".repeat(64)}]}).to_string()).expect(count).create_async().await,
             server.mock("POST", "/api/show").match_body(mockito::Matcher::Json(serde_json::json!({"model":"installed-test-model:latest:local","verbose":false})))
                 .with_body(r#"{"capabilities":["completion"],"details":{"format":"gguf"},"model_info":{"general.architecture":"synthetic"}}"#).expect(count).create_async().await,
         ]
+    }
+
+    #[test]
+    fn audited_versions_dispatch_only_with_the_local_selector() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            for version in ["0.35.1", "0.40.1"] {
+                let mut server = mockito::Server::new_async().await;
+                let metadata = ready_metadata_version(&mut server, 1, version).await;
+                let generation = server.mock("POST", "/api/generate")
+                    .match_body(mockito::Matcher::Json(serde_json::json!({"model":"installed-test-model:latest:local","prompt":"synthetic content","stream":true})))
+                    .with_body("{\"response\":\"synthetic result\",\"done\":false}\n{\"done\":true}\n")
+                    .expect(1).create_async().await;
+                let unconstrained = server.mock("POST", "/api/generate")
+                    .match_body(mockito::Matcher::PartialJson(serde_json::json!({"model":"installed-test-model:latest"})))
+                    .expect(0).create_async().await;
+                let (_sender, receiver) = oneshot::channel();
+                let mut tokens = Vec::new();
+                let outcome = run_cancellable_request(&local_client(Duration::from_secs(2)).unwrap(), &server.url(), "installed-test-model", "synthetic content", receiver, |token| tokens.push(token)).await;
+                assert_eq!(outcome, InferenceOutcome::Completed);
+                assert_eq!(tokens, ["synthetic result"]);
+                generation.assert_async().await;
+                unconstrained.assert_async().await;
+                for mock in metadata { mock.assert_async().await; }
+            }
+        });
     }
 
     #[test]
@@ -425,6 +458,9 @@ mod tests {
                 ("0.35.1", serde_json::json!({"models":[{"name":"installed-test-model:latest","remote_host":"https://example.invalid"}]}), serde_json::json!({}), "REMOTE_MODEL", 1, 0),
                 ("0.35.1", serde_json::json!({"models":[{"name":"installed-test-model:latest","digest":"a".repeat(64)}]}), serde_json::json!({"capabilities":["embedding"]}), "UNSUPPORTED_CAPABILITY", 1, 1),
                 ("0.35.1", serde_json::json!({"models":[{"name":"installed-test-model:latest","digest":"a".repeat(64)}]}), serde_json::json!({"capabilities":["completion"]}), "VERIFICATION_FAILED", 1, 1),
+                ("0.40.2", serde_json::json!({"models":[]}), serde_json::json!({}), "UNSUPPORTED_RUNTIME", 0, 0),
+                ("0.40.1", serde_json::json!({"models":[{"name":"installed-test-model:latest","remote_host":"https://example.invalid"}]}), serde_json::json!({}), "REMOTE_MODEL", 1, 0),
+                ("0.40.1", serde_json::json!({"models":[{"name":"installed-test-model:latest","digest":"a".repeat(64)}]}), serde_json::json!({"capabilities":["embedding"]}), "UNSUPPORTED_CAPABILITY", 1, 1),
             ] {
                 let mut server = mockito::Server::new_async().await;
                 let version = server.mock("GET", "/api/version").with_body(serde_json::json!({"version":version}).to_string()).create_async().await;
@@ -594,7 +630,7 @@ mod tests {
                 stream.read_exact(&mut vec![0; length]).unwrap();
                 if step < 3 {
                     let body = match step {
-                        0 => r#"{"version":"0.35.1"}"#.to_string(),
+                        0 => r#"{"version":"0.40.1"}"#.to_string(),
                         1 => serde_json::json!({"models":[{"name":"installed-test-model:latest","digest":"a".repeat(64)}]}).to_string(),
                         _ => r#"{"capabilities":["completion"],"details":{"format":"gguf"},"model_info":{"general.architecture":"synthetic"}}"#.to_string(),
                     };

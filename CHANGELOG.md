@@ -7,6 +7,9 @@ and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+- **Phase 6.5 Increment 6 — Ollama 0.40.1 compatibility:** Add exactly server `0.40.1` to native and renderer readiness while retaining `0.35.1`, fresh bounded metadata checks and per-request `:local` enforcement. Unknown versions, remote models and non-completion capabilities remain blocked before content dispatch. Pinned upstream review, synthetic regressions and an actual metadata-only native READY observation passed locally; a corrected unsigned pilot was compiled. [ADR-016 amendment](docs/decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md#compatibility-amendment--2026-10-08) and [validation](docs/testing/PHASE-6.5-INCREMENT-6-PACKAGED-RECOVERY-VALIDATION.md) preserve old inference/CI scope and owner-reported acceptance of all three bounded installed recovery checks on 2026-10-08 (`1 OK; 2 OK; 3 OK`). Broader manual accessibility and new-source CI remain pending. No dependency, daemon/model installation, endpoint, permission or persistence change.
+
 ### Security
 - **Dependency security maintenance (2026-10-07):** Update Next/eslint-config-next to 16.3.6, sharp to 0.35.5, source-map-js to 1.2.2, both brace-expansion families to 1.1.21/5.0.12, scoped typography parser to 7.1.6 and rustls to 0.23.45. Add bounded parser/typography regression coverage and preserve the original Cargo graph. Authorized PR #7 integrated the reviewed patch into main as `5f7ba34`; all four exact-source main CI #31 jobs passed. This consolidation brings that source into the separately accepted Phase 6.5 pilot branch. [ADR-018](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md) retains unresolved glib and the separate braces finding from the recorded lookup; local audit remains nonzero. Source CI does not prove full security remediation, updated installed binaries or distribution acceptance.
 

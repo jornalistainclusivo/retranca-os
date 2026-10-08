@@ -80,6 +80,18 @@ describe('Local AI readiness native boundary', () => {
     expect(invoke).toHaveBeenCalledExactlyOnceWith('get_local_ai_readiness', { model });
   });
 
+  it.each(['0.35.1', '0.40.1'])('accepts native local execution evidence on audited server %s', async runtime_version => {
+    const report = { ...reportFor('READY'), runtime_version };
+    invoke.mockResolvedValue(report);
+    expect(await fetchLocalAiReadiness(selectedModel)).toEqual(report);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith('get_local_ai_readiness', { model: selectedModel });
+  });
+
+  it.each(['0.40.0', '0.40.2', '0.40.1-rc0', '0.40.1+local', '0.35.10', '1.0.0'])('rejects purported READY from unaudited server %s', async runtime_version => {
+    invoke.mockResolvedValue({ ...reportFor('READY'), runtime_version });
+    await expect(fetchLocalAiReadiness(selectedModel)).rejects.toThrow();
+  });
+
   it('keeps a resolved legacy alias diagnostic without replacing the requested choice', async () => {
     const model = 'synthetic-editorial';
     const report = { ...reportFor('READY'), model, resolved_model: `${model}:latest` };

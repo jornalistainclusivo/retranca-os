@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 pub(crate) const OLLAMA_ENDPOINT: &str = "http://127.0.0.1:11434";
-const SUPPORTED_SERVER_VERSION: &str = "0.35.1";
+const SUPPORTED_SERVER_VERSIONS: &[&str] = &["0.35.1", "0.40.1"];
 const CHECK_DEADLINE: Duration = Duration::from_secs(10);
 const MAX_MODEL_UNITS: usize = 256;
 
@@ -45,7 +45,7 @@ impl ReadinessState {
             Self::NoSelection => "Selecione um modelo em IA local.",
             Self::InvalidModel => "O nome do modelo selecionado é inválido.",
             Self::ServerUnreachable => "Não foi possível consultar o Ollama. Verifique se ele está em execução.",
-            Self::UnsupportedRuntime => "A versão do servidor Ollama ainda não foi validada para execução local pelo Retranca. Esta versão do Retranca aceita o servidor 0.35.1.",
+            Self::UnsupportedRuntime => "A versão do servidor Ollama ainda não foi validada para execução local pelo Retranca. Esta versão do Retranca aceita os servidores 0.35.1 e 0.40.1.",
             Self::ModelMissing => "O modelo selecionado não está disponível. Atualize a lista de modelos.",
             Self::RemoteModel => "O modelo informado usa execução remota. Escolha um modelo instalado localmente.",
             Self::UnsupportedCapability => "Não foi possível confirmar a capacidade de geração de texto desse modelo.",
@@ -226,7 +226,7 @@ async fn inspect(client: &Client, base_url: &str, model: &str) -> LocalAiReadine
     if version.version.len() > 64 {
         return report.finish(ReadinessState::VerificationFailed);
     }
-    let supported = version.version == SUPPORTED_SERVER_VERSION;
+    let supported = SUPPORTED_SERVER_VERSIONS.contains(&version.version.as_str());
     report.runtime_version = Some(version.version);
     if !supported {
         return report.finish(ReadinessState::UnsupportedRuntime);
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn metadata_policy_blocks_unknown_remote_and_unsupported_models() {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
-            for (index, expected) in [
+            for (runtime_version, (index, expected)) in [
                 ReadinessState::UnsupportedRuntime,
                 ReadinessState::ModelMissing,
                 ReadinessState::RemoteModel,
@@ -403,6 +403,7 @@ mod tests {
             ]
             .into_iter()
             .enumerate()
+            .flat_map(|case| ["0.35.1", "0.40.1"].into_iter().map(move |version| (version, case)))
             {
                 let mut server = mockito::Server::new_async().await;
                 let mut inventory = tags();
@@ -418,11 +419,7 @@ mod tests {
                 }
                 let version = server
                     .mock("GET", "/api/version")
-                    .with_body(if index == 0 {
-                        r#"{"version":"0.35.2"}"#
-                    } else {
-                        r#"{"version":"0.35.1"}"#
-                    })
+                    .with_body(serde_json::json!({"version": if index == 0 { "0.35.2" } else { runtime_version }}).to_string())
                     .expect(1)
                     .create_async()
                     .await;
@@ -448,6 +445,7 @@ mod tests {
                 )
                 .await;
                 assert_eq!(report.state, expected);
+                assert_eq!(report.runtime_version.as_deref(), Some(if index == 0 { "0.35.2" } else { runtime_version }));
                 if expected == ReadinessState::Ready {
                     assert_eq!(report.generation_model().unwrap(), "synthetic:stable:local");
                     assert_eq!(report.execution, ExecutionEvidence::LocalRequestEnforced);
@@ -467,6 +465,51 @@ mod tests {
                 version.assert_async().await;
                 catalog.assert_async().await;
                 model.assert_async().await;
+            }
+        });
+    }
+
+    #[test]
+    fn unaudited_server_versions_stop_before_model_metadata() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            for runtime_version in [
+                "0.40.0",
+                "0.40.2",
+                "0.40.1-rc0",
+                "0.40.1+local",
+                "0.35.10",
+                "1.0.0",
+            ] {
+                let mut server = mockito::Server::new_async().await;
+                let version = server
+                    .mock("GET", "/api/version")
+                    .with_body(serde_json::json!({"version":runtime_version}).to_string())
+                    .expect(1)
+                    .create_async()
+                    .await;
+                let tags = server
+                    .mock("GET", "/api/tags")
+                    .expect(0)
+                    .create_async()
+                    .await;
+                let show = server
+                    .mock("POST", "/api/show")
+                    .expect(0)
+                    .create_async()
+                    .await;
+                let report = check_readiness(
+                    &local_client(Duration::from_secs(2)).unwrap(),
+                    &server.url(),
+                    Some("synthetic:stable"),
+                )
+                .await;
+                assert_eq!(report.state, ReadinessState::UnsupportedRuntime);
+                assert_eq!(report.execution, ExecutionEvidence::Unknown);
+                assert_eq!(report.runtime_version.as_deref(), Some(runtime_version));
+                assert!(report.generation_model().is_err());
+                version.assert_async().await;
+                tags.assert_async().await;
+                show.assert_async().await;
             }
         });
     }

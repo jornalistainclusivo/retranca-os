@@ -11,6 +11,7 @@ const states: LocalAiReadinessState[] = [
   'NO_SELECTION', 'INVALID_MODEL', 'SERVER_UNREACHABLE', 'UNSUPPORTED_RUNTIME',
   'MODEL_MISSING', 'REMOTE_MODEL', 'UNSUPPORTED_CAPABILITY', 'VERIFICATION_FAILED', 'READY',
 ];
+const supportedServerVersions = ['0.35.1', '0.40.1'];
 
 function validName(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 256
@@ -43,7 +44,7 @@ function parseReport(result: unknown, requested: string | null): LocalAiReadines
   if (report.resolved_model !== null
     && report.resolved_model !== requested && report.resolved_model !== `${requested}:latest`) throw invalid();
   if (report.state === 'READY') {
-    if (report.execution !== 'LOCAL_REQUEST_ENFORCED' || report.runtime_version !== '0.35.1'
+    if (report.execution !== 'LOCAL_REQUEST_ENFORCED' || !supportedServerVersions.includes(report.runtime_version as string)
       || report.resolved_model === null || report.digest === null
       || !report.capabilities.includes('completion')) throw invalid();
   } else if (report.execution !== 'UNKNOWN') throw invalid();
