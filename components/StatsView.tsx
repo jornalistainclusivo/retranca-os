@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Article, GamificationBadge, WorkflowStage } from '@/types/editorial';
+import { Article, WorkflowStage } from '@/types/editorial';
+import { EditorialAchievements } from './EditorialAchievements';
+import { matchesTimeFilter } from '@/lib/utils/editorialOverview';
 import { 
   Trophy, 
   CheckCircle2, 
@@ -49,53 +51,9 @@ export const StatsView: React.FC<StatsViewProps> = ({ articles, workflowStages }
     return stage?.lifecycleRole !== 'PUBLICATION' && stage?.semanticClassification === 'IDEA';
   }).length;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const atrasados = articles.filter((a) => {
-    const stage = workflowStages.find(s => s.id === a.workflowStageId);
-    const isPub = stage?.lifecycleRole === 'PUBLICATION';
-    return !isPub && a.publishDate < todayStr;
-  }).length;
+  const atrasados = articles.filter(a => matchesTimeFilter(a, 'atrasados', workflowStages)).length;
 
   const percentPublished = total > 0 ? Math.round((publicados / total) * 100) : 0;
-
-  // Badges logic
-  const badges: GamificationBadge[] = [
-    {
-      id: 'badge_1',
-      title: 'Primeira Publicação',
-      description: 'Publicou pelo menos 1 pauta no Retranca',
-      icon: '🎉',
-      unlocked: publicados >= 1,
-    },
-    {
-      id: 'badge_2',
-      title: 'Produtividade de Ouro',
-      description: '5 matérias concluídas e revisadas',
-      icon: '🏆',
-      unlocked: publicados >= 5,
-    },
-    {
-      id: 'badge_3',
-      title: 'Redação em Alta Velocidade',
-      description: '15 pautas concluídas no Editorial OS',
-      icon: '⚡',
-      unlocked: publicados >= 15,
-    },
-    {
-      id: 'badge_4',
-      title: 'Mestre da Acessibilidade WCAG 2.2',
-      description: 'Todos os checklists de acessibilidade e Alt Text preenchidos',
-      icon: '🌟',
-      unlocked: articles.some(a => a.checklists.filter(c => c.category === 'wcag' && c.completed).length >= 1),
-    },
-    {
-      id: 'badge_5',
-      title: 'Pontualidade Britânica',
-      description: 'Nenhuma pauta com prazo atrasado',
-      icon: '🎯',
-      unlocked: atrasados === 0,
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -173,29 +131,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ articles, workflowStages }
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {badges.map((b) => (
-            <div
-              key={b.id}
-              className={`p-4 rounded-xl border flex flex-col items-center text-center space-y-2 transition-all ${
-                b.unlocked
-                  ? 'bg-yellow-50/50 dark:bg-amber-950/30 border-yellow-200 dark:border-amber-800 shadow-2xs'
-                  : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-50 grayscale'
-              }`}
-            >
-              <div className="text-3xl">{b.icon}</div>
-              <div className="font-bold text-xs text-slate-900 dark:text-slate-100">{b.title}</div>
-              <p className="text-[10px] text-slate-500 leading-tight">{b.description}</p>
-              <span
-                className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded ${
-                  b.unlocked
-                    ? 'bg-yellow-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                }`}
-              >
-                {b.unlocked ? 'Desbloqueado' : 'Bloqueado'}
-              </span>
-            </div>
-          ))}
+          <div className="col-span-full"><EditorialAchievements articles={articles} workflowStages={workflowStages} /></div>
         </div>
       </div>
 
@@ -206,7 +142,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ articles, workflowStages }
             Mensagem Editorial
           </div>
           <p className="text-xs font-medium italic text-slate-300">
-            &quot;Excelente trabalho! Seu conhecimento e rigor em Linguagem Simples e WCAG alteram positivamente a acessibilidade da informação.&quot;
+            Confira fontes, contexto e acessibilidade antes de concluir sua pauta. Os indicadores registram seu trabalho e não substituem a revisão humana.
           </p>
         </div>
         <Sparkles className="w-6 h-6 text-yellow-400 flex-shrink-0 ml-4" />

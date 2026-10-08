@@ -11,6 +11,10 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Test Specification
 
+## Open startup/category corrective delta — 2026-10-07
+
+[ADR-017](../../decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) replaces historical standard-category mutation rejection expectations with rename/removal parity across browser and Rust. Cover identity and content preservation, explicit reassignment, invalid/duplicate names or targets, rollback and the last active category. Add explicit repair of a legacy null stage reference and import of a renamed label with a valid active ID; unknown IDs still reject. Cover empty/restarted browser storage, native initialization before catalog reads, atomic snapshot/retry behavior, unresolved-record visibility, local dates, category selection refresh and achievements that require actual saved work. The [Phase 6.5 corrective validation](../../testing/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME-VALIDATION.md) distinguishes passing local synthetic/browser/disposable SQLite checks from pending installed/manual/remote acceptance. Existing accepted AI samples remain valid and are not rerun.
+
 ## Gate B corrective acceptance delta — 2026-10-03
 
 Execution update 2026-10-04: TEST-DEPENDENCY-GATE-001 has local graph/audit, clean installation, types, 287 frontend tests, lint, static build and fresh independent candidate-review evidence in the [validation checkpoint](../../testing/PHASE-6.4-RESUMPTION-2026-10-04.md). Exact published-source CI remains to be verified. The audit retains 7 Next/lint-chain affected-package entries; Linux glib is explicitly unresolved. The three accessibility corrective cases below have not been implemented or accepted by this dependency-only round.

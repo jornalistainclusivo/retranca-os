@@ -123,17 +123,7 @@ fn validate_request(request: &ImportArticlesRequest) -> Result<(), CanonicalErro
             || !valid_id(&article.category_id)
             || !["ideia", "pesquisa", "escrita", "revisao", "publicado"]
                 .contains(&article.status.as_str())
-            || ![
-                "IA",
-                "Acessibilidade",
-                "Inclusão",
-                "SEO",
-                "Docs",
-                "Blog",
-                "Social",
-                "Linguagem Simples",
-            ]
-            .contains(&article.category_tag.as_str())
+            || article.category_tag.trim().is_empty()
             || serde_json::from_str::<Vec<String>>(&article.tags).is_err()
         {
             return Err(invalid("ERR_IMPORT_INVALID"));

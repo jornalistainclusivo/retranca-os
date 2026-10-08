@@ -1,4 +1,67 @@
-# Current work — Phase 6.5 Increment 3 production provider policy
+# Current work — Phase 6.5 consolidation after dependency maintenance — 2026-10-07
+
+- [x] Confirm all four jobs of [main CI #31](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37695557140) passed on `5f7ba349acafe2dc45b9bbadd3271bac4440d86a`, the authorized merge of dependency PR #7.
+- [x] Confirm published Phase 6.5 source `71d25c088887231001329ae3d9fc659dcc6ad5a5` passed all four jobs of [CI #28](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37657094508). Preserve the three Increment 4–5 commits and both accepted Windows pilot checkpoints.
+- [x] Obtain explicit owner authorization for incorporating main into `codex/phase-6.5-runtime-pilot` with one local merge commit. Push and manual CI remain separate gates.
+- [x] Reconcile the sole README conflict by retaining integrated readiness/diagnostics, accepted pilot source and the new dependency checkpoint. Update stale publication/CI wording; do not claim a rebuilt installed pilot or full security closure.
+- [x] Complete source/dependency preservation, 131 local Markdown target checks and whitespace/conflict-marker guards; align the root installation with the reviewed lock (540 packages, explicit Node 24.19.0), pass types, eight focused regressions and isolated pilot configuration check. Prepare the explicitly authorized local merge commit; its final identity is retained in a local ignored receipt.
+- [ ] Obtain separate push and exact combined-source CI authorization, then review the accepted Increment 4–5 source for its own PR/main integration decision. Existing CI #28/#31 results do not validate the new combined Git revision.
+- [ ] Complete remaining packaged cancellation/recovery, manual accessibility, installed Linux, licensing/security/signing and public distribution gates through separately bounded increments. Do not repeat accepted model or installer scripts solely for confirmation.
+
+Current consolidation evidence: [resumption record](docs/testing/PHASE-6.5-POST-SECURITY-CONSOLIDATION.md). Earlier checkpoints below retain their original verification dates and are superseded for publication/CI only by this current evidence.
+
+# Previous checkpoint — Phase 6.5 Increment 5 startup review and Início — 2026-10-07
+
+- [x] Verify current Git/remote baseline and four passed CI #27 jobs; preserve all 11 pending package-source files and previously accepted model/installed checks.
+- [x] Record review A–D as distribution blockers, with the original owner `1 OK; 2 OK; 3 OK` retained as bounded acceptance.
+- [x] Record the separately accepted suggested-category editing decision in [ADR-017](docs/decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) and update contracts/specifications.
+- [x] Remove automatic sample startup, publish complete workspace snapshots with retry, expose unresolved records for explicit CMS repair, and align article labels/filter counts with stable IDs and local dates.
+- [x] Implement Início first in navigation, followed by Kanban/CMS/Calendar/Statistics/Notes/Settings; provide guidance, actions, recent saved work and shared achievements based on actual saved articles.
+- [x] Pass 364 frontend tests / 29 files, focused post-change tests, types/lint/static build, native domain/import tests in debug/release and 21 isolated compiled-browser checks, including text contrast and reduced motion.
+- [x] Build and retain a fresh unsigned Windows NSIS pilot with separate identity, hashes and receipt. See [current validation and three owner checks](docs/testing/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME-VALIDATION.md); no installed app, owner data or model execution by the agent.
+- [x] Record the owner's `1 OK; 2 OK; 3 OK` on 2026-10-07 for the final corrective installed Windows pilot: Início/creation, visibility/counts/restart and category customization. Preserve existing unresolved records until an explicit owner repair/removal; bounded acceptance is not a publication or distribution authorization.
+- [x] Record separate owner authorization on 2026-10-07 for the local commit of the 41 reviewed packaging/corrective source files: `Sim, autorizo. pode criar o commit.` Use `fix(phase-6.5): correct startup and add home experience`; exclude owner data, raw captures and binaries.
+- [x] Publish the separately authorized corrective source as `71d25c0` and verify all four successful CI #28 jobs. The earlier CI #27 covers only `6d0a4f3`; main integration and distribution remain separate gates.
+
+# Previous checkpoint — Phase 6.5 Increment 5 isolated Windows packaged pilot
+
+- [x] Verify all four successful jobs of [CI #27](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37537545421) on published native-pilot `6d0a4f3d83aefb45c8f78d5d5d70b9eac85b6ef7`; preserve the accepted daemon sample and two completed-output owner decisions.
+- [x] Owner authorized continued development; prepare [packaged pilot specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT.md) and separate [validation](docs/testing/PHASE-6.5-INCREMENT-5-PACKAGED-PILOT-VALIDATION.md), preserving ADR-016/008 and normal data ownership.
+- [x] Prepare explicit pilot product/binary/identifier overlay and local build helper with fixed release arguments, separate Cargo target, ignored logs/receipts/artifacts and no installer/app/model execution.
+- [x] Pass five focused configuration/boundary tests, helper check, TypeScript and scoped lint. Retain the corrected test-extension and blocked sandbox attempts separately; no Vitest/CI configuration change or warning cleanup.
+- [x] Build one local Windows x64 release/NSIS candidate in 207.715 seconds and retain executable/installer with SHA-256, sizes and local receipt. Verify generated distinct installer metadata and `NotSigned` status. Final guard follow-up passed without changing the compiled application/configuration or rerunning the model; release compilation uses a separate ignored target directory and does not execute an installer or application.
+- [x] Complete final delivery checks: 126 existing local documentation targets, five clean new files and tracked diff whitespace; verify captured artifact/configuration hashes and ignored binary/receipt/target paths. The current 11-file round remains uncommitted.
+- [ ] Obtain owner-installed startup/data isolation, synthetic article restart persistence and one packaged-window inference observation. Linux, broader accessibility, signing/licensing/security and distribution remain separate.
+- [ ] Obtain new-round commit/push/manual CI/merge/release authorization against the completed package-source scope. CI #27 does not cover the new helper/overlay.
+
+# Previous checkpoint — Phase 6.5 Increment 4 bounded native runtime pilot
+
+- [x] Verify all four successful jobs of [CI #26](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37530233063) on published metadata `82d1a0007c3d04e3e1375870f946ddac0709006a`; preserve the clean/synchronized branch at resumption and earlier accepted desktop checks.
+- [x] Owner authorized continuing development; prepare the [native pilot specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-NATIVE-PILOT.md) and separate [validation](docs/testing/PHASE-6.5-INCREMENT-4-NATIVE-PILOT-VALIDATION.md).
+- [x] Implement an ignored, explicitly opted-in native test with three frozen synthetic cases, unchanged model/authority, registered cancellation, recovery, local output retention and bounded stop rules. No production function body, dependency, IPC, UI, schema, model/daemon preference or workflow change.
+- [x] Pass five non-daemon harness tests in both Windows debug and release profiles; the live test remains ignored by default. Formatting passes. Existing provisioning warnings remain separate.
+- [x] Complete one actual Windows debug sequence in 94.639 seconds: `PL-01` completed, `CANCEL-01` cancelled after its first fragment with teardown acknowledged, `RECOVER-01` completed. All three have released registries, preserved synthetic source files and stable sampled identity; no retries. Record model `gemma4:latest`, runtime `0.35.1` and exact scope in validation; raw metadata/outputs remain ignored/local.
+- [x] Record the owner's `1 OK, 2 OK` on 2026-10-06: both completed synthetic suggestions accepted against the two bounded checks; `CANCEL-01` remains an unreviewed partial suggestion. Preserve the original execution ledger and retain a separate local human-review receipt; do not repeat generation or earlier UI/CMS checks.
+- [x] Finish documentation/diff checks: 132 existing local link targets, clean tracked whitespace and three new files without whitespace/conflict/final-newline findings. Confirm all raw pilot captures ignored by Git.
+- [x] Owner explicitly authorized the local commit of this prepared 11-file native-pilot round on 2026-10-06: `Sim, autorizo criar o commit local.` Use `test(phase-6.5): add bounded native runtime pilot`; exclude generated outputs, raw metadata and editorial data. ADR-016 records the current evidence without changing its provider direction.
+- [x] Owner separately authorized native-pilot push and manual CI; publish `6d0a4f3d83aefb45c8f78d5d5d70b9eac85b6ef7` and verify all four successful jobs of CI #27 on that exact SHA. Metadata CI alone did not cover this harness.
+- [ ] Obtain separate source merge/tag/release authority for Increment 4; continuation into packaging is development authority only.
+
+# Previous checkpoint — Phase 6.5 Increment 4 runtime metadata preparation
+
+- [x] Verify PR #6 merged as `1b7de720ff8f87060cd2f945b8c65ec598679471` and all four successful jobs in main CI #25 on that exact SHA.
+- [x] Publish the authorized annotated `milestone-phase-6.5-increments-2-3` tag; GitHub tag object `a794672b5420f32b74279d1dbeef55058e7a42d0` targets the integrated merge. No installer release/version bump.
+- [x] Owner authorized the next development step; create `codex/phase-6.5-runtime-pilot` from clean integrated main.
+- [x] Prepare the [metadata specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE.md), reusing ADR-016/008 authority without changing production behavior.
+- [x] Implement developer Rust inventory/readiness observations with explicit exact model choice, JSON output and fail-closed exit codes. No Tauri/database startup, prompt/inference/download or new dependency.
+- [x] Owner selected `gemma4:latest` for one read-only metadata observation; do not substitute/download a model.
+- [x] Verify final formatting, 5 Windows example tests, release type checking, actual catalog and owner-selected model metadata. Permitted query reports server `0.35.1` and `READY / LOCAL_REQUEST_ENFORCED` for `gemma4:latest`; keep raw observations/digests local and record failed sandbox attempts separately in [validation](docs/testing/PHASE-6.5-INCREMENT-4-RUNTIME-EVIDENCE-VALIDATION.md).
+- [x] Finish documentation checks: 114 existing local link targets, tracked diff whitespace and the three new files' whitespace/conflict/final-newline checks. No new-source CI is claimed.
+- [x] Specify later synthetic inference/cancellation cases, attempt/time limits and human quality review in the new bounded native pilot; installed Windows/Linux, licensing, accessibility and future embedded engine remain separate.
+- [x] Owner explicitly authorized the local commit of this 10-file metadata round on 2026-10-06, with message `feat(phase-6.5): add local runtime metadata probe`. Keep observations, model digests and editorial data ignored/local.
+- [x] Owner separately authorized metadata push and manual CI; publish `82d1a0007c3d04e3e1375870f946ddac0709006a` and verify all four successful jobs of CI #26 on that exact SHA. This CI does not validate the later native pilot harness; merge/release remain separately gated.
+
+# Previous checkpoint — Phase 6.5 Increment 3 production provider policy
 
 - [x] Verify UI CI #23 on published `34bf047781e63e2f55f82600b99cff9686204b82`; preserve accepted desktop checks.
 - [x] Owner authorized continuing development and confirmed the app was already closed.
@@ -7,7 +70,7 @@
 - [x] Complete final local verification and record scoped results in [validation](docs/testing/PHASE-6.5-INCREMENT-3-PRODUCTION-POLICY-VALIDATION.md): 350 frontend tests, types/lint/static build, Rust format and 128 tests in each default debug/release profile, 85 in each explicit-feature debug/release sample, 11 isolated compiled settings checks, 126 local documentation targets and diff whitespace.
 - [x] Owner accepted all three bounded normal-startup/CMS-without-AI/guidance-model-diagnostic checks (`1 OK; 2 OK; 3 OK`, 2026-10-05).
 - [x] Owner explicitly authorized the four source-integration steps: documentation/commit, push/CI, reviewed PR/merge and an appropriately chosen technical milestone tag. Distribution release remains outside that scope.
-- [ ] Complete and verify the authorized source-integration sequence; use the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) and the PR/CI/tag identities for resulting evidence. Preserve branch protection and existing accepted checks.
+- [x] Complete and verify the authorized source-integration sequence; the [integration checkpoint](docs/testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md) records exact PR/CI/merge/tag identities. Preserve branch protection and existing accepted checks.
 - [ ] Retain runtime/model pilot, Windows/Linux installed packages, licensing and future embedded-engine delivery as separate gates.
 
 No real article/database/model file was inspected or changed by the agent. Existing local files and owner Ollama configuration remain outside Git. No dependency, schema or CI configuration change is included.
@@ -38,7 +101,7 @@ No real article/database/model file was inspected or changed by the agent. Exist
 - [ ] Retain exact runtime/model identity and broader pilot evidence as separate gates.
 - [ ] Retain separate dependency maintenance, licensing, preference persistence, attachments, packaged Windows/Linux and release gates. Do not reopen accepted scripts or introduce these features implicitly.
 
-Current entry: [Increment 2 readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI is implemented and locally validated through automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05. UI publication and exact-source CI subsequently passed above; broader desktop/NVDA remain pending. Neither part of Increment 2 is integrated into `main` yet. Runtime identity and broader distribution acceptance remain open; no merge/tag/release is authorized. Sections below are historical checkpoints and do not override this continuation or the merged baseline.
+Historical Increment 2 checkpoint: [readiness UI specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-2-READINESS-UI.md) and [UI validation](docs/testing/PHASE-6.5-INCREMENT-2-UI-VALIDATION.md), following the published and CI-approved [native round](docs/testing/PHASE-6.5-INCREMENT-2-NATIVE-VALIDATION.md). Preserve its bounded owner functional acceptance. The UI passed automated checks and the isolated compiled-browser sample. The owner accepted the three diagnostic/recheck/focus desktop checks on 2026-10-05; UI publication and exact-source CI subsequently passed. At that checkpoint, Increment 2 integration and merge/tag/release authority were still pending. PR #6, main CI #25 and the published technical milestone supersede that earlier source-integration state, as recorded at the top. Runtime identity and broader desktop/NVDA/distribution acceptance remain open. Sections below retain historical scope.
 
 ## Closure candidate — 2026-10-04
 
@@ -215,7 +278,7 @@ The [acceptance closure plan](docs/testing/PHASE-6.4-SLICE-8-ACCEPTANCE-CLOSURE-
 - [x] Document [ADR-018](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md): glib remains unresolved; the additional braces chain has five affected npm entries with no compatible published patch. Do not downgrade Next ESLint or force an incompatible native graph.
 - [x] Complete branch-baseline checks: 358 frontend tests/28 files and 128 Rust Windows tests in each debug/release profile; types, lint, build, formatting and locked checks passed. Integration with Phase 6.5 passed 372 frontend tests/30 files and 141 Rust tests in each profile, with one ignored test. Preserve shared-lock audit failure (five high affected entries) and fresh candidate review interruption by usage limit; the implementer completed a separate final pass, not full independent acceptance.
 - [x] Owner explicitly authorized the local commit of the eight reviewed source/documentation files on 2026-10-07. Push, existing CI, PR/merge and publication remain separate authorization gates; upstream findings and incomplete independent acceptance are preserved.
-- [ ] Verify Linux and the exact published revision through authorized CI; neither prior Phase 6.5 CI nor local Windows results close this gate.
+- [x] Complete the resumed original independent candidate-review cycle and verify all four jobs of security CI #29/#30 on `ad6d84c`; integrate authorized PR #7 into main as `5f7ba34` and verify all four main CI #31 jobs. These source checks do not resolve upstream findings or accept installed Linux runtime.
 - [ ] Close unresolved upstream glib/braces findings through supported updates and fresh relevant evidence before claiming complete remediation.
 
 ## Historical Phase 5 checklist

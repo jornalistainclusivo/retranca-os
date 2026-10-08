@@ -11,6 +11,8 @@ authors: Retranca OS Core Team
 
 # Phase 6.4 Technical Specification
 
+> **2026-10-07 amendment — open category customization and startup:** [ADR-017](../../decisions/ADR-017-OPEN-EDITORIAL-STARTUP-AND-CATEGORY-CUSTOMIZATION.md) supersedes protected-standard-category mutation clauses. All active category origins support rename and safe removal; preserve stable IDs, unique nonempty names, explicit valid reassignment for referenced categories and at least one active category. Category text is a display label resolved by ID, including JSON imports; it is not a fixed list of permitted names. Initialization creates no sample articles, publishes a complete workspace and exposes unresolved records for explicit repair. Existing SQLite schema/version, native authority and AI prerequisites remain unchanged. See the [current corrective specification](../phase-6.5/PHASE-6.5-INCREMENT-5-STARTUP-AND-HOME.md); older conflicting clauses below retain historical scope.
+
 > **2026-09-30 amendment — open single edition:** [ADR-013](../../decisions/ADR-013-OPEN-SINGLE-EDITION.md) supersedes the commercial Free/PRO access policy and ADR-011/012. All implemented customization and editorial capabilities are open to everyone, without account, subscription, activation, entitlement verification, or developer premium. Native domain validation, data preservation, and Rust AI evidence/runtime requirements remain mandatory. Older commercial clauses below are historical and MUST NOT drive current implementation or acceptance.
 
 

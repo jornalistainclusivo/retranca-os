@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Article, WorkflowStage } from '@/types/editorial';
+import { Article, WorkflowStage, CategoryEntity } from '@/types/editorial';
+import { localDateKey, unresolvedArticles } from '@/lib/utils/editorialOverview';
 import { 
   CheckCircle2, 
   Clock, 
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 interface KanbanBoardProps {
+  categories?: CategoryEntity[];
   articles: Article[];
   workflowStages: WorkflowStage[];
   searchTerm: string;
@@ -46,8 +48,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onSelectArticle,
   onUpdateArticleStage,
   onToggleChecklist,
+  categories,
 }) => {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateKey();
+  const unresolved = unresolvedArticles(articles, workflowStages, categories);
+  const unresolvedIds = new Set(unresolved.map(a => a.id));
 
   // Helper to compute checklist completion percentage
   const getProgress = (art: Article) => {
@@ -107,9 +112,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   return (
+    <div className="space-y-4">
+      {unresolved.length > 0 && <section aria-label="Pautas sem etapa ou categoria válida" className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-400 p-5 space-y-3">
+        <h3 className="font-bold">Pautas para conferir ({unresolved.length})</h3>
+        <p className="text-sm">Estas pautas fazem parte dos totais, mas precisam de uma etapa ou categoria ativa. Confira no CMS e escolha os vínculos antes de salvar.</p>
+        <ul className="space-y-2">{unresolved.map(article => <li key={article.id}>
+          <button type="button" onClick={() => onSelectArticle(article)} className="min-h-11 rounded-lg px-3 py-2 border border-slate-400 bg-white dark:bg-slate-900 font-semibold text-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Abrir no CMS: {article.title || 'Pauta sem título'}</button>
+        </li>)}</ul>
+      </section>}
     <div className="flex gap-4 overflow-x-auto pb-6 h-[calc(100vh-140px)] min-h-[600px] snap-x">
-      {workflowStages.map((col) => {
-        const colArticles = articles.filter((a) => a.workflowStageId === col.id);
+      {workflowStages.filter(s => s.isActive).map((col) => {
+        const colArticles = articles.filter((a) => a.workflowStageId === col.id && !unresolvedIds.has(a.id));
         const styles = getColorClasses(col);
 
         return (
@@ -264,6 +277,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
         );
       })}
+    </div>
     </div>
   );
 };

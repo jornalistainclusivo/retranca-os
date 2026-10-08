@@ -17,6 +17,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 default = []
 dev-fixtures = []
 
+[[example]]
+name = "local_ai_readiness_probe"
+test = true
+
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
 

@@ -17,6 +17,7 @@ import {
   applyChecklistTemplate
 } from "@/lib/api/articles";
 import { validateStageA11y, validateCategoryA11y } from "@/lib/utils/workflowValidation";
+import { SEMANTIC_LABELS } from "@/lib/utils/workflowPresentation";
 import { Plus, Edit2, Trash2, Check, X, ArrowUp, ArrowDown } from "lucide-react";
 
 interface WorkflowEditorProps {
@@ -328,11 +329,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                       <input ref={focusRef} type="text" value={editStageName} onChange={e => setEditStageName(e.target.value)} className="flex-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Nome da etapa"/>
                       <select value={editStageClass} onChange={e => setEditStageClass(e.target.value as SemanticClassification)} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 outline-none text-sm" aria-label="Classe semântica">
                         <option value="">Sem classificação</option>
-                        <option value="IDEA">Ideia (Backlog)</option>
-                        <option value="RESEARCH">Pesquisa</option>
-                        <option value="DRAFTING">Redação</option>
-                        <option value="REVIEW">Revisão</option>
-                        <option value="PUBLISHED">Publicado (recomendação de IA)</option>
+                        {Object.entries(SEMANTIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                       </select>
                       <button onClick={handleUpdateStage} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50" aria-label="Salvar">Salvar</button>
                       <button onClick={() => setEditingStage(null)} className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold" aria-label="Cancelar">Cancelar</button>
@@ -362,8 +359,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                         <div>
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100">{stage.displayName}</h3>
                           <p className="text-xs font-mono text-slate-500 uppercase mt-1">
-                            {stage.semanticClassification || "CUSTOMIZADO"}
-                            {stage.lifecycleRole === "PUBLICATION" && " • (PUBLICAÇÃO)"}
+                            {stage.semanticClassification ? SEMANTIC_LABELS[stage.semanticClassification] : "Sem classificação"}
+                            {stage.lifecycleRole === "PUBLICATION" && " • Função de publicação"}
                           </p>
                         </div>
                       </div>
@@ -380,15 +377,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             {(
               <div className="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Adicionar Nova Etapa</h3>
-                <form onSubmit={handleCreateStage} className="flex gap-3">
+                <p id={`${panelId}-classification-help`} className="text-sm text-slate-600 dark:text-slate-300 mb-3">O nome é livre. A classificação descreve a atividade editorial e não limita a IA. A função de publicação é preservada separadamente; escolher “Publicado” aqui não conclui pautas automaticamente.</p>
+                <form onSubmit={handleCreateStage} className="flex flex-wrap gap-3">
                   <input type="text" required aria-label="Nome da nova etapa" value={newStageName} onChange={(e) => setNewStageName(e.target.value)} placeholder="Nome da etapa" className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                  <select aria-label="Classificação da nova etapa" value={newStageClass} onChange={(e) => setNewStageClass(e.target.value as SemanticClassification)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select aria-label="Classificação da nova etapa" aria-describedby={`${panelId}-classification-help`} value={newStageClass} onChange={(e) => setNewStageClass(e.target.value as SemanticClassification)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Sem classificação</option>
-                    <option value="IDEA">Ideia (Backlog)</option>
-                    <option value="RESEARCH">Pesquisa</option>
-                    <option value="DRAFTING">Redação</option>
-                    <option value="REVIEW">Revisão</option>
-                    <option value="PUBLISHED">Publicado (recomendação de IA)</option>
+                    {Object.entries(SEMANTIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                   <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"><Plus className="w-4 h-4" />Adicionar</button>
                 </form>
@@ -424,12 +418,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-slate-900 dark:text-slate-100">{cat.name}</h3>
-                        <p className="text-xs text-slate-500 mt-1">Origem: <span className="font-mono bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">{cat.origin}</span></p>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{cat.origin === 'standard' ? 'Categoria sugerida • editável' : 'Criada por você • editável'}</p>
                       </div>
-                      {cat.origin === 'custom' && (
+                      {(
                         <div className="flex gap-2">
                           <button onClick={() => { rememberFocus(); setEditingCategory(cat.id); setEditCategoryName(cat.name); }} aria-label={`Editar categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => { rememberFocus(); setDeletingCategory(cat.id); }} aria-label={`Excluir categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                          <button disabled={activeCategories.length <= 1} onClick={() => { rememberFocus(); setDeletingCategory(cat.id); }} aria-label={`Excluir categoria ${cat.name}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       )}
                     </div>
@@ -441,7 +435,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             {(
               <div className="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Adicionar Categoria</h3>
-                <form onSubmit={handleCreateCategory} className="flex gap-3">
+                <form onSubmit={handleCreateCategory} className="flex flex-wrap gap-3">
                   <input type="text" required aria-label="Nome da nova categoria" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Nome da categoria" className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"><Plus className="w-4 h-4" />Adicionar</button>
                 </form>

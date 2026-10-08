@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Article,
-  ArticleStatus,
   ActiveView,
   TimeFilter,
-  CategoryTag,
   WorkflowStage,
   CategoryEntity,
 } from "@/types/editorial";
@@ -19,6 +17,7 @@ import { CalendarView } from "@/components/CalendarView";
 import { StatsView } from "@/components/StatsView";
 import { GovernanceView } from "@/components/GovernanceView";
 import { WorkflowEditor } from "@/components/WorkflowEditor";
+import { HomeView } from "@/components/HomeView";
 import { ArticleModal } from "@/components/ArticleModal";
 import { MotivationalModal } from "@/components/MotivationalModal";
 import { AiAssistantModal } from "@/components/AiAssistantModal";
@@ -40,8 +39,6 @@ import {
   fetchAllRawArticles,
   saveRawArticle,
   deleteRawArticle,
-  fetchWorkflowStages,
-  fetchCategories,
   assignArticleStage,
   assignArticleCategory,
 } from "@/lib/api/articles";
@@ -49,12 +46,9 @@ import {
   toArticleProps,
   fromArticleProps,
 } from "@/lib/adapters/articleAdapter";
-import { getDb } from "@/db/client";
-import { seedDatabase, setDbInstanceForSeed } from "@/lib/api/seed";
-import { articles as articlesSchema } from "@/db/schema";
+import { loadEditorialWorkspace, projectArticleCategories, reconcileCategorySelection } from "@/lib/api/editorialWorkspace";
+import { filterWorkspaceArticles, matchesTimeFilter } from "@/lib/utils/editorialOverview";
 import {
-  getStoredWorkflowStages,
-  getStoredCategories,
   browserAssignArticleStage,
   browserAssignArticleCategory,
   createNewArticle,
@@ -67,7 +61,11 @@ export default function Home() {
   const [categories, setCategories] = useState<CategoryEntity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeView, setActiveView] = useState<ActiveView>("kanban");
+  const [activeView, setActiveView] = useState<ActiveView>("inicio");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const viewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const didLoadRef = useRef(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("todas");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
@@ -96,32 +94,14 @@ export default function Home() {
   const [selectedProvider, setSelectedProvider] =
     useState<ProviderType>("NONE");
 
-  // Montagem Inicial: Conexão, Seed e Fetch
-  useEffect(() => {
-    const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
       try {
-        const db = await getDb();
-        setDbInstanceForSeed(db);
-
-        const existingArticles = await db.select().from(articlesSchema);
-        if (existingArticles.length === 0) {
-          console.log("Database empty. Running seed...");
-          await seedDatabase();
-        }
-
-        const rawData = await fetchAllRawArticles();
-        const adaptedArticles = rawData.map((raw) =>
-          toArticleProps(raw.article, raw.checklists, raw.history),
-        );
-
-        const stages = await fetchWorkflowStages();
-        const cats = await fetchCategories();
-
+        const { stages, categories: cats, articles: loadedArticles } = await loadEditorialWorkspace();
         setWorkflowStages(stages);
         setCategories(cats);
-        // default select all categories
         setSelectedCategories(cats.map((c) => c.id));
-        setArticles(adaptedArticles);
+        setArticles(loadedArticles);
+        didLoadRef.current = true;
 
         // Preflight Check for AI Model
         if (
@@ -146,30 +126,50 @@ export default function Home() {
           }
         }
       } catch (e) {
-        console.error("Error initializing Tauri SQLite Database: ", e);
+        console.error("Error loading editorial workspace: ", e);
+        didLoadRef.current = false;
+        setLoadError("Não foi possível carregar seu ambiente. Suas pautas foram preservadas. Tente novamente.");
       } finally {
         setIsLoading(false);
         setIsMounted(true);
       }
-    };
-
-    // Certificar-se de executar apenas no client e no ambiente Tauri
-    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
-      initializeApp();
-    } else {
-      const initFallback = async () => {
-        const stages = getStoredWorkflowStages();
-        const cats = getStoredCategories();
-        setWorkflowStages(stages);
-        setCategories(cats);
-        setSelectedCategories(cats.map((c) => c.id));
-        setArticles(getStoredArticles());
-        setIsLoading(false);
-        setIsMounted(true);
-      };
-      initFallback();
-    }
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => { if (active) return initializeApp(); });
+    return () => { active = false; };
+  }, [initializeApp]);
+
+  useEffect(() => {
+    if (!isLoading && !loadError) viewHeadingRef.current?.focus();
+  }, [activeView, isLoading, loadError]);
+
+  const refreshWorkspace = async () => {
+    const workspace = await loadEditorialWorkspace();
+    setSelectedCategories(selected => reconcileCategorySelection(
+      categories.map(c => c.id), selected, workspace.categories.map(c => c.id),
+    ));
+    setWorkflowStages(workspace.stages);
+    setCategories(workspace.categories);
+    setArticles(workspace.articles);
+    setCreationError(null);
+  };
+
+  const navigate = (view: ActiveView) => {
+    setActiveView(view);
+    setIsFocusMode(false);
+  };
+
+  const openArticle = (article: Article) => {
+    setSelectedArticle(article);
+    setIsArticleModalOpen(true);
+  };
+
+  const viewLabels: Record<ActiveView, string> = {
+    inicio: 'Início', kanban: 'Quadro Kanban', lista: 'CMS Editorial', calendario: 'Calendário',
+    estatisticas: 'Estatísticas e conquistas', documentos: 'Bloco de notas', configuracoes: 'Configurações Editoriais',
+  };
 
   // Sync storage listener
   useEffect(() => {
@@ -178,13 +178,13 @@ export default function Home() {
         typeof window !== "undefined" &&
         !(window as any).__TAURI_INTERNALS__
       ) {
-        setArticles(getStoredArticles());
+        setArticles(projectArticleCategories(getStoredArticles(), categories));
       }
     };
     window.addEventListener("jinc_storage_updated", handleStorageChange);
     return () =>
       window.removeEventListener("jinc_storage_updated", handleStorageChange);
-  }, []);
+  }, [categories]);
 
   // Update DOM dark mode class
   useEffect(() => {
@@ -201,7 +201,7 @@ export default function Home() {
     savedArticle?: Article,
     deletedId?: string,
   ) => {
-    setArticles(newArticles);
+    setArticles(projectArticleCategories(newArticles, categories));
 
     if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
       if (savedArticle) {
@@ -230,10 +230,10 @@ export default function Home() {
       const adaptedArticles = rawData.map((raw) =>
         toArticleProps(raw.article, raw.checklists, raw.history),
       );
-      setArticles(adaptedArticles);
+      setArticles(projectArticleCategories(adaptedArticles, categories));
     } else {
       browserAssignArticleStage(id, newStageId);
-      setArticles(getStoredArticles());
+      setArticles(projectArticleCategories(getStoredArticles(), categories));
     }
 
     if (previous.workflowStageId !== newStageId && isPublished) {
@@ -315,7 +315,7 @@ export default function Home() {
       const adaptedArticles = rawData.map((raw) =>
         toArticleProps(raw.article, raw.checklists, raw.history),
       );
-      setArticles(adaptedArticles);
+      setArticles(projectArticleCategories(adaptedArticles, categories));
     } else {
       // Browser fallback transitions
       const metadataArticle = mergeBrowserSaveArticle(previous, savedArticle);
@@ -347,7 +347,7 @@ export default function Home() {
       ) {
         browserAssignArticleCategory(savedArticle.id, savedArticle.categoryId);
       }
-      setArticles(getStoredArticles());
+      setArticles(projectArticleCategories(getStoredArticles(), categories));
     }
 
     if (
@@ -370,76 +370,22 @@ export default function Home() {
 
   // Open New Article Modal
   const handleOpenNewArticleModal = () => {
+    if (isLoading || loadError || !didLoadRef.current) return;
     const newArt = createNewArticle(workflowStages, categories);
 
     if (!newArt) {
-      alert("Não é possível criar a pauta: nenhuma etapa de fluxo ou categoria ativa encontrada.");
+      setCreationError("Para criar uma pauta, mantenha pelo menos uma etapa de fluxo e uma categoria ativa nas Configurações Editoriais.");
+      navigate('configuracoes');
       return;
     }
 
+    setCreationError(null);
     setSelectedArticle(newArt);
     setIsArticleModalOpen(true);
   };
 
-  // Filtered articles calculation
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  const filteredArticles = articles.filter((art) => {
-    // Search Term Filter
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      const matchTitle = art.title.toLowerCase().includes(term);
-      const matchSummary = art.summary.toLowerCase().includes(term);
-      const matchKeyword = art.keyword.toLowerCase().includes(term);
-      const matchNotes = art.notes.toLowerCase().includes(term);
-      const matchTag = art.tags.some((t) => t.toLowerCase().includes(term));
-      if (
-        !matchTitle &&
-        !matchSummary &&
-        !matchKeyword &&
-        !matchNotes &&
-        !matchTag
-      ) {
-        return false;
-      }
-    }
-
-    // Category ID Filter
-    if (
-      selectedCategories.length > 0 &&
-      art.categoryId &&
-      !selectedCategories.includes(art.categoryId)
-    ) {
-      return false;
-    }
-
-    // Period Filter
-    if (timeFilter === "hoje") {
-      return art.publishDate === todayStr;
-    }
-    if (timeFilter === "semana") {
-      const diff =
-        (new Date(art.publishDate).getTime() - new Date().getTime()) /
-        (1000 * 3600 * 24);
-      return diff >= -1 && diff <= 7;
-    }
-    if (timeFilter === "mes") {
-      const artDate = new Date(art.publishDate);
-      const now = new Date();
-      return (
-        artDate.getMonth() === now.getMonth() &&
-        artDate.getFullYear() === now.getFullYear()
-      );
-    }
-    if (timeFilter === "atrasados") {
-      const isPub =
-        workflowStages.find((s) => s.id === art.workflowStageId)
-          ?.lifecycleRole === "PUBLICATION";
-      return !isPub && art.publishDate < todayStr;
-    }
-
-    return true;
-  });
+  const scopedArticles = filterWorkspaceArticles(articles, searchTerm, selectedCategories, categories);
+  const filteredArticles = scopedArticles.filter(art => matchesTimeFilter(art, timeFilter, workflowStages));
 
   const publishedCount = articles.filter((a) => {
     const isPub =
@@ -455,7 +401,7 @@ export default function Home() {
   if (!isMounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 motion-reduce:transition-none">
       {/* Header */}
       <Header
         articles={articles}
@@ -469,6 +415,7 @@ export default function Home() {
         onOpenNewModal={handleOpenNewArticleModal}
         onOpenAiModal={() => setIsAiModalOpen(true)}
         onArticlesUpdated={(updated) => updateArticlesState(updated)}
+        workspaceReady={!isLoading && !loadError}
       />
 
       {/* Main Body */}
@@ -478,12 +425,12 @@ export default function Home() {
           {!isFocusMode && (
             <Sidebar
               activeView={activeView}
-              setActiveView={setActiveView}
+              setActiveView={navigate}
               timeFilter={timeFilter}
-              setTimeFilter={setTimeFilter}
+              setTimeFilter={(filter) => { setTimeFilter(filter); navigate('kanban'); }}
               selectedCategories={selectedCategories}
               setSelectedCategories={setSelectedCategories}
-              articles={articles}
+              articles={scopedArticles}
               categories={categories}
               workflowStages={workflowStages}
             />
@@ -496,12 +443,25 @@ export default function Home() {
                 <span className="sr-only">Carregando pautas...</span>
                 <div aria-hidden="true" className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100"></div>
               </div>
+            ) : loadError ? (
+              <section className="rounded-xl bg-white dark:bg-slate-900 border border-slate-300 p-6 space-y-4">
+                <p role="alert">{loadError}</p>
+                <button type="button" onClick={() => { setIsLoading(true); setLoadError(null); didLoadRef.current = false; void initializeApp(); }} className="rounded-lg bg-blue-600 text-white px-4 py-3 focus-visible:ring-2 focus-visible:ring-blue-500">Tentar carregar novamente</button>
+              </section>
             ) : (
               <>
+                <h2 ref={viewHeadingRef} tabIndex={-1} className="text-xl font-bold mb-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">{viewLabels[activeView]}</h2>
+                {creationError && <p role="alert" className="mb-4 text-red-700 dark:text-red-300">{creationError}</p>}
+                {activeView === 'inicio' && <HomeView articles={articles} workflowStages={workflowStages} categories={categories} onNavigate={navigate} onCreateArticle={handleOpenNewArticleModal} onSelectArticle={openArticle} />}
+                {['kanban', 'lista', 'calendario'].includes(activeView) && <div className="flex flex-wrap items-center gap-3 mb-4 text-sm">
+                  <p role="status">Exibindo {filteredArticles.length} de {articles.length} pauta(s). O total geral inclui todas as pautas salvas.</p>
+                  <button type="button" onClick={() => { setSearchTerm(''); setTimeFilter('todas'); setSelectedCategories(categories.map(c => c.id)); }} className="underline text-blue-700 dark:text-blue-300 rounded p-2 focus-visible:ring-2 focus-visible:ring-blue-500">Mostrar todas as pautas</button>
+                </div>}
                 {activeView === "kanban" && (
                   <KanbanBoard
                     articles={filteredArticles}
                     workflowStages={workflowStages}
+                    categories={categories}
                     searchTerm={searchTerm}
                     onSelectArticle={(art) => {
                       setSelectedArticle(art);
@@ -546,14 +506,8 @@ export default function Home() {
                   <WorkflowEditor
                     workflowStages={workflowStages}
                     categories={categories}
-                    onUpdateStages={async () => {
-                      const stages = await fetchWorkflowStages();
-                      setWorkflowStages(stages);
-                    }}
-                    onUpdateCategories={async () => {
-                      const cats = await fetchCategories();
-                      setCategories(cats);
-                    }}
+                    onUpdateStages={refreshWorkspace}
+                    onUpdateCategories={refreshWorkspace}
                   />
                 )}
               </>

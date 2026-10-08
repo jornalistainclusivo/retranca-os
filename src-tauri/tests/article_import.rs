@@ -56,6 +56,32 @@ fn request(values: Vec<serde_json::Value>) -> ImportArticlesRequest {
     serde_json::from_value(serde_json::json!({"articles": values})).unwrap()
 }
 
+#[test]
+fn import_edited_category_labels_still_require_valid_references() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = open(&temporary.path().join("synthetic-renamed-category.db")).await;
+        setup(&pool).await;
+        let mut edited = fixture("edited");
+        edited["article"]["categoryTag"] = "Ciência e tecnologia".into();
+        let result = import_articles_pool(&pool, request(vec![edited.clone()]))
+            .await
+            .unwrap();
+        assert_eq!(result.imported, 1);
+        edited["article"]["id"] = "unknown-reference".into();
+        edited["article"]["categoryId"] = "missing".into();
+        for key in ["checklists", "history"] {
+            edited[key][0]["articleId"] = "unknown-reference".into();
+        }
+        let error = import_articles_pool(&pool, request(vec![edited]))
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(error.code, "ERR_IMPORT_REFERENCE");
+        assert_eq!(count(&pool).await, 1);
+    });
+}
+
 async fn count(pool: &SqlitePool) -> i64 {
     sqlx::query_scalar("SELECT COUNT(*) FROM articles")
         .fetch_one(pool)

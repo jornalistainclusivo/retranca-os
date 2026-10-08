@@ -48,7 +48,7 @@ export function parseArticleImport(content: string): Article[] {
     const status = text(source.status);
     const categoryTag = text(source.categoryTag);
     if (!['ideia', 'pesquisa', 'escrita', 'revisao', 'publicado'].includes(status)
-      || !['IA', 'Acessibilidade', 'Inclusão', 'SEO', 'Docs', 'Blog', 'Social', 'Linguagem Simples'].includes(categoryTag)) {
+      || (source.categoryId == null && !['IA', 'Acessibilidade', 'Inclusão', 'SEO', 'Docs', 'Blog', 'Social', 'Linguagem Simples'].includes(categoryTag))) {
       throw invalid();
     }
     return {

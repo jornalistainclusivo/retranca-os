@@ -35,6 +35,130 @@ fn run_async<F: std::future::Future>(f: F) -> F::Output {
 }
 
 #[test]
+fn test_open_suggested_category_mutations_preserve_articles() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext { instances };
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('pub', 'Publicado', 0, 'PUBLICATION', 1, 'time')").await.unwrap();
+        pool.execute("INSERT INTO categories (id, name, origin, is_active, created_at) VALUES ('suggested', 'Suggested', 'standard', 1, 'time'), ('target', 'Target', 'custom', 1, 'time')").await.unwrap();
+        pool.execute("INSERT INTO articles (id, title, status, categoryTag, tags, publishDate, createdAt, updatedAt, workflow_stage_id, category_id, notes) VALUES ('synthetic', 'EXERCÍCIO SINTÉTICO', 'ideia', 'IA', '[]', '2026-10-07', 'time', 'time', 'pub', 'suggested', 'Preserve this synthetic content')").await.unwrap();
+        domain::rename_category(
+            ctx.state_db(),
+            serde_json::from_value(serde_json::json!({"id": "suggested", "name": "Ciência"}))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+        let name: String = sqlx::query_scalar("SELECT name FROM categories WHERE id = 'suggested'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(name, "Ciência");
+        let duplicate = domain::rename_category(
+            ctx.state_db(),
+            serde_json::from_value(serde_json::json!({"id": "suggested", "name": "Target"}))
+                .unwrap(),
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(duplicate.code, "ERR_INVALID_CATEGORY");
+        let no_target = domain::remove_category(
+            ctx.state_db(),
+            RemoveCategoryRequest {
+                id: "suggested".into(),
+                reassign_to_category_id: None,
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(no_target.code, "ERR_UNRESOLVED_CATEGORY_REFERENCE");
+        let invalid = domain::remove_category(
+            ctx.state_db(),
+            RemoveCategoryRequest {
+                id: "suggested".into(),
+                reassign_to_category_id: Some("missing".into()),
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(invalid.code, "ERR_UNRESOLVED_CATEGORY_REFERENCE");
+        let category: String =
+            sqlx::query_scalar("SELECT category_id FROM articles WHERE id = 'synthetic'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(category, "suggested");
+        domain::remove_category(
+            ctx.state_db(),
+            RemoveCategoryRequest {
+                id: "suggested".into(),
+                reassign_to_category_id: Some("target".into()),
+            },
+        )
+        .await
+        .unwrap();
+        let row = sqlx::query("SELECT category_id, notes FROM articles WHERE id = 'synthetic'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(row.get::<String, _>("category_id"), "target");
+        assert_eq!(
+            row.get::<String, _>("notes"),
+            "Preserve this synthetic content"
+        );
+        let last = domain::remove_category(
+            ctx.state_db(),
+            RemoveCategoryRequest {
+                id: "target".into(),
+                reassign_to_category_id: None,
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(last.code, "ERR_INVALID_CATEGORY");
+    });
+}
+
+#[test]
+fn test_explicit_assignment_recovers_a_null_stage_without_guessing() {
+    run_async(async {
+        let (instances, pool) = setup_db().await;
+        let ctx = TestContext { instances };
+        // Reproduce the historical nullable desktop schema in this disposable database only.
+        pool.execute("DROP TABLE articles; CREATE TABLE articles (id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, categoryTag TEXT NOT NULL, tags TEXT NOT NULL, publishDate TEXT NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL, completedAt TEXT, workflow_stage_id TEXT, category_id TEXT);").await.unwrap();
+        pool.execute("INSERT INTO workflow_stages (id, display_name, order_index, lifecycle_role, is_active, created_at) VALUES ('pub', 'Publicado', 0, 'PUBLICATION', 1, 'time'), ('idea', 'Ideia', 1, NULL, 1, 'time')").await.unwrap();
+        pool.execute("INSERT INTO articles (id, title, status, categoryTag, tags, publishDate, createdAt, updatedAt) VALUES ('synthetic-null', 'EXERCÍCIO SINTÉTICO', 'escrita', 'IA', '[]', '2026-10-07', 'time', 'time')").await.unwrap();
+        domain::assign_article_stage(
+            ctx.state_db(),
+            AssignArticleStageRequest {
+                article_id: "synthetic-null".into(),
+                workflow_stage_id: "idea".into(),
+            },
+        )
+        .await
+        .unwrap();
+        let id: String = sqlx::query_scalar(
+            "SELECT workflow_stage_id FROM articles WHERE id = 'synthetic-null'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(id, "idea");
+        let history: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM history_entries WHERE articleId = 'synthetic-null'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(history, 1);
+    });
+}
+
+#[test]
 fn test_open_003_all_structural_ipc_commands_without_entitlement_state() {
     run_async(async {
         let (instances, pool) = setup_db().await;

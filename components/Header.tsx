@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 interface HeaderProps {
+  workspaceReady?: boolean;
   articles: Article[];
   workflowStages: WorkflowStage[];
   searchTerm: string;
@@ -46,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewModal,
   onOpenAiModal,
   onArticlesUpdated,
+  workspaceReady = true,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importRunning = useRef(false);
@@ -166,6 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Create New Article */}
               <button
                 onClick={onOpenNewModal}
+                disabled={!workspaceReady}
                 className="px-4 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all flex items-center gap-1.5 active:scale-95"
               >
                 <Plus className="w-5 h-5" />
@@ -176,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div role="group" aria-label="Arquivos locais de pautas" aria-busy={isImporting} className="flex flex-wrap items-center gap-1 pl-1 border-l border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => exportArticlesJSON(articles)}
-                  disabled={isImporting}
+                  disabled={isImporting || !workspaceReady}
                   aria-label="Exportar pautas para arquivo JSON local"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Exportar pautas para arquivo JSON local"
@@ -186,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={handleImportClick}
-                  disabled={isImporting}
+                  disabled={isImporting || !workspaceReady}
                   aria-label="Importar pautas de arquivo JSON local"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Importar pautas locais, preservando as existentes"
@@ -204,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={handleReset}
-                  disabled={isImporting}
+                  disabled={isImporting || !workspaceReady}
                   aria-label="Restaurar pautas de exemplo no navegador"
                   className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Restaurar pautas iniciais"

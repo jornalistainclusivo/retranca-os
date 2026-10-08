@@ -2,7 +2,9 @@
 
 ## Status
 
-Implementação de manutenção autorizada pelo responsável em 07/10/2026; candidato local em revisão. Commit, push, CI remoto e integração exigem autorizações separadas. Esta decisão não encerra a fase 6.5 nem autoriza distribuição.
+Manutenção parcial integrada, após autorizações explícitas, pelo [PR #7](https://github.com/jornalistainclusivo/retranca-os/pull/7) na `main`, em `5f7ba349acafe2dc45b9bbadd3271bac4440d86a`. Os quatro jobs do [CI #31](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37695557140) passaram nesse merge. O responsável também autorizou incorporar essa base à branch `codex/phase-6.5-runtime-pilot`, preservando os Incrementos 4–5, com um commit local de merge; push e CI da revisão combinada conservam seus próprios gates. Esta decisão não encerra a fase 6.5, as pendências glib/braces ou a distribuição.
+
+Checkpoint de revisão: o mesmo revisor independente, antes interrompido pelo limite de uso, concluiu seu ciclo sobre `ad6d84ca22f09553e47b4a9c9d66bbcb1835f444`, sem identificar regressão concreta nos contratos/famílias de plataformas examinados. Todos os quatro jobs dos CIs [#29](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37688342468) e [#30](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37692477632) passaram nessa revisão. O relato local original abaixo é histórico; a interrupção e o CI pendente foram superados por esses recibos, sem repetir a inferência, inspecionar dados editoriais ou ampliar a revisão para uma auditoria de todo o repositório. Build/testes Linux não equivalem a aceite do aplicativo instalado.
 
 ## Contexto
 
