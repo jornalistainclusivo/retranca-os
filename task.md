@@ -1,4 +1,23 @@
-# Current work — Phase 6.5 consolidation after dependency maintenance — 2026-10-07
+# Current work — Phase 6.5 Increment 6 packaged recovery — 2026-10-08
+
+- [x] Confirm PR #8 integrated as `0d2be58344323fb022942b8190465859651fac12` and all four exact main CI #34 jobs passed; preserve accepted native/model and both Windows pilot checkpoints.
+- [x] Preserve the original clean/synchronized AntiGravity checkout; create `codex/phase-6.5-packaged-recovery` from current main in a separate managed worktree.
+- [x] Prepare the [bounded Increment 6 specification](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-6-PACKAGED-RECOVERY.md) and [separate validation](docs/testing/PHASE-6.5-INCREMENT-6-PACKAGED-RECOVERY-VALIDATION.md), following existing ADR-008/014/016/017/018 without changing runtime or persistence contracts.
+- [x] Install the approved lock in the new worktree and pass pilot configuration preflight with explicit Node 24.19.0; no application, database or model execution.
+- [x] Finish a new locked unsigned Windows pilot build in 175.371 seconds; retain candidate `7f0bcb56-0f0c-4641-bc45-1db7d7b5ad90`, exact main source/artifact identities, 81 local documentation targets and clean documentation/artifact boundaries. The previous installed binary predates dependency consolidation; installed acceptance remains pending.
+- [x] Confirm updated server `0.40.1` through its API; preserve installed Ollama/models and record the blocked initial candidate without marking recovery checks passed.
+- [x] Review pinned upstream `cf2a313a298066d572c36812e5ad30a21c0db13b` local-reference/show/generate enforcement; amend ADR-016 and native/UI contracts to support exactly `0.35.1` and `0.40.1`.
+- [x] Apply native/renderer compatibility correction and unknown/remote/dispatch/cancellation regressions; pass 380 frontend tests / 30 files, lint/types and Rust formatting/full locked release suite. Keep the manual inference test ignored.
+- [x] Observe the existing native metadata-only probe: `gemma4:latest`, server `0.40.1`, `READY / LOCAL_REQUEST_ENFORCED`, 249 ms, no inference or editorial database access.
+- [x] Compile corrected pilot `edae554b-088c-4588-9fb0-859c2a1f29b0` in 91.065 seconds; bind pending source hashes and new installer handoff. Retain the initial candidate as historical.
+- [x] Record the owner's `1 OK; 2 OK; 3 OK` on 2026-10-08 for corrected candidate `edae554b-088c-4588-9fb0-859c2a1f29b0`: cancellation/original preservation, fresh generation and Escape/reopen/restart recovery. Keep broader accessibility untested and preserve this bounded acceptance without repetition.
+- [ ] Record applicable manual NVDA/zoom/reflow/contrast/reduced-motion observations with explicit coverage and untested states; do not infer conformance from CI or source.
+- [x] Owner explicitly authorized the local commit of these 13 reviewed files on 2026-10-08: `OK, commit local autorizado.` Use `fix(phase-6.5): support audited Ollama 0.40.1`; include four source/test files and nine documents, excluding editorial data, raw captures and binaries. The final commit identity is retained in the supplemental local receipt.
+- [ ] Obtain separate authorization before push, manual CI or later integration/publication. Keep broader manual accessibility, installed Linux, licensing/security/signing, backup/restore and distribution gates open.
+
+Earlier dated checkpoints below retain historical state and are superseded for source integration/CI only by PR #8 and main CI #34.
+
+# Previous checkpoint — Phase 6.5 consolidation after dependency maintenance — 2026-10-07
 
 - [x] Confirm all four jobs of [main CI #31](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37695557140) passed on `5f7ba349acafe2dc45b9bbadd3271bac4440d86a`, the authorized merge of dependency PR #7.
 - [x] Confirm published Phase 6.5 source `71d25c088887231001329ae3d9fc659dcc6ad5a5` passed all four jobs of [CI #28](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37657094508). Preserve the three Increment 4–5 commits and both accepted Windows pilot checkpoints.
