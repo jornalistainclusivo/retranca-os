@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { validatePilotConfig, validateBuildEnvironment, parseMode, selectInstaller, PILOT_IDENTIFIER } from '../scripts/packaging/build-local-pilot.mjs';
+import { validatePilotConfig, validateWindowsZoomConfig, validateBuildEnvironment, parseMode, selectInstaller, PILOT_IDENTIFIER } from '../scripts/packaging/build-local-pilot.mjs';
 
 const read = (file: string) => JSON.parse(readFileSync(new URL(file, import.meta.url), 'utf8'));
 const configs = () => [read('../src-tauri/tauri.conf.json'), read('../src-tauri/tauri.pilot.conf.json')];
@@ -12,6 +12,34 @@ describe('isolated packaged pilot boundary', () => {
     expect(overlay.identifier).not.toBe(base.identifier);
     expect(overlay.productName).not.toBe(base.productName);
     expect(parseMode([])).toBe('--check');
+  });
+
+  it('preserves normal Windows window settings while enabling native zoom in both variants', () => {
+    const [base, overlay] = configs();
+    const windows = read('../src-tauri/tauri.windows.conf.json');
+    expect(() => validateWindowsZoomConfig(base, windows)).not.toThrow();
+    expect(windows.app.windows[0]).toEqual({ ...base.app.windows[0], zoomHotkeysEnabled: true });
+    expect(overlay.app.windows[0].zoomHotkeysEnabled).toBe(true);
+    expect(base.app.windows[0].zoomHotkeysEnabled).toBeUndefined();
+  });
+
+  it('rejects disabled zoom and unrelated overrides before accepting a Windows pilot configuration', () => {
+    for (const value of [false, undefined]) {
+      const [base, overlay] = configs();
+      overlay.app.windows[0].zoomHotkeysEnabled = value;
+      expect(() => validatePilotConfig(base, overlay)).toThrow();
+    }
+    for (const change of [
+      (windows: ReturnType<typeof read>) => { windows.app.windows[0].zoomHotkeysEnabled = false; },
+      (windows: ReturnType<typeof read>) => { windows.app.windows[0].dataDirectory = 'C:/private'; },
+      (windows: ReturnType<typeof read>) => { windows.app.windows[0].title = 'Unexpected identity'; },
+      (windows: ReturnType<typeof read>) => { windows.identifier = 'com.unexpected'; },
+    ]) {
+      const [base] = configs();
+      const windows = read('../src-tauri/tauri.windows.conf.json');
+      change(windows);
+      expect(() => validateWindowsZoomConfig(base, windows)).toThrow();
+    }
   });
 
   it('rejects namespace collisions, custom data paths and absolute database preloads', () => {

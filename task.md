@@ -1,4 +1,21 @@
-# Current work — Phase 6.5 Increment 6 packaged recovery — 2026-10-08
+# Current work — Phase 6.5 Increment 7 accessibility — 2026-10-08
+
+- [x] Preserve approved main `95e6a2c` / four successful main CI #37 jobs, accepted Increment 6 recovery evidence and the original AntiGravity checkout.
+- [x] Create local `codex/phase-6.5-accessibility` in the reused managed worktree; preserve pending work and local artifacts.
+- [x] Expose exclusive page and deadline-filter states; pass 392 frontend tests, types/lint/static build and 21 isolated browser checks in their bounded scope.
+- [x] Shut down NVDA and close the owned laboratory after the earlier Computer Use stop; do not claim agent reader acceptance.
+- [x] Record owner development results `1 ok, 2 ok, 3 não ok`; retain checks 1–2 and clarify the failed shortcut without requesting repeated accepted tests.
+- [x] Implement Windows-specific native zoom and the separate Pilot override/validator; preserve shared non-Windows config and capability permissions. Pass 19 targeted regression cases and packaging preflight.
+- [x] Document the [Increment 7 contract](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-7-ACCESSIBILITY.md) and [validation/limits](docs/testing/PHASE-6.5-INCREMENT-7-ACCESSIBILITY-VALIDATION.md).
+- [x] Pass post-zoom full types, scoped lint and locked offline native configuration compilation (51.86 seconds); review the minimal source diff and validate four new local documentation targets.
+- [x] Record owner development zoom retest `3 ok` on 2026-10-08; all three bounded development checks are accepted. Preserve them without repetition; installed Pilot zoom remains separate.
+- [ ] Review the installed executable identity discrepancy and prepare a fresh identified package before installed zoom acceptance.
+- [x] Owner explicitly authorized the local commit of these eleven reviewed files on 2026-10-08: `sim, autorizo`. Use `fix(phase-6.5): improve navigation states and Windows zoom`; retain the resulting commit identity in the supplemental local receipt.
+- [ ] Obtain separate authorization before push, manual CI and later integration/distribution. No new installer or installed zoom acceptance is included in this checkpoint.
+
+Earlier checkpoints below retain historical state and do not supersede the current branch or acceptance boundaries.
+
+# Previous checkpoint — Phase 6.5 Increment 6 packaged recovery — 2026-10-08
 
 - [x] Confirm PR #8 integrated as `0d2be58344323fb022942b8190465859651fac12` and all four exact main CI #34 jobs passed; preserve accepted native/model and both Windows pilot checkpoints.
 - [x] Preserve the original clean/synchronized AntiGravity checkout; create `codex/phase-6.5-packaged-recovery` from current main in a separate managed worktree.

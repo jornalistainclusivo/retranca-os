@@ -9,6 +9,7 @@ import console from 'node:console';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const overlayPath = join(root, 'src-tauri/tauri.pilot.conf.json');
 const basePath = join(root, 'src-tauri/tauri.conf.json');
+const windowsPath = join(root, 'src-tauri/tauri.windows.conf.json');
 export const PILOT_IDENTIFIER = 'com.jornalistainclusivo.retranca.pilot';
 
 const assert = (condition, message) => {
@@ -24,7 +25,8 @@ export function validatePilotConfig(base, overlay) {
   assert(allowedKeys(overlay.app, ['windows']) && overlay.app.windows.length === 1, 'Unexpected pilot window configuration.');
   const window = overlay.app.windows[0];
   assert(window.label === 'main' && window.title.includes('Piloto local'), 'Pilot window must identify the isolated application.');
-  assert(allowedKeys(window, ['label', 'title', 'width', 'height', 'resizable', 'fullscreen']), 'Unexpected window override or data path.');
+  assert(allowedKeys(window, ['label', 'title', 'width', 'height', 'resizable', 'fullscreen', 'zoomHotkeysEnabled']), 'Unexpected window override or data path.');
+  assert(window.zoomHotkeysEnabled === true, 'The Windows pilot must enable native page zoom.');
   assert(!base.app.directories && !base.app.windows.some(item => Object.hasOwn(item, 'dataDirectory')), 'Custom application data paths are not allowed in this pilot.');
   assert(JSON.stringify(base.plugins?.sql?.preload) === JSON.stringify(['sqlite:retranca.db']), 'The pilot requires the existing relative database preload.');
   assert((base.bundle.resources == null || (Array.isArray(base.bundle.resources) && base.bundle.resources.length === 0))
@@ -39,6 +41,16 @@ export function validatePilotConfig(base, overlay) {
     && JSON.stringify(bundle.windows.webviewInstallMode) === '{"type":"skip"}'
     && JSON.stringify(bundle.windows.nsis) === '{"installMode":"currentUser"}', 'The pilot must use current-user NSIS without installing WebView2.');
   return { identifier: PILOT_IDENTIFIER, productName: overlay.productName, version: base.version };
+}
+
+export function validateWindowsZoomConfig(base, overlay) {
+  assert(allowedKeys(overlay, ['$schema', 'app']) && allowedKeys(overlay.app, ['windows'])
+    && base.app.windows.length === 1 && overlay.app.windows.length === 1, 'Unexpected Windows configuration override.');
+  const expectedWindow = { ...base.app.windows[0], zoomHotkeysEnabled: true };
+  const window = overlay.app.windows[0];
+  assert(allowedKeys(window, Object.keys(expectedWindow))
+    && Object.keys(expectedWindow).every(key => JSON.stringify(window[key]) === JSON.stringify(expectedWindow[key])),
+    'The Windows override must preserve the normal window and enable native page zoom only.');
 }
 
 export function validateBuildEnvironment(environment) {
@@ -85,6 +97,8 @@ async function main() {
   const mode = parseMode(process.argv.slice(2));
   const base = JSON.parse(readFileSync(basePath, 'utf8'));
   const overlay = JSON.parse(readFileSync(overlayPath, 'utf8'));
+  const windows = JSON.parse(readFileSync(windowsPath, 'utf8'));
+  validateWindowsZoomConfig(base, windows);
   const identity = validatePilotConfig(base, overlay);
   validateBuildEnvironment(process.env);
   if (mode === '--check') {
@@ -98,11 +112,12 @@ async function main() {
   mkdirSync(receiptDir, { recursive: true });
   const receiptPath = join(receiptDir, 'build.json');
   const startedAt = Date.now();
+  const inputFiles = [basePath, windowsPath, overlayPath, fileURLToPath(import.meta.url)];
   const receipt = {
     status: 'building', source_baseline: baseline, ...identity,
     platform: process.platform, architecture: process.arch, node_version: process.version,
     started_at: new Date(startedAt).toISOString(), target_directory: targetDir,
-    input_hashes: [basePath, overlayPath, fileURLToPath(import.meta.url)].map(path => ({ name: basename(path), sha256: hashFile(path) })),
+    input_hashes: inputFiles.map(path => ({ name: basename(path), sha256: hashFile(path) })),
     signing: 'disabled for this local pilot', artifacts: [], installed_runtime_acceptance: 'pending',
   };
   const save = () => writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
@@ -119,7 +134,7 @@ async function main() {
       copyFileSync(path, destination, constants.COPYFILE_EXCL);
       receipt.artifacts.push({ path: destination, bytes: statSync(destination).size, sha256: hashFile(destination) });
     }
-    assert(receipt.input_hashes.every((item, index) => item.sha256 === hashFile([basePath, overlayPath, fileURLToPath(import.meta.url)][index])), 'Build configuration changed during compilation.');
+    assert(receipt.input_hashes.every((item, index) => item.sha256 === hashFile(inputFiles[index])), 'Build configuration changed during compilation.');
     receipt.status = 'compiled';
   } catch (error) {
     receipt.status = 'failed';
