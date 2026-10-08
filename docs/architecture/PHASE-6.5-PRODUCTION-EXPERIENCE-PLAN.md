@@ -2,6 +2,14 @@
 
 Date: 2026-10-02. Status: draft for product/architecture review, not an approved specification or completed phase.
 
+## Current continuation — Increment 7 accessibility — 2026-10-08
+
+[PR #9](https://github.com/jornalistainclusivo/retranca-os/pull/9) integrated the accepted Ollama 0.40.1 correction as main `95e6a2cec5880c419ef911d3e6b12e3786fbea48`; all four exact-source automatic [main CI #37 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37816289826) passed. Earlier pending Increment 6 publication/integration wording is historical. Preserve its accepted bounded recovery sample and retained branch.
+
+Continue on local `codex/phase-6.5-accessibility` in the existing managed worktree, preserving the original AntiGravity checkout. The [Increment 7 specification](../specifications/phase-6.5/PHASE-6.5-INCREMENT-7-ACCESSIBILITY.md) and [validation](../testing/PHASE-6.5-INCREMENT-7-ACCESSIBILITY-VALIDATION.md) cover page/filter accessible states and a Windows-native zoom correction. The owner accepted development checks 1–2; check 3 initially failed because the shortcut did not amplify the view. After the Windows-specific correction, the owner reported `3 ok` on 2026-10-08. All three bounded development checks are now accepted; preserve them without repetition. This source handoff does not update or accept the installed Pilot executable. No new ADR, permission, schema, dependency, model or CI contract is included; other-platform zoom and comprehensive accessibility remain separate.
+
+The owner explicitly authorized the local commit of eleven reviewed source/documentation files on 2026-10-08. Record the verified identity in its supplemental receipt. Next: obtain separate push authorization, followed by separately authorized exact-source CI. A later fresh identified Windows Pilot build/update and its installed zoom check are still required; signing, licensing/security, full backup/restore, installed Linux and public distribution remain open.
+
 ## Current continuation after pilot integration — 2026-10-08
 
 [PR #8](https://github.com/jornalistainclusivo/retranca-os/pull/8) integrated the accepted Increment 4–5 source and dependency consolidation into main as `0d2be58344323fb022942b8190465859651fac12`. Authenticated GitHub API confirmed all four successful jobs of [main CI #34](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37785724612) on that merge SHA. The retained pilot branch is synchronized at `2ac806fb44f2e7a7eb37f17b300d839fc1b8536d` with the same tracked tree; the extra main merge commit is not missing application content. Earlier pending source-consolidation/publication/CI/integration wording below is historical and superseded for these completed actions.

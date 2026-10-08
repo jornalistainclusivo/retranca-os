@@ -76,12 +76,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5 px-2">
           Visões do OS
         </h2>
-        <nav className="space-y-1">
+        <nav aria-label="Páginas do Retranca" className="space-y-1">
           <button type="button" onClick={() => setActiveView('inicio')} aria-current={activeView === 'inicio' ? 'page' : undefined}
             className={`w-full flex items-center gap-2 px-3 py-2 min-h-10 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${activeView === 'inicio' ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
             <Home aria-hidden="true" className="w-4 h-4" /> Início
           </button>
           <button
+            type="button"
+            aria-current={activeView === 'kanban' ? 'page' : undefined}
             onClick={() => setActiveView('kanban')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'kanban'
@@ -99,6 +101,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-current={activeView === 'lista' ? 'page' : undefined}
             onClick={() => setActiveView('lista')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'lista'
@@ -113,6 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-current={activeView === 'calendario' ? 'page' : undefined}
             onClick={() => setActiveView('calendario')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'calendario'
@@ -127,6 +133,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-current={activeView === 'estatisticas' ? 'page' : undefined}
             onClick={() => setActiveView('estatisticas')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'estatisticas'
@@ -141,6 +149,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-current={activeView === 'documentos' ? 'page' : undefined}
             onClick={() => setActiveView('documentos')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'documentos'
@@ -161,6 +171,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <button
+            type="button"
+            aria-current={activeView === 'configuracoes' ? 'page' : undefined}
             onClick={() => setActiveView('configuracoes')}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               activeView === 'configuracoes'
@@ -186,6 +198,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </h2>
         <div className="space-y-1">
           <button
+            type="button"
+            aria-pressed={timeFilter === 'todas'}
             onClick={() => setTimeFilter('todas')}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               timeFilter === 'todas'
@@ -201,6 +215,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-pressed={timeFilter === 'hoje'}
             onClick={() => setTimeFilter('hoje')}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               timeFilter === 'hoje'
@@ -216,6 +232,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-pressed={timeFilter === 'semana'}
             onClick={() => setTimeFilter('semana')}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               timeFilter === 'semana'
@@ -231,6 +249,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-pressed={timeFilter === 'mes'}
             onClick={() => setTimeFilter('mes')}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               timeFilter === 'mes'
@@ -246,6 +266,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            type="button"
+            aria-pressed={timeFilter === 'atrasados'}
             onClick={() => setTimeFilter('atrasados')}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all ${
               timeFilter === 'atrasados'
