@@ -1,12 +1,12 @@
 # Retranca OS — Local development
 
-Date: 2026-10-08. This guide prepares the source checkout; public installers remain unavailable. For application use, see the [Portuguese getting-started guide](../user-guide/GETTING-STARTED.md).
+Date: 2026-10-09. This guide prepares the source checkout; public installers remain unavailable. For application use, see the [Portuguese getting-started guide](../user-guide/GETTING-STARTED.md).
 
 ## Prerequisites
 
 Install Git, Node.js/npm, Rust/Cargo and the [native Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system. On Windows, development requires the Microsoft C++ Build Tools with Desktop development with C++, an MSVC Rust toolchain and WebView2. Linux requires its distribution's native libraries.
 
-The current installed Next.js 16.3.6 package requires Node.js 20.9 or newer. The identified local Windows pilot used Node.js 24.19.0; the existing frontend CI uses Node.js 20. These are recorded environments, not a newly validated version matrix. Use a maintained Node release that satisfies the package requirement.
+Use a 64-bit Node.js environment that satisfies the complete lockfile: 20.19 or newer within Node 20, 22.13 or newer within Node 22, or Node 24 and newer. Next.js 16.3.8 alone declares Node 20.9 or newer, but Vite 8 and the TypeScript ESLint visitor dependencies impose stricter requirements. The local dependency-maintenance round passed with Node.js 24.19.0 and npm 10.9.0; the existing frontend CI uses Node.js 20. These are recorded environments, not a validated version/platform matrix. See the [maintenance evidence](../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#manutenção-local--2026-10-09).
 
 Ollama is optional for planning/CMS use. Actual assistance requires an installed local model, the audited server version and native readiness. No cloud API key is needed. See [ADR-016](../decisions/ADR-016-PRODUCTION-LOCAL-AI-PROVIDER.md), whose current accepted server set is exactly 0.35.1 and 0.40.1.
 
