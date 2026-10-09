@@ -1,8 +1,23 @@
 # Phase 6.5 — Production Provider and Model Experience
 
-Date: 2026-10-02. Status: draft for product/architecture review, not an approved specification or completed phase.
+Date: 2026-10-02; current checkpoint 2026-10-08. Status: Phase 6.5 in progress. Approved provider/product decisions are recorded in the cited ADRs; the full phase and public distribution are not complete.
 
-## Current continuation — Increment 7 accessibility — 2026-10-08
+## Active continuation — Public documentation — 2026-10-08
+
+[PR #10](https://github.com/jornalistainclusivo/retranca-os/pull/10) integrated Increment 7 as main `92a16d25e617a0345367e7843da8ab16c7fbb5fe`; all four exact-source [main CI #40 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37854563619) passed. The [integration and installed acceptance record](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md) binds source, the identified Windows candidate, the corrected raw/NSIS installed hash distinction and the owner's accepted installed zoom report on 2026-10-08. Earlier pending push/CI/integration and installed-zoom wording below is historical. Preserve all bounded accepted samples without repeating them.
+
+The owner authorized the public-documentation round in `codex/phase-6.5-public-documentation` from this main, reusing the clean managed checkout and preserving the original AntiGravity workspace and historical branches. The [public README](../../README.md), [documentation index](../README.md), [first-use guide](../user-guide/GETTING-STARTED.md) and [development guide](../development/LOCAL-DEVELOPMENT.md) provide current entry points. The documentation round is prepared locally; it needs separate commit/push/integration authorization and is not a public installer release.
+
+Current next work:
+- Correct the private packaging receipt to distinguish raw executable, expected unsigned NSIS payload and installer identities, with a bounded regression test. No reinstall is required for the accepted candidate.
+- Complete remaining representative installed-platform and broader accessibility evidence where it is still absent.
+- Define and validate full backup/restoration beyond article-only JSON import/export.
+- Resolve applicable dependency/security and formal licensing/signing questions.
+- Prepare, validate and obtain authorization for public release assets before offering a direct installer download. GitHub currently has no installer release.
+
+These are remaining criteria within the roadmap, not a newly fixed count of future phases. External local Ollama remains the first delivery; an embedded engine remains the preferred future option. Article/file/image attachments remain discovery work, not an implemented capability.
+
+## Historical checkpoint — Increment 7 source preparation — 2026-10-08
 
 [PR #9](https://github.com/jornalistainclusivo/retranca-os/pull/9) integrated the accepted Ollama 0.40.1 correction as main `95e6a2cec5880c419ef911d3e6b12e3786fbea48`; all four exact-source automatic [main CI #37 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37816289826) passed. Earlier pending Increment 6 publication/integration wording is historical. Preserve its accepted bounded recovery sample and retained branch.
 
@@ -96,4 +111,4 @@ Preserve Phase 6.4's open single edition (ADR-013), article-owned text (ADR-014)
 
 ## Next review
 
-Follow the current continuation checkpoint above. Preserve the completed [source integration/milestone](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md), Increment 4's bounded native sample and both accepted Increment 5 Windows pilot checkpoints. The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. PR #8/main CI #34 complete the consolidated pilot source integration; the next evidence is [Increment 6 packaged cancellation/recovery](../specifications/phase-6.5/PHASE-6.5-INCREMENT-6-PACKAGED-RECOVERY.md) and manual accessibility. Representative model evaluation, exact process/model attestation, installed Linux, licensing/security/signing, full backup/restore and a real preferred embedded engine retain separately evidenced gates.
+Follow the active public-documentation continuation at the start of this file. Preserve the completed [source integration/milestone](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md), native sample, startup/recovery samples and [Increment 7 integration/installed zoom acceptance](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md). The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. Next, finish the prepared documentation review and the bounded packaging receipt correction. Representative model evaluation, exact process/model attestation, installed Linux, broader accessibility, licensing/security/signing, full backup/restore and a real preferred embedded engine retain separately evidenced gates.

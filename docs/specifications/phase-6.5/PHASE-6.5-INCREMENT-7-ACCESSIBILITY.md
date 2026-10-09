@@ -1,6 +1,8 @@
 # Phase 6.5 Increment 7 — Navigation states and Windows zoom
 
-Date: 2026-10-08 (America/Sao_Paulo). Status: local implementation; all three bounded development checks accepted by owner report on 2026-10-08. This is a bounded accessibility increment, not full WCAG or distribution acceptance.
+Date: 2026-10-08 (America/Sao_Paulo). Status: source integrated through PR #10, exact-source main CI #40 passed, and all three development checks plus the identified installed Windows zoom check accepted by owner report. This is a bounded accessibility increment, not full WCAG or distribution acceptance.
+
+The [integration record](../../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md) is the current source/package acceptance checkpoint. Baseline and original development handoff details below retain their historical scope.
 
 ## Baseline and decisions
 
@@ -22,7 +24,7 @@ No new ADR is needed for these semantic controls and native zoom setting. Preser
 
 Protect exclusive current-page/filter states, the two Windows configuration variants, rejection of disabled zoom/unrelated overrides and the existing isolated packaging boundary. Check the packaging preflight, types/lint and locked offline native configuration compilation. Preserve earlier passed frontend/static/browser checks in their original scope rather than rerunning them as native zoom evidence.
 
-The owner reported `1 ok, 2 ok, 3 não ok`, then clarified that the shortcut did not enlarge the page. Record navigation/reader and dismissal as pass by owner report on the development checkout; record zoom activation as fail before correction and zoomed layout as not-tested. The owner subsequently reported `3 ok` after the focused zoom correction retest on 2026-10-08, completing the three development checks. Preserve the original failure as historical evidence; no repeat of passed checks is needed. These outcomes do not apply to the installed Pilot executable.
+The owner reported `1 ok, 2 ok, 3 não ok`, then clarified that the shortcut did not enlarge the page. Record navigation/reader and dismissal as pass by owner report on the development checkout; record zoom activation as fail before correction and zoomed layout as not-tested. The owner subsequently reported `3 ok` after the focused zoom correction retest on 2026-10-08, completing the three development checks. Preserve the original failure as historical evidence; no repeat of passed checks is needed. These original development outcomes do not by themselves apply to an installed Pilot executable. The later identified candidate and owner installed zoom acceptance are recorded separately in the integration checkpoint.
 
 The completed correction handoff repeated only check 3 using the same development checkout:
 
@@ -36,8 +38,8 @@ Save any open work and close the app/Ctrl+C before source changes. Shut down NVD
 
 ## Completion and limits
 
-Implementation, local compilation, owner development acceptance, remote CI and installed package acceptance are distinct. A fresh Pilot build/update with its own identified artifacts is needed before installed zoom acceptance; existing executables are not modified by source changes. Do not transfer prior package results to an unidentified or different executable.
+Implementation, local compilation, owner development acceptance, remote CI and installed package acceptance are distinct. The fresh identified Pilot build/update and its bounded installed zoom acceptance were completed as recorded in the integration checkpoint; existing executables are not modified by source changes. Do not transfer prior package results to an unidentified or different executable.
 
 Keep contrast, full zoom/reflow coverage, reader error/status announcements, reduced-motion observations and other platforms explicitly untested where appropriate. [Keyboard](https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html), [Name, Role, Value](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value.html) and [Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html) guide this sample, without certifying WCAG conformance.
 
-The owner explicitly authorized the eleven-file local commit on 2026-10-08. Push, manual CI, integration and distribution remain separately authorized gates; the resulting commit identity belongs in its verified supplemental receipt.
+The owner separately authorized commit, push, manual CI, Ready and normal PR #10 merge; the integration checkpoint records their resulting identities. Public distribution, tag/release and future source changes keep their separate authorization requirements.

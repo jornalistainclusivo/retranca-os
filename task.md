@@ -1,4 +1,16 @@
-# Current work — Phase 6.5 Increment 7 accessibility — 2026-10-08
+# Current work — Public documentation — 2026-10-08
+
+- [x] Reverify public main `92a16d2`, merged PR #10 and successful exact-source CI #40; preserve previous tests.
+- [x] Record the identified Windows Pilot and the owner's installed zoom acceptance in [integration evidence](docs/testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md), preserving historical failures and the raw/NSIS hash distinction.
+- [x] Start `codex/phase-6.5-public-documentation` from that main in the reused clean managed worktree; preserve the original AntiGravity checkout and historical branches.
+- [x] Prepare a public README focused on capabilities, real download availability, first use, local AI and local data.
+- [x] Add [first-use](docs/user-guide/GETTING-STARTED.md) and [development](docs/development/LOCAL-DEVELOPMENT.md) guides plus the [documentation index](docs/README.md); update active Phase 6.5 status/specification/validation and changelog.
+- [x] Pass 153 local link/anchor checks, Markdown parsing, manifest/command review and diff/whitespace/conflict/private-path guards; record the scope in integration evidence. Application tests were not repeated for Markdown-only changes.
+- [ ] Obtain separate authorization before this round's commit, push and integration. No runtime, dependency, database, model, CI configuration, license, tag or release change is included.
+- [ ] Correct the packaging helper's raw-versus-NSIS payload receipt semantics in a later bounded source round.
+- [ ] Complete the Phase 6.5 distribution criteria before publishing installer assets and a direct download link.
+
+# Historical checkpoint — Phase 6.5 Increment 7 accessibility — 2026-10-08
 
 - [x] Preserve approved main `95e6a2c` / four successful main CI #37 jobs, accepted Increment 6 recovery evidence and the original AntiGravity checkout.
 - [x] Create local `codex/phase-6.5-accessibility` in the reused managed worktree; preserve pending work and local artifacts.
