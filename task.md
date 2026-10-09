@@ -1,4 +1,16 @@
-# Current work — Public documentation — 2026-10-08
+# Current work — Packaging artifact identity — 2026-10-08
+
+- [x] Confirm the authorized documentation commit `41a1147`, PR #11 merge into main `b462e18`, and all four successful exact-source main CI #43 jobs. The earlier documentation preparation checklist below is historical.
+- [x] Create `codex/phase-6.5-installer-receipts` from verified main in the reused managed worktree; preserve the original AntiGravity checkout and accepted private candidates.
+- [x] Review the pinned Tauri CLI 2.11.4 bundle-marker transformation; add separate raw/installer artifact roles and an expected unsigned installed-executable identity in receipt schema 2.
+- [x] Reject unaudited CLI versions and missing, ambiguous, already patched or unknown markers before accepting an expected payload hash; preserve raw bytes and exclusive artifact copies.
+- [x] Pass 19 targeted packaging tests, TypeScript, scoped lint and configuration/toolchain preflight. Confirm the accepted candidate's derived hash equals its recorded installed hash without launching the application or inspecting editorial data.
+- [x] Document the [artifact-identity contract](docs/specifications/phase-6.5/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY.md), [bounded validation](docs/testing/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY-VALIDATION.md), developer guidance and current production-plan status.
+- [x] Pass 131 local Markdown link/anchor checks, Markdown parsing, manifest/command consistency, exact eight-file scope and Git whitespace/conflict/private-path guards; retain final file identities in the supplemental checkpoint.
+- [ ] Obtain explicit authorization for the local commit of this eight-file correction; then obtain separate push, CI and integration authorization. This checkpoint contains no new installed acceptance or public release.
+- [ ] Complete applicable Phase 6.5 distribution criteria and resolve tag/version/release-asset scope before offering installation with few clicks.
+
+# Historical checkpoint — Public documentation preparation — 2026-10-08
 
 - [x] Reverify public main `92a16d2`, merged PR #10 and successful exact-source CI #40; preserve previous tests.
 - [x] Record the identified Windows Pilot and the owner's installed zoom acceptance in [integration evidence](docs/testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md), preserving historical failures and the raw/NSIS hash distinction.
