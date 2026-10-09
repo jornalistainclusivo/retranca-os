@@ -66,11 +66,11 @@ node scripts/packaging/build-local-pilot.mjs --check
 node scripts/packaging/build-local-pilot.mjs --build
 ```
 
-The first command validates configuration only. The second compiles and saves private artifacts, logs and `build.json` in `.retranca-local/phase65-packaged-pilot/<candidate>/`; it does not launch the installer, app or model. These files remain Git-ignored and are not public release assets.
+The first command validates configuration and the audited Tauri CLI version only. The second compiles and saves private artifacts, logs and `build.json` in `.retranca-local/phase65-packaged-pilot/<candidate>/`; it does not launch the installer, app or model. These files remain Git-ignored and are not public release assets.
 
-**Hash distinction:** the helper currently records the restored raw executable and the installer. Tauri CLI 2.11.4 patches the executable's bundle marker for NSIS, packages it, and restores the raw executable. The raw executable hash therefore must not be used as the installed NSIS payload hash. The [integration record](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md#installed-executable-identity) documents the exact byte comparison and corrected installed hash for the accepted candidate. A helper-receipt correction remains follow-up work; it is not implemented by these documentation changes.
+**Hash distinction:** receipt schema 2 assigns separate roles to the restored raw executable and NSIS installer, and records an expected unsigned installed-executable hash. Tauri CLI 2.11.4 patches the bundle marker for NSIS and later restores the raw executable; the raw hash therefore differs from the installed payload hash. The helper derives the expected hash in memory without changing the raw file. The [artifact-identity contract](../specifications/phase-6.5/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY.md) defines the audited toolchain and rejects absent, duplicate, mixed, patched or unrecognized markers.
 
-A future helper change must distinguish raw, expected unsigned NSIS payload and installer identities, fail on unrecognized/ambiguous inputs and receive a regression test. Do not normalize arbitrary binary differences or assume the same transformation will identify signed/future toolchain outputs.
+The [bounded validation](../testing/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY-VALIDATION.md) covers the receipt helper and checks the accepted candidate against its previously recorded installed hash. A derived expectation is not an installed-file observation, signature verification or installer acceptance. Historical receipts remain unchanged. Signed packages and future toolchains need separate review; do not normalize arbitrary binary differences.
 
 ## Data and publication boundaries
 

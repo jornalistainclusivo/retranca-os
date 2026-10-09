@@ -1,4 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
+import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, copyFileSync, createWriteStream, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -10,6 +11,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const overlayPath = join(root, 'src-tauri/tauri.pilot.conf.json');
 const basePath = join(root, 'src-tauri/tauri.conf.json');
 const windowsPath = join(root, 'src-tauri/tauri.windows.conf.json');
+const cliPackagePath = join(root, 'node_modules/@tauri-apps/cli/package.json');
+const lockPath = join(root, 'package-lock.json');
+export const VERIFIED_NSIS_CLI_VERSION = '2.11.4';
 export const PILOT_IDENTIFIER = 'com.jornalistainclusivo.retranca.pilot';
 
 const assert = (condition, message) => {
@@ -72,6 +76,49 @@ export function selectInstaller(candidates, startedAt) {
 
 const hashFile = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 
+export function validateReceiptToolchain(version) {
+  assert(version === VERIFIED_NSIS_CLI_VERSION, 'NSIS payload identity requires the audited Tauri CLI 2.11.4; review a different toolchain before deriving an installed hash.');
+  return version;
+}
+
+export function deriveUnsignedNsisIdentity(rawExecutable, cliVersion) {
+  validateReceiptToolchain(cliVersion);
+  assert(Buffer.isBuffer(rawExecutable), 'The raw executable must be a Buffer.');
+  const prefix = Buffer.from('__TAURI_BUNDLE_TYPE_VAR_');
+  const rawMarker = Buffer.from('__TAURI_BUNDLE_TYPE_VAR_UNK');
+  const nsisMarker = Buffer.from('__TAURI_BUNDLE_TYPE_VAR_NSS');
+  const offset = rawExecutable.indexOf(prefix);
+  assert(offset >= 0 && rawExecutable.indexOf(prefix, offset + prefix.length) === -1,
+    'Expected exactly one Tauri bundle marker; absent or ambiguous markers cannot identify an NSIS payload.');
+  assert(rawExecutable.subarray(offset, offset + rawMarker.length).equals(rawMarker),
+    'Expected the restored UNK marker; patched, partial or unknown bundle markers are not accepted.');
+  const expectedPayload = Buffer.from(rawExecutable);
+  nsisMarker.copy(expectedPayload, offset);
+  return {
+    bytes: rawExecutable.length,
+    sha256: createHash('sha256').update(expectedPayload).digest('hex'),
+    raw_sha256: createHash('sha256').update(rawExecutable).digest('hex'),
+    bundle_marker: 'NSS',
+    tauri_cli_version: cliVersion,
+    verification: 'derived unsigned NSIS payload; not an installed-file observation',
+  };
+}
+
+export function copyPilotArtifacts(rawPath, installerPath, receiptDir, cliVersion) {
+  const expected = deriveUnsignedNsisIdentity(readFileSync(rawPath), cliVersion);
+  const artifacts = [];
+  for (const [role, path] of [['raw-executable', rawPath], ['nsis-installer', installerPath]]) {
+    const destination = join(receiptDir, basename(path));
+    copyFileSync(path, destination, constants.COPYFILE_EXCL);
+    artifacts.push({ role, path: destination, bytes: statSync(destination).size, sha256: hashFile(destination) });
+  }
+  assert(artifacts[0].sha256 === expected.raw_sha256, 'The raw executable changed while copying artifacts.');
+  return {
+    artifacts,
+    expected_installed_executable: { file_name: basename(rawPath), ...expected },
+  };
+}
+
 async function compile(args, targetDir, logPath) {
   const log = createWriteStream(logPath, { flags: 'wx' });
   await new Promise((resolvePromise, reject) => {
@@ -101,8 +148,9 @@ async function main() {
   validateWindowsZoomConfig(base, windows);
   const identity = validatePilotConfig(base, overlay);
   validateBuildEnvironment(process.env);
+  const cliVersion = validateReceiptToolchain(JSON.parse(readFileSync(cliPackagePath, 'utf8')).version);
   if (mode === '--check') {
-    console.log(JSON.stringify({ configuration: 'valid', ...identity, webview2: 'already installed required', installer_execution: 'not requested' }));
+    console.log(JSON.stringify({ configuration: 'valid', ...identity, tauri_cli_version: cliVersion, webview2: 'already installed required', installer_execution: 'not requested' }));
     return;
   }
   assert(process.platform === 'win32', 'This first packaged pilot builds on Windows only; Linux needs separate native packaging evidence.');
@@ -112,9 +160,10 @@ async function main() {
   mkdirSync(receiptDir, { recursive: true });
   const receiptPath = join(receiptDir, 'build.json');
   const startedAt = Date.now();
-  const inputFiles = [basePath, windowsPath, overlayPath, fileURLToPath(import.meta.url)];
+  const inputFiles = [basePath, windowsPath, overlayPath, fileURLToPath(import.meta.url), cliPackagePath, lockPath];
   const receipt = {
-    status: 'building', source_baseline: baseline, ...identity,
+    receipt_schema: 2, status: 'building', source_baseline: baseline, ...identity,
+    tauri_cli_version: cliVersion,
     platform: process.platform, architecture: process.arch, node_version: process.version,
     started_at: new Date(startedAt).toISOString(), target_directory: targetDir,
     input_hashes: inputFiles.map(path => ({ name: basename(path), sha256: hashFile(path) })),
@@ -129,11 +178,9 @@ async function main() {
     ], targetDir, join(receiptDir, 'build.log'));
     const nsisDir = join(targetDir, 'release/bundle/nsis');
     const installer = selectInstaller(readdirSync(nsisDir).map(name => ({ name, modifiedAt: statSync(join(nsisDir, name)).mtimeMs })), startedAt);
-    for (const path of [join(targetDir, 'release/retranca-pilot.exe'), join(nsisDir, installer)]) {
-      const destination = join(receiptDir, basename(path));
-      copyFileSync(path, destination, constants.COPYFILE_EXCL);
-      receipt.artifacts.push({ path: destination, bytes: statSync(destination).size, sha256: hashFile(destination) });
-    }
+    Object.assign(receipt, copyPilotArtifacts(
+      join(targetDir, 'release/retranca-pilot.exe'), join(nsisDir, installer), receiptDir, cliVersion,
+    ));
     assert(receipt.input_hashes.every((item, index) => item.sha256 === hashFile(inputFiles[index])), 'Build configuration changed during compilation.');
     receipt.status = 'compiled';
   } catch (error) {

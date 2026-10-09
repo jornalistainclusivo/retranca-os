@@ -2,7 +2,17 @@
 
 Date: 2026-10-02; current checkpoint 2026-10-08. Status: Phase 6.5 in progress. Approved provider/product decisions are recorded in the cited ADRs; the full phase and public distribution are not complete.
 
-## Active continuation — Public documentation — 2026-10-08
+## Active continuation — Packaging artifact identity — 2026-10-08
+
+[PR #11](https://github.com/jornalistainclusivo/retranca-os/pull/11) integrated the public-documentation round as main `b462e183b18a08e989b26520ddd3899ce2bd98dd`. All four exact-source [main CI #43 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37869770300) passed; the API completion timestamp is 2026-10-09T01:41:40Z (2026-10-08 local). Documentation integration is complete, and previously accepted application/installed zoom checks remain valid within their recorded scope.
+
+The next bounded source round uses `codex/phase-6.5-installer-receipts` from that main in the reused managed worktree. The original AntiGravity checkout, historical branches and private candidates are preserved. The helper now distinguishes copied raw executable/installer artifacts from the derived expected unsigned NSIS payload; schema 2, the pinned Tauri CLI 2.11.4 guard and negative-marker cases follow the [artifact-identity contract](../specifications/phase-6.5/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY.md).
+
+The [local validation record](../testing/PHASE-6.5-PACKAGING-ARTIFACT-IDENTITY-VALIDATION.md) includes 19 targeted tests, types, scoped lint, configuration/toolchain preflight and the previously accepted candidate's expected hash. No app rebuild, installation, inference, storage change or repeated owner test is included. Commit, push and integration of this correction remain separate authorization gates.
+
+Remaining work is the representative installed-platform/accessibility evidence, full backup/restoration, applicable security and licensing/signing decisions, and a validated public installer release. The owner's requested installation with few clicks remains a distribution objective: evaluate tag/version alignment and authorized release assets before advertising a download. Existing tags do not by themselves provide an installer. External local Ollama remains the first delivery, and an embedded engine remains the preferred future option.
+
+## Historical checkpoint — Public documentation preparation — 2026-10-08
 
 [PR #10](https://github.com/jornalistainclusivo/retranca-os/pull/10) integrated Increment 7 as main `92a16d25e617a0345367e7843da8ab16c7fbb5fe`; all four exact-source [main CI #40 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37854563619) passed. The [integration and installed acceptance record](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md) binds source, the identified Windows candidate, the corrected raw/NSIS installed hash distinction and the owner's accepted installed zoom report on 2026-10-08. Earlier pending push/CI/integration and installed-zoom wording below is historical. Preserve all bounded accepted samples without repeating them.
 
