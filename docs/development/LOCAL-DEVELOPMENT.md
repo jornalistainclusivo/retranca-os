@@ -78,4 +78,4 @@ Desktop SQLite uses the existing relative `sqlite:retranca.db` preload in the ap
 
 JSON article exports are not full backups. Their preserved-ID/reference policy is recorded in [ADR-015](../decisions/ADR-015-LOCAL-ARTICLE-IMPORT-PRESERVATION.md). Keep editorial databases, exports, model output and raw test captures local.
 
-The [Phase 6.5 plan](../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) retains installed Linux, broader accessibility, backup/restore, unresolved dependency/security questions, formal licensing/signing and distribution criteria. The public repository has no declared LICENSE file yet. This guide does not select a license, create a tag or publish an installer.
+The [Phase 6.5 plan](../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) retains installed Linux, broader accessibility, backup/restore, unresolved dependency/security questions, third-party licensing/signing and distribution criteria. The project's own code and documentation are available under the [MIT License](../../LICENSE); dependencies, runtimes and AI models retain their own licenses. This guide does not create a tag or publish an installer.

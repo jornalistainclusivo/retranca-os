@@ -35,4 +35,4 @@ As pastas `architecture`, `decisions`, `specifications` e `testing` preservam pl
 
 Documentos antigos podem mencionar Free/PRO, IA em nuvem ou motores sintéticos. Consulte os ADRs e checkpoints atuais antes de interpretar essas referências como comportamento presente. Relatórios de segurança e testes de revisões anteriores mantêm seus próprios escopos; esta consolidação não reescreve esses resultados.
 
-A primeira distribuição pública depende dos critérios ainda abertos no plano da fase 6.5, inclusive licença formal, riscos aplicáveis, empacotamento e validações de instalação.
+O código e a documentação próprios do Retranca OS estão sob a [licença MIT](../LICENSE). A primeira distribuição pública depende dos critérios ainda abertos no plano da fase 6.5, inclusive licenças de terceiros, riscos aplicáveis, empacotamento e validações de instalação.
