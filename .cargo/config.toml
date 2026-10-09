@@ -1,0 +1,7 @@
+# The application keeps SQLx 0.8 bindings and links the independently built engine.
+# Run npm run sqlite:prepare before invoking Cargo directly.
+[env]
+LIBSQLITE3_SYS_USE_PKG_CONFIG = { value = "1", force = true }
+SQLITE3_STATIC = { value = "1", force = true }
+SQLITE3_LIB_DIR = { value = ".retranca-local/sqlite-runtime/3.51.3", relative = true, force = true }
+SQLITE3_INCLUDE_DIR = { value = ".retranca-local/sqlite-runtime/3.51.3", relative = true, force = true }

@@ -9,6 +9,7 @@ pub mod phase64;
 pub mod provider_policy;
 pub mod provisioning;
 pub mod sidecar_path;
+pub mod workspace_backup;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;

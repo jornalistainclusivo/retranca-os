@@ -27,3 +27,6 @@ retranca-pautas-*.json
 /.retranca-local/
 /editorial-data/
 /attachments/
+
+# Independent pinned SQLite build tool; generated static engine stays private.
+/tools/sqlite-runtime/target/

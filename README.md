@@ -12,6 +12,8 @@ Uma única edição funcional, sem conta ou assinatura: todas as pessoas podem p
 
 Base de código conferida em **09/10/2026**: [`main` em `96a3093`](https://github.com/jornalistainclusivo/retranca-os/tree/96a309384ccb7b337dcce65b39a7519eb1ac02d7). A fase 6.4 está integrada; a fase 6.5 permanece em desenvolvimento.
 
+Este checkout contém o candidato local em `codex/phase-6.5-workspace-backup`, sobre `9768a87`: preparação do SQLite estático e protótipo interno de backup. Os comandos novos abaixo descrevem esse checkout; eles ainda não estão na main, no PR #14 ou no aplicativo instalado. Consulte o [registro do build SQLite](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) para a evidência e os limites.
+
 ### Download
 
 **Ainda não há um instalador público para baixar com um clique.** Nessa data, a [página de releases](https://github.com/jornalistainclusivo/retranca-os/releases) não possui releases publicadas. Os manifestos [npm](package.json), [Cargo](src-tauri/Cargo.toml) e [Tauri](src-tauri/tauri.conf.json) declaram `0.1.0`; esse metadado e as tags históricas não comprovam uma versão distribuível.
@@ -55,17 +57,17 @@ cd retranca-os
 npm ci
 ```
 
-Em um checkout existente, entre na própria pasta e execute `npm ci`, preservando alterações locais. Use os lockfiles do projeto.
+Em um checkout existente, entre na própria pasta e execute `npm ci`, preservando alterações locais. Use os lockfiles do projeto. Um clone novo obtém a main publicada, sem as alterações locais descritas em “Estado atual”.
 
 ### Desktop normal
 
 Antes de iniciar sobre dados de uma versão anterior, preserve uma cópia dos dados com o aplicativo fechado. A [inicialização do banco](db/client.ts) executa as migrações necessárias automaticamente; não há um diálogo de autorização dessas migrações na abertura.
 
 ```sh
-npx --no-install tauri dev
+npm run desktop:dev
 ```
 
-O [Tauri](src-tauri/tauri.conf.json) inicia `npm run dev` automaticamente e abre o frontend em `http://localhost:3000`. Esse modo usa o banco e a identidade do aplicativo normal.
+O comando prepara e verifica o SQLite 3.51.3 estático antes de iniciar o [Tauri](src-tauri/tauri.conf.json). O Tauri inicia `npm run dev` automaticamente e abre o frontend em `http://localhost:3000`. Esse modo usa o banco e a identidade do aplicativo normal. A primeira preparação exige compilador C nativo e acesso aos crates não armazenados em cache; não exige instalar uma DLL de SQLite. O [guia de build nativo](docs/development/LOCAL-DEVELOPMENT.md#pinned-native-sqlite-build) também mostra a preparação para comandos Cargo/Tauri diretos.
 
 1. Abra **Início** e confira as etapas e categorias sugeridas.
 2. Personalize o fluxo em **Configurações Editoriais**, se necessário.
@@ -141,9 +143,9 @@ npm run test:rs
 npm run test:rs:release
 ```
 
-`lint:rs` executa formatação em modo de conferência e `cargo check --locked`; os scripts de teste Rust usam o lockfile. O [guia de desenvolvimento](docs/development/LOCAL-DEVELOPMENT.md#validation-commands) contém também os comandos Cargo individuais para debug e release.
+`lint:rs` executa preparação do SQLite, formatação em modo de conferência e `cargo check --locked`; os scripts de teste Rust também preparam o motor e usam o lockfile. O [guia de desenvolvimento](docs/development/LOCAL-DEVELOPMENT.md#validation-commands) contém também os comandos Cargo individuais para debug e release.
 
-O [Vitest](vitest.config.ts) usa ambiente Node. O CI verifica frontend e Rust em Windows/Ubuntu; não compila nem instala o piloto. Esses checks não comprovam acessibilidade completa, qualidade editorial da IA ou prontidão de distribuição. Os [registros de validação](docs/testing/) se aplicam aos commits, ambientes e casos identificados em cada relatório.
+O [Vitest](vitest.config.ts) usa ambiente Node. O CI verifica frontend e Rust em Windows/Ubuntu; não compila nem instala o piloto. A configuração candidata adiciona preparação e checagem de identidade do SQLite nas duas plataformas, mas essa revisão ainda não rodou no GitHub. Esses checks não comprovam acessibilidade completa, qualidade editorial da IA ou prontidão de distribuição. Os [registros de validação](docs/testing/) se aplicam aos commits, ambientes e casos identificados em cada relatório.
 
 ## Limitações e trabalho planejado
 

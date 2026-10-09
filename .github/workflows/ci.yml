@@ -63,6 +63,17 @@ jobs:
             libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev \
             libayatana-appindicator3-dev libssl-dev
 
+      - name: Setup Node.js for the native build tool
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Test SQLite build guards
+        run: node --test scripts/build/__tests__/sqlite-runtime.test.mjs
+
+      - name: Prepare pinned static SQLite
+        run: node scripts/build/prepare-sqlite-runtime.mjs
+
       # O `build.rs` do Tauri resolve `externalBin` acrescentando o target
       # triple do runner. Apenas o artefato de Windows é versionado, portanto
       # nas demais plataformas o mock do repositório supre o requisito de build.
@@ -80,6 +91,10 @@ jobs:
       - name: Check (debug)
         working-directory: src-tauri
         run: cargo check --locked
+
+      - name: Verify linked SQLite identity
+        working-directory: src-tauri
+        run: cargo test --locked --test sqlite_runtime -- --nocapture
 
       - name: Test (debug)
         working-directory: src-tauri

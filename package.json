@@ -4,16 +4,19 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev:desktop": "node scripts/dev/start-desktop.mjs",
+    "dev:desktop": "npm run sqlite:prepare && node scripts/dev/start-desktop.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern src-tauri",
-    "lint:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo check --manifest-path src-tauri/Cargo.toml --locked",
+    "lint:rs": "npm run sqlite:prepare && cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo check --manifest-path src-tauri/Cargo.toml --locked",
     "clean": "next clean",
     "test": "vitest run",
-    "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
-    "test:rs:release": "cargo test --manifest-path src-tauri/Cargo.toml --release --locked"
+    "test:rs": "npm run sqlite:prepare && cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:rs:release": "npm run sqlite:prepare && cargo test --manifest-path src-tauri/Cargo.toml --release --locked",
+    "sqlite:prepare": "node scripts/build/prepare-sqlite-runtime.mjs",
+    "desktop:dev": "npm run sqlite:prepare && tauri dev",
+    "desktop:build": "npm run sqlite:prepare && tauri build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

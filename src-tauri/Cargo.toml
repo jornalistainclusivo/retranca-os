@@ -24,6 +24,8 @@ test = true
 
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
+serde_json = "1.0"
+sha2 = "0.10.8"
 
 [dependencies]
 sqlx = { version = "=0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }

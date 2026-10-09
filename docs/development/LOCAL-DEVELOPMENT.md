@@ -18,20 +18,38 @@ Create a new checkout in a directory of your choice:
 git clone https://github.com/jornalistainclusivo/retranca-os.git
 cd retranca-os
 npm ci
-npx --no-install tauri dev
 ```
 
 For an existing checkout, enter its own directory instead of cloning over it. Check `git status --short --branch` before switching branches or updating source; preserve pending work.
 
-The native configuration starts `npm run dev` automatically. `npx --no-install` uses the project's installed Tauri CLI; `npm ci` installs the lockfile without deliberately upgrading dependencies. It requires network access for uncached packages.
+For the current candidate checkout, start normal desktop development with `npm run desktop:dev`. It prepares the pinned SQLite engine and then invokes the installed Tauri CLI, which starts `npm run dev` automatically. A fresh clone above obtains published main; it does not include these candidate changes. `npm ci` installs the lockfile without deliberately upgrading dependencies and requires network access for uncached packages.
 
 Save open edits, close the app and stop the development command with Ctrl+C before a change that may restart Tauri. Source updates do not update an already installed Pilot executable.
+
+## Pinned native SQLite build
+
+These commands describe the current checkout. The SQLite build integration is local work on `codex/phase-6.5-workspace-backup`, based on `9768a87`; local commit has been authorized; integration into main remains pending. A fresh clone of published main does not contain these candidate scripts yet.
+
+`npm run desktop:dev` prepares the pinned SQLite engine before starting normal Tauri development. `npm run desktop:build` prepares it before the normal desktop build. The fixture command `npm run dev:desktop` also prepares it but retains synthetic identity/runtime. These commands have different scopes.
+
+For direct Cargo or direct Tauri CLI use, prepare once from the checkout root, and repeat after build-recipe changes:
+
+```sh
+npm run sqlite:prepare
+npx --no-install tauri dev
+```
+
+The [separate Rust build tool](../../tools/sqlite-runtime/Cargo.toml) and its lock compile SQLite 3.51.3. The [Node preparer](../../scripts/build/prepare-sqlite-runtime.mjs) verifies the official source checksum, actual engine identity/options and native target, then records artifact/recipe hashes. The private cache in `.retranca-local/sqlite-runtime/3.51.3/` contains only build artifacts; it is not the editorial database or a backup.
+
+The [.cargo configuration](../../.cargo/config.toml) supplies the static library paths automatically. The app refuses absent or mismatched preparation instead of linking an old/system engine. If that guard fails, return to this checkout's root and run `npm run sqlite:prepare`; review the reported failure rather than altering application data or bypassing the guard. An uncached helper build requires access to its locked crates and a native C compiler. No separate SQLite DLL installation is required.
+
+The recipe supports native Windows MSVC and Linux GNU; cross-compilation and other platforms are rejected. Local Windows debug/release and a Tauri build without an installer passed; Linux and the candidate CI remain unexecuted. Native CI selects Node 24 for this helper, while frontend CI retains Node 20. See the [implementation evidence and limits](../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09).
 
 ## Preview, desktop and synthetic fixtures
 
 | Command | Scope |
 | --- | --- |
-| `npx --no-install tauri dev` | Normal native desktop with SQLite and the supported external Ollama path. |
+| `npm run desktop:dev` | Prepare SQLite and start normal native desktop with the supported external Ollama path. |
 | `npm run dev` | Web frontend preview. It does not provide the native Tauri inference runtime or the same desktop database. |
 | `npm run dev:desktop` | Explicit developer fixtures: synthetic sidecar/provisioning, separate identity and storage. It is not the normal real-Ollama entry point. |
 
@@ -46,6 +64,8 @@ npx --no-install tsc --noEmit --incremental false
 npm run lint
 npm test
 npm run build
+node --test scripts/build/__tests__/sqlite-runtime.test.mjs
+npm run sqlite:prepare
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo check --manifest-path src-tauri/Cargo.toml --locked
 cargo test --manifest-path src-tauri/Cargo.toml --locked

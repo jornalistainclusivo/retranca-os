@@ -8,7 +8,9 @@ Checkpoint de revisão: o mesmo revisor independente, antes interrompido pelo li
 
 ## Manutenção local — 2026-10-09
 
-Esta rodada parte da `main` `96a309384ccb7b337dcce65b39a7519eb1ac02d7` e do commit local de README `963bbd456a120a0593e18cec22edcb112b1f6802`, na branch `codex/phase-6.5-release-readiness`. A correção abaixo foi validada localmente; publicação e integração permanecem pendentes e conservam autorizações e evidências próprias. Os resultados históricos das seções seguintes conservam seus próprios commits e escopos.
+Esta rodada parte da `main` `96a309384ccb7b337dcce65b39a7519eb1ac02d7` e do commit de README `963bbd456a120a0593e18cec22edcb112b1f6802`, na branch `codex/phase-6.5-release-readiness`. Após autorizações específicas, a manutenção foi commitada em `9768a87ab3cd2d46f1b5ffa2fbc1886cc7ee33a7`, publicada e verificada: os quatro jobs do [CI de branch](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37988393320) passaram nesse SHA. O responsável relatou inspeção do aplicativo com funcionamento aparentemente bom; o relato não identifica uma atualização do Pilot instalado nem aceita backup/restauração.
+
+O responsável autorizou abrir o [PR #14](https://github.com/jornalistainclusivo/retranca-os/pull/14) como Draft, contendo os dois commits e seis arquivos. A abertura acionou o [CI de PR](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37992013867), cujos quatro jobs também passaram em `9768a87`. O PR permanece aberto em Draft, sem merge, com `mergeable_state=clean` observado. A integração à main permanece pendente; publicação de um PR não autoriza merge, tag ou release. Os resultados locais abaixo e os históricos das seções seguintes conservam seus próprios commits e escopos. A preparação local do Incremento 8 permanece separada desta manutenção.
 
 A API do GitHub confirmou sete alertas abertos na branch padrão: seis de Next.js e um de glib. A [release oficial do Next.js 16.3.8](https://github.com/vercel/next.js/releases/tag/v16.3.8) contém as correções dos seis advisories observados: GHSA-cjq9-62q9-8jv4, GHSA-f87g-xv8r-7p7x, GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p, GHSA-3w37-wq28-93x7 e GHSA-39w2-rjm5-chcv. A API dos alertas informa 16.3.8 como primeira versão corrigida. Isso sustenta a atualização de dependência, sem afirmar que todos os caminhos vulneráveis existem neste aplicativo.
 
@@ -36,7 +38,97 @@ As auditorias acima examinam o lockfile candidato. Não comprovam ausência de v
 
 O [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) continua indicando glib corrigido a partir de 0.20.0. A árvore nativa examinada ainda utiliza 0.18.5. Esta rodada não aplica fork, override ou atualização incompatível das bindings; a pendência Linux permanece aberta.
 
-A instalação também emitiu avisos de depreciação das ferramentas herdadas `@esbuild-kit/esm-loader` e `@esbuild-kit/core-utils`. Vitest avisou sobre o futuro carregamento nativo da configuração Vite em CommonJS. Nenhum aviso foi suprimido nesta rodada. Não houve alteração de Rust/Cargo.lock, schema, migração, permissões, CI, runtime de IA ou dados editoriais. Testes nativos, inferência, aceites instalados e acessibilidade já registrados não foram repetidos; não validam automaticamente este novo frontend. CI da nova revisão, pacote identificado e aceite instalado ainda precisam de evidência própria.
+A instalação também emitiu avisos de depreciação das ferramentas herdadas `@esbuild-kit/esm-loader` e `@esbuild-kit/core-utils`. Vitest avisou sobre o futuro carregamento nativo da configuração Vite em CommonJS. Nenhum aviso foi suprimido nesta rodada. Não houve alteração de Rust/Cargo.lock, schema, migração, permissões, CI, runtime de IA ou dados editoriais. Testes nativos, inferência, aceites instalados e acessibilidade já registrados não foram repetidos; não validam automaticamente este novo frontend. No encerramento da validação local, CI da nova revisão, pacote identificado e aceite instalado ainda aguardavam evidência própria. O checkpoint acima registra o CI de branch posteriormente concluído; um novo pacote identificado e seu aceite instalado continuam pendentes.
+
+## Pendência identificada no protótipo de backup — 2026-10-09
+
+O [Incremento 8](../specifications/phase-6.5/PHASE-6.5-INCREMENT-8-WORKSPACE-BACKUP.md) permanece em preparação local separada de PR #14. Seus nove testes sintéticos passaram em Windows e reportaram SQLite 3.46.0. A árvore locked/offline confirma `sqlx-sqlite 0.8.6 → libsqlite3-sys 0.30.1`, utilizada pelo app e pelo plugin SQL. Nenhum manifesto, lock ou binário instalado foi alterado.
+
+A [documentação oficial do SQLite](https://www.sqlite.org/wal.html) descreve o WAL-reset bug, uma corrida rara de escrita/checkpoint com múltiplas conexões em WAL, potencialmente presente nessa versão. A correção upstream é indicada em 3.51.3 ou posterior, com backports 3.44.6 e 3.50.7. Verificar um caminho compatível de manutenção antes de expor backup/restauração; não presumir que o cenário passou a estar seguro porque os testes comuns passaram. Nenhuma corrida de corrupção foi reproduzida e o banco real não foi inspecionado. Essa pendência não integra a manutenção de Next.js do PR #14 e não foi contabilizada como novo alerta Dependabot.
+
+## Investigação de compatibilidade SQLite — 2026-10-09
+
+**Checkpoint histórico: investigação autorizada e experimento local aprovado pelos testes, antes da adoção da estratégia de build.** Nesse checkpoint, manifests, locks, CI e aplicativos instalados permaneciam intactos. A [integração local autorizada posteriormente](#integração-local-do-build-sqlite--2026-10-09) registra o estado candidato atual; a interface de backup continua ausente.
+
+### Restrições verificadas
+
+| Alternativa examinada | Evidência e conclusão |
+| --- | --- |
+| Patch publicado na série atual | O [registro de libsqlite3-sys](https://crates.io/api/v1/crates/libsqlite3-sys) contém somente 0.30.0 e 0.30.1 nessa série. O [manifesto SQLx 0.8.6](https://github.com/transact-rs/sqlx/blob/v0.8.6/sqlx-sqlite/Cargo.toml) exige `0.30.1`, equivalente à faixa `^0.30.1`; uma atualização normal do lock não alcança o motor corrigido. |
+| Atualizar somente o plugin SQL | O plugin publicado [2.4.1](https://crates.io/api/v1/crates/tauri-plugin-sql/2.4.1/dependencies) e o [2.5.0](https://crates.io/api/v1/crates/tauri-plugin-sql/2.5.0/dependencies) continuam exigindo SQLx `^0.8`. O 2.5.0 também exige Tauri `^2.12`; trocar só o plugin não resolve SQLite. |
+| Migrar somente o app para SQLx 0.9.0 | O [registro publicado](https://crates.io/api/v1/crates/sqlx/0.9.0) exige Rust 1.94.0, acima do 1.93.0 disponível neste experimento. O plugin conserva SQLx 0.8 e expõe seu pool ao app; substituir uma família isoladamente não é uma migração compatível já demonstrada. Não foi instalado outro toolchain. |
+| SQLite corrigido externo, com vínculo estático | O [build.rs publicado de libsqlite3-sys 0.30.1](https://docs.rs/crate/libsqlite3-sys/0.30.1/source/build.rs) permite selecionar a biblioteca externa mesmo com `bundled` habilitado, usando `LIBSQLITE3_SYS_USE_PKG_CONFIG=1`, `SQLITE3_LIB_DIR`, `SQLITE3_INCLUDE_DIR` e `SQLITE3_STATIC=1`. Esta foi a alternativa testada abaixo, mantendo SQLx/plugin/lock do app. |
+
+O Context7 ajudou a localizar as opções de SQLx; suas respostas apontam também para a branch atual upstream. As conclusões de versão/compatibilidade acima usam o código publicado de 0.8.6, o build script efetivamente instalado e os registros exatos consultados em 2026-10-09.
+
+### Experimento executado
+
+Um projeto Rust privado, ignorado pelo Git, compilou `libsqlite3-sys =0.37.0` com `bundled` e `unlock_notify`. Ele forneceu somente a biblioteca estática `sqlite3.lib` ao teste do aplicativo, sem abrir um banco. Esse pacote pertence ao experimento, não à árvore de dependências do Retranca. A árvore do app continua com as bindings 0.30.1, SQLx 0.8.6 e plugin SQL 2.4.0; o motor C vinculado no processo de teste passou a ser **SQLite 3.51.3**.
+
+O arquivo do crate tem SHA-256 `b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1`, igual ao [registro oficial de 0.37.0](https://crates.io/api/v1/crates/libsqlite3-sys/0.37.0). O SHA3-256 de `sqlite3.c` foi conferido e corresponde a `32d5424f97e0a7fc5ed2f6335afbb58be4e0298bd7117a34e39d345ff13d859e`, publicado na [release SQLite 3.51.3](https://sqlite.org/releaselog/3_51_3.html). O probe também reportou seu source ID oficial `737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6d618`. Essa release declara a correção do WAL-reset bug; não é uma afirmação de remediação de todos os problemas de SQLite.
+
+Com as quatro variáveis acima restritas ao processo de teste e caminhos apontando para a biblioteca compilada no experimento:
+
+```powershell
+cargo test --manifest-path src-tauri/Cargo.toml --locked --offline --test workspace_backup --test article_content --test article_import --test phase64_persistence -- --nocapture
+```
+
+| Verificação local — Windows x64 MSVC, Rust/Cargo 1.93.0, perfil test/debug | Resultado |
+| --- | --- |
+| Conteúdo e migração de texto (`article_content`) | 4 passaram |
+| Importação conservadora (`article_import`) | 7 passaram |
+| Persistência e migração 6.4 (`phase64_persistence`) | 17 passaram |
+| Criação/verificação do protótipo (`workspace_backup`) | 9 passaram; `sqlite_version()` reportou 3.51.3 |
+| Total | 37 passaram; nenhuma falha ou teste ignorado nesses quatro executáveis |
+
+Os testes usaram bancos descartáveis e o núcleo 8A local sobre `9768a87`. Os hashes do manifesto/lock Rust e do README atual permaneceram iguais aos de antes da investigação. Nenhum banco editorial, configuração persistida, instalação normal ou Pilot foi acessado ou atualizado. O aviso herdado de `unused_mut` permanece. Não foi executado o reproducer exato da corrida WAL-reset, build release/instalador, avaliação instalada, Linux ou novo CI deste candidato.
+
+### Proposta apresentada após o experimento
+
+Preparar um processo reproduzível que compile e vincule estaticamente uma versão corretiva fixada de SQLite, preserve uma única cadeia SQLx 0.8/plugin e confira a versão efetivamente vinculada. Não depender de uma DLL que a pessoa usuária precise instalar ou de variáveis configuradas manualmente no IDE. Definir origem/checksums, flags, tratamento de falha e teste que impeça retorno silencioso ao motor antigo; validar compilação limpa, release/empacotamento e as plataformas-alvo. SQLite 3.51.3 é o candidato mínimo testado nesta investigação, não uma escolha definitiva para distribuição.
+
+Naquele checkpoint, a integração nas dependências de build e no CI aguardava autorização específica conforme AGENTS.md. O experimento provava compatibilidade local dos caminhos cobertos, sem corrigir o build padrão. A autorização e a implementação posteriores estão registradas abaixo; a distribuição, o backup em interface e a restauração do banco ativo continuam separados.
+
+## Integração local do build SQLite — 2026-10-09
+
+**Status: implementação local autorizada, validada em Windows x64 MSVC; commit local autorizado, publicação e CI remoto novo pendentes; sem atualização instalada.** A estratégia e a alteração de CI receberam autorização específica após o experimento. O checkout `codex/phase-6.5-workspace-backup` parte de `9768a87`; esta revisão inclui o protótipo 8A e mudanças ainda não publicadas, separadas do PR #14 e da main.
+
+### Estratégia aplicada
+
+- A [ferramenta de build separada](../../tools/sqlite-runtime/Cargo.toml) fixa `libsqlite3-sys =0.37.0` e tem lock próprio. Compila o SQLite C 3.51.3 e informa versão, source ID, opções e caminhos sem abrir banco. O código-fonte e seu SHA3-256 são confrontados com a [release oficial SQLite 3.51.3](https://sqlite.org/releaselog/3_51_3.html).
+- O [preparador Node](../../scripts/build/prepare-sqlite-runtime.mjs) publica biblioteca estática, header e recibo em `.retranca-local/sqlite-runtime/3.51.3/`, ignorado pelo Git. Confere alvo nativo, opções necessárias, hashes dos artefatos e dos cinco arquivos da receita. Um cache íntegro é reutilizado; um cache incompatível precisa ser preparado novamente.
+- A [configuração Cargo](../../.cargo/config.toml) seleciona essa biblioteca por caminhos relativos ao checkout e força vínculo estático. O [build script do app](../../src-tauri/build.rs) recusa preparação ausente, identidade/alvo/opções incompatíveis ou artefatos/receita alterados. Não há retorno silencioso para SQLite 3.46.0 nem configuração manual de variáveis no IDE.
+- O app mantém SQLx 0.8.6, plugin SQL 2.4.0 e as bindings `libsqlite3-sys 0.30.1`. O `libsqlite3-sys 0.37.0` pertence apenas à ferramenta independente, não à árvore do app. Os dois locks principais permanecem byte a byte: Cargo `fbcd24edd9c15a5cecad5aac02a9e43142402af8a5d74603342b8677e0f4c81a` e npm `a7d80503398f068dc805f62c2f352d6fbdecbec3a7757bc1b7dbf6ec41656a99`. As dependências de build adicionadas `serde_json` e `sha2` reutilizam versões já presentes no lock Rust.
+- `npm run desktop:dev`, `desktop:build`, `dev:desktop`, `lint:rs` e os dois `test:rs` preparam o motor antes de invocar Tauri/Cargo. O hook Tauri `beforeBuildCommand` também prepara o motor antes do frontend. Cargo direto e `npx --no-install tauri dev` exigem `npm run sqlite:prepare` antes; o [guia local](../development/LOCAL-DEVELOPMENT.md#pinned-native-sqlite-build) mostra a sequência.
+- O [CI candidato](../../.github/workflows/ci.yml) prepara o motor e verifica sua identidade real em Windows e Ubuntu. Preserva eventos, permissões, matriz, nomes de jobs e agregador Rust; adiciona Node 24 somente ao processo nativo. Esta configuração ainda não rodou no GitHub.
+
+### Verificações desta implementação
+
+Ambiente local: Windows x64 MSVC, Rust/Cargo 1.93.0, Node.js 24.19.0 e npm 10.9.0. Os comandos abaixo foram executados no checkout com estas alterações locais; não são resultados do CI de `9768a87`.
+
+| Verificação executada | Resultado |
+| --- | --- |
+| `node scripts/build/prepare-sqlite-runtime.mjs`, primeira execução | Compilou a ferramenta/motor; versão, source ID, SHA3-256 e opções conferidos. |
+| Nova execução do preparador | Reutilizou o cache após conferir receita e hashes; sem recompilar. |
+| `node --test scripts/build/__tests__/sqlite-runtime.test.mjs` | 3 passaram: origem/opções/alvo, nome da biblioteca e rejeições de cache ausente, antigo, excessivo ou alterado. |
+| `cargo check --manifest-path src-tauri/Cargo.toml --locked --offline` e equivalente `--release` | Ambos passaram. |
+| `cargo test --manifest-path src-tauri/Cargo.toml --locked --offline` e equivalente `--release` | Em cada perfil: 155 passaram, nenhuma falha e 1 teste de piloto real ignorado. Incluem 9 testes de backup e 3 do contrato/identidade SQLite. |
+| Identidade consultada pelo SQLx nos testes nativos | SQLite 3.51.3 e source ID oficial; opções exigidas presentes. |
+| `node node_modules/@tauri-apps/cli/tauri.js build --no-bundle -- --locked` | Build Tauri release passou, incluindo o novo hook, preparação e exportação Next. Gerou executável local, sem instalador. |
+| `npm test -- __tests__/packaged-pilot.test.ts` | 19 passaram; contrato do helper Pilot preservado. |
+| `node scripts/packaging/build-local-pilot.mjs --check` | Configuração/CLI válidas; sem compilar ou executar instalador. |
+| ESLint dos dois novos arquivos Node | Passou; aviso herdado de `.eslintignore` permanece. |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | Passou. |
+| `cargo fmt --check`, app e ferramenta separada | Ambos passaram. |
+| Revisão documental e de preservação | 129 links locais e 15 âncoras conferidos; scripts existentes; sete arquivos do snapshot íntegros, README original e três fontes Rust anteriores preservados; locks principais e contratos de CI/Tauri conferidos. `git diff --check` passou. |
+
+O compilador conserva o aviso herdado `unused_mut` em `src-tauri/src/provisioning/download.rs:93`. O Vitest conserva seu aviso de carregamento CommonJS. Nenhum deles foi ocultado ou corrigido lateralmente.
+
+### Limites e continuação
+
+A preparação admite builds nativos Windows MSVC e Linux GNU; cross-compilation e outras plataformas são recusadas. Windows foi executado localmente. A validação Linux e o CI desta revisão continuam pendentes, assim como um novo instalador identificado e seu aceite instalado. Não foi reproduzida a corrida WAL-reset exata; os testes comprovam o motor corrigido vinculado e os cenários cobertos.
+
+O aplicativo instalado normal/Pilot, os bancos editoriais e o checkout original do AntiGravity permanecem preservados. O núcleo 8A não ganhou IPC, interface ou restauração ativa. A mudança de build resolve o pré-requisito local do motor; não aceita automaticamente backup/restauração, elimina todas as vulnerabilidades nem encerra a fase 6.5. Commit/publicação, integração, distribuição e operação sobre dados reais conservam seus gates específicos.
 
 ## Contexto
 
