@@ -1,12 +1,12 @@
 # Phase 6.5 Increment 7 — Accessibility validation
 
-Date: 2026-10-08 (America/Sao_Paulo). Scope: [navigation states and Windows zoom](../specifications/phase-6.5/PHASE-6.5-INCREMENT-7-ACCESSIBILITY.md). Status: local correction implemented and all three bounded development checks accepted by owner report on 2026-10-08. The owner explicitly authorized the local commit of eleven reviewed files on 2026-10-08; its final identity is retained in the supplemental receipt. Push, CI dispatch, installer build/update and editorial database access are not included.
+Date: 2026-10-08 (America/Sao_Paulo). Scope: [navigation states and Windows zoom](../specifications/phase-6.5/PHASE-6.5-INCREMENT-7-ACCESSIBILITY.md). Current status: source integrated through PR #10, all four main CI #40 jobs passed and the identified installed Windows zoom check accepted by owner report. The [integration record](PHASE-6.5-INCREMENT-7-INTEGRATION.md) binds exact source, raw/NSIS artifact identities and acceptance. Local/development observations below retain their original scope; no editorial database access or full accessibility acceptance is inferred.
 
 ## Source identity and preserved work
 
 Branch `codex/phase-6.5-accessibility` starts at main `95e6a2cec5880c419ef911d3e6b12e3786fbea48`, merging PR #9. All four automatic [main CI #37 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37816289826) passed on that exact SHA. That historical baseline CI does not validate this later round. Preserve Increment 6's separately accepted installed recovery sample and the original AntiGravity checkout.
 
-The normal development checkout and installed Pilot are different application artifacts. The owner's current tests followed the explicit managed-worktree development instructions; they are not installed-package acceptance. Application version remains 0.1.0, so the version string alone does not identify a build.
+The normal development checkout and installed Pilot are different application artifacts. The owner's original development tests followed the explicit managed-worktree instructions; those results alone were not installed-package acceptance. The later identified installed handoff is recorded separately in the integration checkpoint. Application version remains 0.1.0, so the version string alone does not identify a build.
 
 ## Local and owner observations
 
@@ -24,7 +24,7 @@ The normal development checkout and installed Pilot are different application ar
 | Pilot preflight after correction | Pass — explicit Node 24.19.0 helper `--check`; isolated identity 0.1.0 retained, no installer execution. |
 | Types/lint and native configuration check after correction | Pass — full TypeScript check, scoped ESLint and `cargo check --manifest-path src-tauri/Cargo.toml --locked --offline` with the Windows configuration supplied through a process-local override; native dev-profile configuration compiled in 51.86 seconds. No app execution or installer generation. |
 | Owner development check 3 after correction | Pass by owner report on 2026-10-08: `3 ok`, after the focused enlarge/reduce/reset and enlarged Início/local-AI-panel handoff. This does not establish exact zoom percentages or full visual coverage. |
-| Installed Pilot zoom after this correction | Not-tested — this source change has not been built/installed as a new identified Pilot candidate. |
+| Installed Pilot zoom after this correction | Pass by owner report on 2026-10-08 after the identified candidate update and corrected identity check; see the separate integration record. At the original source handoff this was not-tested. No measured zoom percentage or comprehensive accessibility score is claimed. |
 
 The existing Vite native-config warning, `.eslintignore` warning and native `unused_mut` warning in `src-tauri/src/provisioning/download.rs:93` remain visible. No dependency update or warning suppression was performed.
 
@@ -34,8 +34,8 @@ The local Tauri CLI schema sets omitted `zoomHotkeysEnabled` to false. The norma
 
 The packaging overlay replaces the window array, so relying only on the Windows platform file would omit the Pilot fix. The negative regression checks guard that variant and reject unrelated window/data-path overrides.
 
-## Installed executable identity and remaining work
+## Historical installed-identity observation
 
-A read-only hash observation found the installed Pilot SHA256 `cd0090312defe3aa49245df600f9702a421055aa2a8da5355c09088a370eb095`, different from the previously identified corrected candidate SHA256 `89ad1719f4a95ed5c71da6121a9f40b1093b0353aff2ca6b8324fdd560d224bf`. Both reported version 0.1.0 and 19,273,728 bytes. The cause remains needs-review; do not infer corruption, a missing update or reproducible build identity from this difference. Do not erase historical owner acceptance or extend it to the current unidentified binary.
+A read-only hash observation found the installed Pilot SHA256 `cd0090312defe3aa49245df600f9702a421055aa2a8da5355c09088a370eb095`, different from the previously identified corrected candidate SHA256 `89ad1719f4a95ed5c71da6121a9f40b1093b0353aff2ca6b8324fdd560d224bf`. Both reported version 0.1.0 and 19,273,728 bytes. At that earlier checkpoint the cause was needs-review; do not infer corruption, a missing update or reproducible build identity from that observation. A fresh candidate was subsequently identified by exact binary comparison in the integration record. Do not erase historical owner acceptance or retroactively extend it to that earlier unidentified binary.
 
-Local source/documentation review is complete and the owner accepted all three bounded development checks. Preserve them without repetition. The owner authorized the local commit with message `fix(phase-6.5): improve navigation states and Windows zoom`; retain its verified identity separately and request independent authorization for publication and CI. Later prepare a fresh identified Pilot artifact and separately scoped installation handoff. Comprehensive contrast, actual zoom/reflow percentages, reader announcements in untriggered error states, reduced motion, Linux/macOS/other readers, signing and distribution are not established by this sample. No full accessibility or production acceptance is claimed.
+The original source/documentation handoff accepted all three development checks and authorized `fix(phase-6.5): improve navigation states and Windows zoom`. Subsequent separately authorized publication, CI and PR #10 integration, the fresh identified Pilot update and owner installed zoom acceptance are completed in the integration record. Preserve accepted outcomes without repetition. Comprehensive contrast, actual zoom/reflow percentages, reader announcements in untriggered error states, reduced motion, Linux/macOS/other readers, signing and distribution are not established by this sample. No full accessibility or production acceptance is claimed.
