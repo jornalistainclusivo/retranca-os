@@ -1,8 +1,18 @@
 # Phase 6.5 — Production Provider and Model Experience
 
-Date: 2026-10-02; current checkpoint 2026-10-08. Status: Phase 6.5 in progress. Approved provider/product decisions are recorded in the cited ADRs; the full phase and public distribution are not complete.
+Date: 2026-10-02; current checkpoint 2026-10-09. Status: Phase 6.5 in progress. Approved provider/product decisions are recorded in the cited ADRs; the full phase and public distribution are not complete.
 
-## Active continuation — Packaging artifact identity — 2026-10-08
+## Active continuation — Dependency maintenance — 2026-10-09
+
+The live GitHub baseline is main `96a309384ccb7b337dcce65b39a7519eb1ac02d7`. [PR #12](https://github.com/jornalistainclusivo/retranca-os/pull/12) integrated the packaging receipt correction; [PR #13](https://github.com/jornalistainclusivo/retranca-os/pull/13) integrated the project's MIT license. All four jobs of [main CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37965192407) passed on that main SHA. Earlier pending integration and project-license wording is historical; third-party licensing and signing retain their separate scope.
+
+The reused managed checkout is on `codex/phase-6.5-release-readiness`, with the separately authorized local README commit `963bbd456a120a0593e18cec22edcb112b1f6802`. The original AntiGravity checkout and its local README remain preserved. No installer release is published.
+
+The current bounded implementation updates Next.js and its ESLint configuration from 16.3.6 to exactly 16.3.8, preserving the rest of the lock and its optional platform packages. Clean installation, types, lint, 406 frontend tests and static export passed locally with Node.js 24.19.0. The [ADR-018 maintenance record](../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#manutenção-local--2026-10-09) distinguishes these results from main CI and remote alerts. The complete npm audit still reports the braces chain; native glib 0.18.5 remains unresolved.
+
+This maintenance has local validation; publication and integration remain pending. It does not update an installed executable or close Phase 6.5. Preserve the accepted native/model, startup/recovery and installed zoom samples. The next source review must settle the unresolved dependency disposition and prepare a full backup/restoration contract beyond article JSON; representative installed Linux and broader accessibility evidence, third-party licensing/signing and validated release assets remain pending. External Ollama remains the first delivery; an embedded engine remains a future option.
+
+## Historical checkpoint — Packaging artifact identity — 2026-10-08
 
 [PR #11](https://github.com/jornalistainclusivo/retranca-os/pull/11) integrated the public-documentation round as main `b462e183b18a08e989b26520ddd3899ce2bd98dd`. All four exact-source [main CI #43 jobs](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37869770300) passed; the API completion timestamp is 2026-10-09T01:41:40Z (2026-10-08 local). Documentation integration is complete, and previously accepted application/installed zoom checks remain valid within their recorded scope.
 
@@ -121,4 +131,4 @@ Preserve Phase 6.4's open single edition (ADR-013), article-owned text (ADR-014)
 
 ## Next review
 
-Follow the active public-documentation continuation at the start of this file. Preserve the completed [source integration/milestone](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md), native sample, startup/recovery samples and [Increment 7 integration/installed zoom acceptance](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md). The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. Next, finish the prepared documentation review and the bounded packaging receipt correction. Representative model evaluation, exact process/model attestation, installed Linux, broader accessibility, licensing/security/signing, full backup/restore and a real preferred embedded engine retain separately evidenced gates.
+Follow the active dependency-maintenance continuation at the start of this file. Preserve the completed [source integration/milestone](../testing/PHASE-6.5-INCREMENTS-2-3-INTEGRATION.md), native sample, startup/recovery samples and [Increment 7 integration/installed zoom acceptance](../testing/PHASE-6.5-INCREMENT-7-INTEGRATION.md). The [native readiness contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-2-PROVIDER-READINESS.md) remains authoritative per generation. Review this local dependency patch and its unresolved advisories before separately authorized publication/integration. Prepare and validate full backup/restore, and complete remaining representative installed-platform/accessibility and third-party licensing/signing evidence before public distribution. Broader model evaluation and exact process/model attestation retain their recorded limits; the preferred embedded engine remains future work.
