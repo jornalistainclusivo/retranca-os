@@ -4,7 +4,7 @@
 
 Aplicativo desktop para planejar pautas, organizar a produção e revisar conteúdo editorial no seu computador. A IA local é opcional; a decisão editorial continua com você.
 
-Uma única edição funcional, sem conta ou assinatura: todas as pessoas podem personalizar etapas, categorias e checklists. A [decisão da edição aberta](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) registra essa direção; a licença formal do código ainda está em definição.
+Uma única edição funcional, sem conta ou assinatura: todas as pessoas podem personalizar etapas, categorias e checklists. A [decisão da edição aberta](docs/decisions/ADR-013-OPEN-SINGLE-EDITION.md) registra essa direção; o código do Retranca OS está disponível sob a [licença MIT](LICENSE).
 
 [Guia de primeiros passos](docs/user-guide/GETTING-STARTED.md) · [Documentação](docs/README.md) · [Desenvolvimento local](docs/development/LOCAL-DEVELOPMENT.md) · [Plano da fase 6.5](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md)
 
@@ -66,7 +66,7 @@ Checkpoint: **08/10/2026**.
 | Windows | Desenvolvimento e piloto local instalado, com testes delimitados aceitos pelo responsável. |
 | Linux | Compilação e testes Rust no CI Ubuntu; instalação e uso do aplicativo com IA real ainda precisam de validação própria. |
 
-O [plano da fase 6.5](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) reúne os critérios restantes: empacotamento, acessibilidade mais ampla, backup/restauração, segurança, licença, assinatura e distribuição. Ele não define uma quantidade fechada de fases futuras.
+O [plano da fase 6.5](docs/architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) reúne os critérios restantes: empacotamento, acessibilidade mais ampla, backup/restauração, segurança, licenças de terceiros, assinatura e distribuição. Ele não define uma quantidade fechada de fases futuras.
 
 ## Para desenvolver ou contribuir
 
@@ -87,4 +87,6 @@ O Tauri inicia o frontend automaticamente. O [guia de desenvolvimento](docs/deve
 
 Comece pelo [índice da documentação](docs/README.md). Ele aponta para o manual, os contratos atuais, os ADRs e as evidências de validação. Documentos históricos preservam as decisões e os resultados de suas respectivas revisões.
 
-O repositório é público, mas **a licença formal ainda não foi definida e não há arquivo LICENSE publicado**. Essa decisão, as licenças das dependências e os demais critérios de distribuição continuam pendentes; esta atualização não publica uma release.
+O código e a documentação próprios do Retranca OS são disponibilizados sob a [licença MIT](LICENSE), com copyright de JINC Apps - Jornalista Inclusivo (2026).
+
+Dependências, runtimes e modelos de IA continuam sujeitos às suas próprias licenças. A revisão desses termos e os demais critérios de distribuição permanecem pendentes; a adoção da MIT não equivale à publicação de uma release.
