@@ -11,7 +11,11 @@ fn main() {
     let host = std::env::var("HOST").unwrap();
     let error = "Pinned SQLite is not ready. From the repository root, run npm run sqlite:prepare. Cross-compilation needs separate native-engine validation.";
     assert_eq!(host, target, "{error}");
-    for name in ["LIBSQLITE3_SYS_USE_PKG_CONFIG", "SQLITE3_STATIC"] {
+    for name in [
+        "LIBSQLITE3_SYS_USE_PKG_CONFIG",
+        "SQLITE3_NO_PKG_CONFIG",
+        "SQLITE3_STATIC",
+    ] {
         println!("cargo:rerun-if-env-changed={name}");
         assert_eq!(std::env::var(name).as_deref(), Ok("1"), "{error}");
     }
