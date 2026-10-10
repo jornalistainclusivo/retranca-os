@@ -12,7 +12,7 @@ Uma única edição funcional, sem conta ou assinatura: todas as pessoas podem p
 
 Base de código conferida em **09/10/2026**: [`main` em `96a3093`](https://github.com/jornalistainclusivo/retranca-os/tree/96a309384ccb7b337dcce65b39a7519eb1ac02d7). A fase 6.4 está integrada; a fase 6.5 permanece em desenvolvimento.
 
-Este checkout contém o candidato local em `codex/phase-6.5-workspace-backup`, sobre `9768a87`: preparação do SQLite estático e protótipo interno de backup. Os comandos novos abaixo descrevem esse checkout; eles ainda não estão na main, no PR #14 ou no aplicativo instalado. Consulte o [registro do build SQLite](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) para a evidência e os limites.
+Este checkout usa `codex/phase-6.5-workspace-backup`: build SQLite e núcleos de backup/recuperação descartável publicados até `d7be11c`, com [CI própria aprovada](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). As mudanças locais 8C acrescentam um painel desktop para criar e verificar backups internos, ainda sem publicação/CI própria ou aceite instalado. Os comandos abaixo descrevem esse candidato, que ainda não está na main, no PR #14 ou no aplicativo instalado. Consulte o [contrato e a validação do backup](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-8-WORKSPACE-BACKUP.md#integração-8c-inicial-criação-e-verificação-internas--2026-10-10) e o [registro SQLite](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09).
 
 ### Download
 
@@ -145,14 +145,14 @@ npm run test:rs:release
 
 `lint:rs` executa preparação do SQLite, formatação em modo de conferência e `cargo check --locked`; os scripts de teste Rust também preparam o motor e usam o lockfile. O [guia de desenvolvimento](docs/development/LOCAL-DEVELOPMENT.md#validation-commands) contém também os comandos Cargo individuais para debug e release.
 
-O [Vitest](vitest.config.ts) usa ambiente Node. O CI verifica frontend e Rust em Windows/Ubuntu; não compila nem instala o piloto. A configuração candidata adiciona preparação e checagem de identidade do SQLite nas duas plataformas, mas essa revisão ainda não rodou no GitHub. Esses checks não comprovam acessibilidade completa, qualidade editorial da IA ou prontidão de distribuição. Os [registros de validação](docs/testing/) se aplicam aos commits, ambientes e casos identificados em cada relatório.
+O [Vitest](vitest.config.ts) usa ambiente Node. O CI verifica frontend e Rust em Windows/Ubuntu; não compila nem instala o piloto. A preparação/identidade SQLite e os núcleos 8A/8B passaram nos quatro jobs da [CI de `d7be11c`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746); essa execução não cobre o início 8C local posterior. O [contrato do incremento 8](docs/specifications/phase-6.5/PHASE-6.5-INCREMENT-8-WORKSPACE-BACKUP.md#integração-8c-inicial-criação-e-verificação-internas--2026-10-10) separa seus testes locais da CI e do aceite instalado. Esses checks não comprovam acessibilidade completa, qualidade editorial da IA ou prontidão de distribuição. Os [registros de validação](docs/testing/) se aplicam aos commits, ambientes e casos identificados em cada relatório.
 
 ## Limitações e trabalho planejado
 
 - **Acessibilidade:** é uma diretriz do projeto, com WCAG 2.2 AA como meta. Há verificações delimitadas de teclado, foco e zoom, mas não uma avaliação completa que comprove conformidade. Checklists, conquistas e sugestões de IA não certificam acessibilidade.
 - **Motor embutido real:** permanece uma preferência futura no ADR-016. A implementação atual depende do Ollama externo.
 - **Anexos e visão multimodal:** estão em [descoberta de produto](docs/specifications/ARTICLE-ATTACHMENTS-DISCOVERY.md); não integram o fluxo implementado de descrição visual textual.
-- **Recuperação e distribuição:** backup/restauração integral, aceite de instalação Linux, assinatura e distribuição pública continuam com critérios pendentes no plano da fase 6.5.
+- **Backup e distribuição:** o candidato local 8C cria/verifica cópias internas dos dados salvos do desktop. Restauração do banco ativo, cópia externa, aceite instalado dessa interface/Linux, assinatura e distribuição pública continuam pendentes no plano da fase 6.5.
 - **Dependências:** o [ADR-018](docs/decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md) registra a rodada de manutenção e suas pendências. Esse documento histórico não é uma confirmação atualizada de todos os alertas de segurança.
 
 <a id="15-licensing-status"></a>

@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Article, WorkflowStage } from '@/types/editorial';
+import { WorkspaceBackupPanel } from '@/components/WorkspaceBackupPanel';
 import { exportArticlesJSON, resetToSeedData } from '@/lib/storage';
 import { importArticleFile, articleImportErrorMessage } from '@/lib/api/articleImport';
 import { 
@@ -174,6 +175,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <Plus className="w-5 h-5" />
                 <span>Nova Pauta</span>
               </button>
+
+              <WorkspaceBackupPanel workspaceReady={workspaceReady} />
 
               {/* Storage Controls (Export, Import, Reset) */}
               <div role="group" aria-label="Arquivos locais de pautas" aria-busy={isImporting} className="flex flex-wrap items-center gap-1 pl-1 border-l border-slate-200 dark:border-slate-700">

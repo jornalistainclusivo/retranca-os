@@ -10,6 +10,7 @@ pub mod provider_policy;
 pub mod provisioning;
 pub mod sidecar_path;
 pub mod workspace_backup;
+pub mod workspace_backup_commands;
 
 #[cfg(debug_assertions)]
 use ai_supervisor::start_inference;
@@ -29,6 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .manage(JobRegistry(StdMutex::new(HashMap::new())))
         .manage(OllamaJobRegistry::default())
+        .manage(workspace_backup_commands::WorkspaceBackupOperations::default())
         .manage(DownloadRegistry(AsyncMutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             #[cfg(debug_assertions)]
@@ -42,6 +44,9 @@ pub fn run() {
             cancel_download,
             get_ollama_models,
             local_ai_readiness::get_local_ai_readiness,
+            workspace_backup_commands::list_workspace_backups,
+            workspace_backup_commands::create_workspace_backup,
+            workspace_backup_commands::verify_internal_workspace_backup,
             article_content::migrate_article_content,
             article_import::import_articles,
             orchestrator::start_orchestrated_inference,

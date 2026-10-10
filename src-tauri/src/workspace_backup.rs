@@ -1,4 +1,4 @@
-//! Workspace backup prototype. No Tauri command or active-database restore is exposed.
+//! Snapshot and disposable recovery core. Active-database restoration is not exposed.
 use crate::phase64::CanonicalError;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -8,9 +8,9 @@ use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-const TABLES: [&str; 8] = [
+pub(crate) const TABLES: [&str; 8] = [
     "articles",
     "categories",
     "checklist_items",
@@ -20,10 +20,10 @@ const TABLES: [&str; 8] = [
     "history_entries",
     "workflow_stages",
 ];
-const DATABASE_FILE: &str = "workspace.sqlite3";
+pub(crate) const DATABASE_FILE: &str = "workspace.sqlite3";
 const RECEIPT_FILE: &str = "receipt.json";
 const MAX_RECEIPT_BYTES: u64 = 16 * 1024;
-const APPLICATION_IDS: [&str; 3] = [
+pub(crate) const APPLICATION_IDS: [&str; 3] = [
     "com.jornalistainclusivo.retranca",
     "com.jornalistainclusivo.retranca.pilot",
     "com.jornalistainclusivo.retranca.fixtures",
@@ -82,7 +82,7 @@ fn is_redirected(metadata: &fs::Metadata) -> bool {
     }
 }
 
-fn validate_directory(directory: &Path) -> Result<(), CanonicalError> {
+pub(crate) fn validate_directory(directory: &Path) -> Result<(), CanonicalError> {
     if !directory.is_absolute()
         || directory.components().any(|part| {
             matches!(
@@ -102,7 +102,7 @@ fn validate_directory(directory: &Path) -> Result<(), CanonicalError> {
     Ok(())
 }
 
-fn file_size(path: &Path) -> Result<u64, CanonicalError> {
+pub(crate) fn file_size(path: &Path) -> Result<u64, CanonicalError> {
     let metadata = fs::symlink_metadata(path).map_err(|_| failure("file"))?;
     if !metadata.is_file() || is_redirected(&metadata) {
         return Err(failure("file"));
@@ -110,9 +110,65 @@ fn file_size(path: &Path) -> Result<u64, CanonicalError> {
     Ok(metadata.len())
 }
 
+#[derive(Clone, Copy)]
+struct BackupBudget {
+    max_bytes: u64,
+    deadline: Instant,
+}
+
+impl BackupBudget {
+    fn new(max_bytes: u64, timeout: Duration) -> Result<Self, CanonicalError> {
+        if max_bytes == 0 || timeout.is_zero() {
+            return Err(failure("operation-limit"));
+        }
+        Ok(Self {
+            max_bytes,
+            deadline: Instant::now()
+                .checked_add(timeout)
+                .ok_or_else(|| failure("operation-limit"))?,
+        })
+    }
+
+    fn check(self, bytes: u64) -> Result<(), CanonicalError> {
+        if bytes > self.max_bytes {
+            return Err(failure("database-limit"));
+        }
+        if Instant::now() >= self.deadline {
+            return Err(failure("operation-limit"));
+        }
+        Ok(())
+    }
+}
+
+async fn apply_budget(
+    connection: &mut SqliteConnection,
+    budget: Option<BackupBudget>,
+) -> Result<(), CanonicalError> {
+    if let Some(budget) = budget {
+        budget.check(0)?;
+        connection
+            .lock_handle()
+            .await
+            .map_err(|error| database_failure(error, "operation-limit"))?
+            .set_progress_handler(1000, move || Instant::now() < budget.deadline);
+    }
+    Ok(())
+}
+
 async fn digest_file(path: PathBuf) -> Result<String, CanonicalError> {
+    digest_file_budgeted(path, None).await
+}
+
+async fn digest_file_budgeted(
+    path: PathBuf,
+    budget: Option<BackupBudget>,
+) -> Result<String, CanonicalError> {
     tauri::async_runtime::spawn_blocking(move || {
-        file_size(&path)?;
+        let size = file_size(&path)?;
+        if let Some(budget) = budget {
+            budget.check(size)?;
+        }
+        let mut total = 0_u64;
         let mut file = File::open(&path).map_err(|_| failure("hash"))?;
         let mut digest = Sha256::new();
         let mut buffer = [0_u8; 64 * 1024];
@@ -120,6 +176,12 @@ async fn digest_file(path: PathBuf) -> Result<String, CanonicalError> {
             let read = file.read(&mut buffer).map_err(|_| failure("hash"))?;
             if read == 0 {
                 break;
+            }
+            total = total
+                .checked_add(read as u64)
+                .ok_or_else(|| failure("database-limit"))?;
+            if let Some(budget) = budget {
+                budget.check(total)?;
             }
             digest.update(&buffer[..read]);
         }
@@ -177,12 +239,39 @@ async fn inspect_database(
     Ok((schema_hash, counts))
 }
 
-/// Internal prototype: the future controller must resolve an application-owned root.
-/// The caller supplies a trusted native pool, not a database path or frontend SQL.
+/// Native core: the caller supplies a trusted pool and an application-owned root.
 pub async fn create_workspace_backup_pool(
     pool: &SqlitePool,
     backup_root: &Path,
     app_identifier: &str,
+) -> Result<WorkspaceBackupArtifact, CanonicalError> {
+    create_workspace_backup_inner(pool, backup_root, app_identifier, None).await
+}
+
+pub async fn create_workspace_backup_pool_bounded(
+    pool: &SqlitePool,
+    backup_root: &Path,
+    app_identifier: &str,
+    max_bytes: u64,
+    timeout: Duration,
+) -> Result<WorkspaceBackupArtifact, CanonicalError> {
+    let budget = BackupBudget::new(max_bytes, timeout)?;
+    create_workspace_backup_inner(pool, backup_root, app_identifier, Some(budget))
+        .await
+        .map_err(|error| {
+            if Instant::now() >= budget.deadline {
+                failure("operation-limit")
+            } else {
+                error
+            }
+        })
+}
+
+async fn create_workspace_backup_inner(
+    pool: &SqlitePool,
+    backup_root: &Path,
+    app_identifier: &str,
+    budget: Option<BackupBudget>,
 ) -> Result<WorkspaceBackupArtifact, CanonicalError> {
     if !APPLICATION_IDS.contains(&app_identifier) {
         return Err(failure("application"));
@@ -191,10 +280,32 @@ pub async fn create_workspace_backup_pool(
     let mut source = pool
         .acquire()
         .await
-        .map_err(|error| database_failure(error, "source"))?;
+        .map_err(|error| database_failure(error, "source"))?
+        .detach();
+    // A detached connection cannot return its progress callback to the plugin pool.
+    apply_budget(&mut source, budget).await?;
+    if let Some(budget) = budget {
+        let pages: i64 = sqlx::query_scalar("PRAGMA page_count")
+            .fetch_one(&mut source)
+            .await
+            .map_err(|error| database_failure(error, "database-limit"))?;
+        let size: i64 = sqlx::query_scalar("PRAGMA page_size")
+            .fetch_one(&mut source)
+            .await
+            .map_err(|error| database_failure(error, "database-limit"))?;
+        let bytes = u64::try_from(pages)
+            .ok()
+            .and_then(|pages| {
+                u64::try_from(size)
+                    .ok()
+                    .and_then(|size| pages.checked_mul(size))
+            })
+            .ok_or_else(|| failure("database-limit"))?;
+        budget.check(bytes)?;
+    }
     inspect_database(&mut source).await?;
     let synchronous: i64 = sqlx::query_scalar("PRAGMA synchronous")
-        .fetch_one(&mut *source)
+        .fetch_one(&mut source)
         .await
         .map_err(|error| database_failure(error, "synchronous"))?;
     if synchronous != 1 && synchronous != 2 && synchronous != 3 {
@@ -208,11 +319,14 @@ pub async fn create_workspace_backup_pool(
     let destination = database.to_str().ok_or_else(|| failure("destination"))?;
     sqlx::query("VACUUM INTO ?")
         .bind(destination)
-        .execute(&mut *source)
+        .execute(&mut source)
         .await
         .map_err(|error| database_failure(error, "snapshot"))?;
     drop(source);
 
+    if let Some(budget) = budget {
+        budget.check(file_size(&database)?)?;
+    }
     let mut copy = SqliteConnection::connect_with(
         &SqliteConnectOptions::new()
             .filename(&database)
@@ -223,6 +337,7 @@ pub async fn create_workspace_backup_pool(
     )
     .await
     .map_err(|error| database_failure(error, "open-copy"))?;
+    apply_budget(&mut copy, budget).await?;
     let (schema_sha256, table_counts) = inspect_database(&mut copy).await?;
     let sqlite_version: String = sqlx::query_scalar("SELECT sqlite_version()")
         .fetch_one(&mut copy)
@@ -246,10 +361,13 @@ pub async fn create_workspace_backup_pool(
         sqlite_version,
         database_schema_version: 2,
         database_size: file_size(&database)?,
-        database_sha256: digest_file(database).await?,
+        database_sha256: digest_file_budgeted(database, budget).await?,
         schema_sha256,
         table_counts,
     };
+    if let Some(budget) = budget {
+        budget.check(receipt.database_size)?;
+    }
     let serialized = serde_json::to_vec_pretty(&receipt).map_err(|_| failure("receipt"))?;
     let mut temporary = OpenOptions::new()
         .create_new(true)
@@ -275,7 +393,36 @@ pub async fn verify_workspace_backup(
     directory: &Path,
     expected_app_identifier: &str,
 ) -> Result<WorkspaceBackupReceipt, CanonicalError> {
+    verify_workspace_backup_inner(directory, expected_app_identifier, None).await
+}
+
+pub async fn verify_workspace_backup_bounded(
+    directory: &Path,
+    expected_app_identifier: &str,
+    max_bytes: u64,
+    timeout: Duration,
+) -> Result<WorkspaceBackupReceipt, CanonicalError> {
+    let budget = BackupBudget::new(max_bytes, timeout)?;
+    verify_workspace_backup_inner(directory, expected_app_identifier, Some(budget))
+        .await
+        .map_err(|error| {
+            if Instant::now() >= budget.deadline {
+                failure("operation-limit")
+            } else {
+                error
+            }
+        })
+}
+
+async fn verify_workspace_backup_inner(
+    directory: &Path,
+    expected_app_identifier: &str,
+    budget: Option<BackupBudget>,
+) -> Result<WorkspaceBackupReceipt, CanonicalError> {
     validate_directory(directory)?;
+    if let Some(budget) = budget {
+        budget.check(file_size(&directory.join(DATABASE_FILE))?)?;
+    }
     let receipt_path = directory.join(RECEIPT_FILE);
     if file_size(&receipt_path)? > MAX_RECEIPT_BYTES {
         return Err(failure("receipt-limit"));
@@ -302,13 +449,13 @@ pub async fn verify_workspace_backup(
     }
     let database = directory.join(DATABASE_FILE);
     if file_size(&database)? != receipt.database_size
-        || digest_file(database.clone()).await? != receipt.database_sha256
+        || digest_file_budgeted(database.clone(), budget).await? != receipt.database_sha256
     {
         return Err(failure("copy-identity"));
     }
     let mut connection = SqliteConnection::connect_with(
         &SqliteConnectOptions::new()
-            .filename(database)
+            .filename(&database)
             .read_only(true)
             .create_if_missing(false)
             .pragma("trusted_schema", "OFF")
@@ -316,6 +463,7 @@ pub async fn verify_workspace_backup(
     )
     .await
     .map_err(|error| database_failure(error, "open-copy"))?;
+    apply_budget(&mut connection, budget).await?;
     let (schema, counts) = inspect_database(&mut connection).await?;
     connection
         .close()
@@ -323,6 +471,14 @@ pub async fn verify_workspace_backup(
         .map_err(|error| database_failure(error, "close-copy"))?;
     if schema != receipt.schema_sha256 || counts != receipt.table_counts {
         return Err(failure("copy-metadata"));
+    }
+    if let Some(budget) = budget {
+        budget.check(receipt.database_size)?;
+    }
+    if file_size(&database)? != receipt.database_size
+        || digest_file_budgeted(database, budget).await? != receipt.database_sha256
+    {
+        return Err(failure("copy-identity"));
     }
     Ok(receipt)
 }
@@ -342,7 +498,7 @@ pub struct WorkspaceRecoveryArtifact {
     pub receipt: WorkspaceRecoveryReceipt,
 }
 
-fn reject_snapshot_sidecars(directory: &Path) -> Result<(), CanonicalError> {
+pub(crate) fn reject_snapshot_sidecars(directory: &Path) -> Result<(), CanonicalError> {
     for suffix in ["-wal", "-shm", "-journal"] {
         match fs::symlink_metadata(directory.join(format!("{DATABASE_FILE}{suffix}"))) {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -607,6 +763,29 @@ pub async fn verify_disposable_workspace_recovery(
     )?;
     verify_recovery_database(directory, &receipt.source_backup).await?;
     Ok(receipt)
+}
+
+#[cfg(test)]
+mod backup_budget_tests {
+    use super::*;
+
+    #[test]
+    fn sqlite_progress_budget_interrupts_an_executing_query() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let mut connection = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+            let budget = BackupBudget::new(1024 * 1024, Duration::from_millis(50)).unwrap();
+            apply_budget(&mut connection, Some(budget)).await.unwrap();
+            let result = sqlx::query_scalar::<_, i64>(
+                "WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<100000000) SELECT SUM(x) FROM n"
+            ).fetch_one(&mut connection).await;
+            assert_eq!(result.unwrap_err().as_database_error().unwrap().code().as_deref(), Some("9"));
+            connection.close().await.unwrap();
+        });
+    }
 }
 
 #[cfg(test)]

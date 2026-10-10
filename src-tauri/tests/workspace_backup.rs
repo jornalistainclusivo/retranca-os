@@ -1014,3 +1014,256 @@ fn recovery_verification_rejects_changed_receipts_and_incomplete_or_oversized_ma
         pool.close().await;
     });
 }
+
+#[test]
+fn internal_controller_keeps_normal_pilot_and_fixture_namespaces_separate() {
+    use app_lib::workspace_backup_commands::{ApplicationBackupStore, WorkspaceBackupOperations};
+    run_async(async {
+        let root = tempfile::tempdir().unwrap();
+        let pool = setup(&root.path().join("synthetic-source.sqlite3")).await;
+        let operations = WorkspaceBackupOperations::default();
+        let ids = [
+            "com.jornalistainclusivo.retranca",
+            "com.jornalistainclusivo.retranca.pilot",
+            APP,
+        ];
+        let mut originals = Vec::new();
+        for id in ids {
+            let config = root.path().join(id);
+            std::fs::create_dir(&config).unwrap();
+            let store = ApplicationBackupStore::new(config.clone(), id.into()).unwrap();
+            let empty = store.list(&operations).await.unwrap();
+            assert_eq!(empty.source_app_identifier, id);
+            assert!(empty.entries.is_empty());
+            assert!(!config.join("backups").exists());
+            let artifact = store.create(&operations, &pool).await.unwrap();
+            assert_eq!(artifact.receipt.source_app_identifier, id);
+            assert!(std::path::Path::new(&artifact.directory).starts_with(config.join("backups")));
+            assert_eq!(
+                store
+                    .verify(&operations, &artifact.receipt.operation_id)
+                    .await
+                    .unwrap()
+                    .receipt,
+                artifact.receipt
+            );
+            let inventory = store.list(&operations).await.unwrap();
+            assert_eq!(inventory.entries.len(), 1);
+            assert_eq!(
+                inventory.entries[0].operation_id,
+                artifact.receipt.operation_id
+            );
+            originals.push((artifact.directory, artifact.receipt.operation_id));
+        }
+        let fixture = ApplicationBackupStore::new(root.path().join(APP), APP.into()).unwrap();
+        assert!(fixture.verify(&operations, &originals[0].1).await.is_err());
+        for (directory, _) in originals {
+            assert!(std::path::Path::new(&directory)
+                .join("receipt.json")
+                .exists());
+        }
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM articles")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            2
+        );
+        pool.close().await;
+    });
+}
+
+#[test]
+fn internal_controller_rejects_path_injection_and_foreign_receipts_and_retains_incomplete_artifacts(
+) {
+    use app_lib::workspace_backup_commands::{ApplicationBackupStore, WorkspaceBackupOperations};
+    run_async(async {
+        let root = tempfile::tempdir().unwrap();
+        let config = root.path().join(APP);
+        std::fs::create_dir(&config).unwrap();
+        assert!(ApplicationBackupStore::new(
+            config.clone(),
+            "com.jornalistainclusivo.retranca".into()
+        )
+        .is_err());
+        assert!(ApplicationBackupStore::new(std::path::PathBuf::from(APP), APP.into()).is_err());
+        let store = ApplicationBackupStore::new(config.clone(), APP.into()).unwrap();
+        let operations = WorkspaceBackupOperations::default();
+        for id in [
+            "../outside",
+            "/absolute",
+            "not-a-uuid",
+            "00000000-0000-0000-0000-000000000000",
+        ] {
+            let failure = store.verify(&operations, id).await.unwrap_err();
+            assert_eq!(failure.details["stage"], "operation-id");
+            assert!(!config.join("backups").exists());
+        }
+        let pool = setup(&root.path().join("synthetic-source.sqlite3")).await;
+        let artifact = store.create(&operations, &pool).await.unwrap();
+        let receipt_path = std::path::Path::new(&artifact.directory).join("receipt.json");
+        let original = std::fs::read(&receipt_path).unwrap();
+        let mut foreign: Value = serde_json::from_slice(&original).unwrap();
+        foreign["source_app_identifier"] = "com.jornalistainclusivo.retranca.pilot".into();
+        std::fs::write(&receipt_path, serde_json::to_vec(&foreign).unwrap()).unwrap();
+        assert!(store
+            .verify(&operations, &artifact.receipt.operation_id)
+            .await
+            .is_err());
+        std::fs::write(&receipt_path, &original).unwrap();
+        let sidecar = std::path::Path::new(&artifact.directory).join("workspace.sqlite3-wal");
+        std::fs::write(&sidecar, b"synthetic uncovered WAL").unwrap();
+        assert!(store
+            .verify(&operations, &artifact.receipt.operation_id)
+            .await
+            .is_err());
+        assert_eq!(std::fs::read(&sidecar).unwrap(), b"synthetic uncovered WAL");
+        let incomplete_id = uuid::Uuid::new_v4().to_string();
+        let incomplete = config
+            .join("backups")
+            .join(format!("workspace-{incomplete_id}"));
+        std::fs::create_dir(&incomplete).unwrap();
+        std::fs::write(
+            incomplete.join("receipt.pending"),
+            b"synthetic partial receipt",
+        )
+        .unwrap();
+        assert!(store.verify(&operations, &incomplete_id).await.is_err());
+        let inventory = store.list(&operations).await.unwrap();
+        assert_eq!(inventory.entries.len(), 2);
+        assert!(inventory
+            .entries
+            .iter()
+            .any(|entry| entry.operation_id == incomplete_id));
+        let next = store.create(&operations, &pool).await.unwrap();
+        assert_ne!(next.receipt.operation_id, artifact.receipt.operation_id);
+        assert_eq!(
+            std::fs::read(incomplete.join("receipt.pending")).unwrap(),
+            b"synthetic partial receipt"
+        );
+        assert_eq!(std::fs::read(receipt_path).unwrap(), original);
+        pool.close().await;
+    });
+}
+
+#[test]
+fn internal_controller_inventory_limit_preserves_all_directories_and_source_data() {
+    use app_lib::workspace_backup_commands::{
+        ApplicationBackupStore, WorkspaceBackupOperations, MAX_INTERNAL_BACKUPS,
+    };
+    run_async(async {
+        let root = tempfile::tempdir().unwrap();
+        let config = root.path().join(APP);
+        let backups = config.join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        for _ in 0..MAX_INTERNAL_BACKUPS {
+            std::fs::create_dir(backups.join(format!("workspace-{}", uuid::Uuid::new_v4())))
+                .unwrap();
+        }
+        let store = ApplicationBackupStore::new(config, APP.into()).unwrap();
+        let operations = WorkspaceBackupOperations::default();
+        assert_eq!(
+            store.list(&operations).await.unwrap().entries.len(),
+            MAX_INTERNAL_BACKUPS
+        );
+        let pool = setup(&root.path().join("synthetic-source.sqlite3")).await;
+        let failure = store.create(&operations, &pool).await.unwrap_err();
+        assert_eq!(failure.details["stage"], "inventory-limit");
+        assert_eq!(
+            std::fs::read_dir(backups).unwrap().count(),
+            MAX_INTERNAL_BACKUPS
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM articles")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            2
+        );
+        pool.close().await;
+    });
+}
+
+#[test]
+fn bounded_backup_rejects_size_and_expired_budget_without_publishing_a_receipt() {
+    use app_lib::workspace_backup::{
+        create_workspace_backup_pool_bounded, verify_workspace_backup_bounded,
+    };
+    run_async(async {
+        let root = tempfile::tempdir().unwrap();
+        let pool = setup(&root.path().join("synthetic-source.sqlite3")).await;
+        let backups = root.path().join("backups");
+        std::fs::create_dir(&backups).unwrap();
+        let failure = create_workspace_backup_pool_bounded(
+            &pool,
+            &backups,
+            APP,
+            1,
+            std::time::Duration::from_secs(5),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.details["stage"], "database-limit");
+        assert_eq!(std::fs::read_dir(&backups).unwrap().count(), 0);
+        assert!(create_workspace_backup_pool_bounded(
+            &pool,
+            &backups,
+            APP,
+            16 * 1024 * 1024,
+            std::time::Duration::ZERO
+        )
+        .await
+        .is_err());
+        assert_eq!(std::fs::read_dir(&backups).unwrap().count(), 0);
+        let artifact = create_workspace_backup_pool_bounded(
+            &pool,
+            &backups,
+            APP,
+            16 * 1024 * 1024,
+            std::time::Duration::from_secs(30),
+        )
+        .await
+        .unwrap();
+        assert!(verify_workspace_backup_bounded(
+            &artifact.directory,
+            APP,
+            1,
+            std::time::Duration::from_secs(30)
+        )
+        .await
+        .is_err());
+        assert!(verify_workspace_backup_bounded(
+            &artifact.directory,
+            APP,
+            16 * 1024 * 1024,
+            std::time::Duration::ZERO
+        )
+        .await
+        .is_err());
+        assert_eq!(
+            verify_workspace_backup_bounded(
+                &artifact.directory,
+                APP,
+                16 * 1024 * 1024,
+                std::time::Duration::from_secs(30)
+            )
+            .await
+            .unwrap(),
+            artifact.receipt
+        );
+        // The timed connection was detached; the plugin's remaining/new connections keep working.
+        sqlx::query(
+            "UPDATE articles SET title = 'Synthetic after bounded backup' WHERE id = 'synthetic-a'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            verify_workspace_backup(&artifact.directory, APP)
+                .await
+                .unwrap(),
+            artifact.receipt
+        );
+        pool.close().await;
+    });
+}
