@@ -1,8 +1,8 @@
 # Fase 6.5 — Incremento 8: backup do espaço editorial
 
-Data inicial: 2026-10-09; checkpoint: 2026-10-10 (America/Sao_Paulo). **Status: núcleos 8A/8B publicados e aprovados em CI; início 8C de criação/verificação interna, com controlador, IPC e painel implementados e validados localmente. Restauração ativa, cópia externa e aceite instalado continuam pendentes.**
+Data inicial: 2026-10-09; checkpoint: 2026-10-10 (America/Sao_Paulo). **Status: núcleos 8A/8B publicados e aprovados em CI; início 8C de criação/verificação interna, com controlador, IPC e painel publicados em `5efa88d`, validados localmente e aprovados em CI própria. Restauração ativa, cópia externa e aceite instalado continuam pendentes.**
 
-Base da implementação 8B: `b9d1464a341f6606cd04d7dea74a69b66da0a8c4`, publicado em `codex/phase-6.5-workspace-backup`, com os quatro jobs do [CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) aprovados. A preparação inicial partiu de `9768a87`. O [PR #14](https://github.com/jornalistainclusivo/retranca-os/pull/14) continua aberto em Draft com README/manutenção Next; os commits de backup/build permanecem separados dele. A main verificada permanece em `96a309384ccb7b337dcce65b39a7519eb1ac02d7`. A revisão 8B foi depois publicada como `d7be11c155927d8c58d488aa04d18626d8b6162e` e passou os quatro jobs de [CI própria](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). O responsável escolheu começar o 8C pela criação/verificação de backups internos; as mudanças 8C atuais são locais e não recebem o resultado do CI 8B.
+Base da implementação 8B: `b9d1464a341f6606cd04d7dea74a69b66da0a8c4`, publicado em `codex/phase-6.5-workspace-backup`, com os quatro jobs do [CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) aprovados. A preparação inicial partiu de `9768a87`. O [PR #14](https://github.com/jornalistainclusivo/retranca-os/pull/14) continua aberto em Draft com README/manutenção Next; os commits de backup/build permanecem separados dele. A main verificada permanece em `96a309384ccb7b337dcce65b39a7519eb1ac02d7`. A revisão 8B foi depois publicada como `d7be11c155927d8c58d488aa04d18626d8b6162e` e passou os quatro jobs de [CI própria](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). O responsável escolheu começar o 8C pela criação/verificação de backups internos; as mudanças 8C foram depois publicadas em `5efa88d` e aprovadas em [CI própria](#publicação-e-ci-do-início-8c--2026-10-10), separada da CI 8B.
 
 ## Objetivo e alcance
 
@@ -52,7 +52,7 @@ A [documentação oficial do WAL-reset bug](https://www.sqlite.org/wal.html), co
 
 A [investigação de compatibilidade na ADR-018](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#investigação-de-compatibilidade-sqlite--2026-10-09) encontrou um caminho local: compilar SQLite 3.51.3 separadamente e vinculá-lo estaticamente à cadeia atual. O código C/checksum/source ID foram conferidos contra a release oficial. Mantendo os manifests e locks do app, os nove testes do núcleo 8A e 28 de persistência/conteúdo/importação passaram em Windows x64 debug; o processo reportou SQLite 3.51.3. São 37 resultados adicionais no ambiente experimental, sem reproduzir a corrida exata ou atualizar qualquer aplicativo instalado.
 
-Após autorização específica, a [integração do build](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) passou a exigir SQLite 3.51.3 estático, com origem, opções, alvo e hashes conferidos. O app conserva SQLx/plugin e seu lock; `libsqlite3-sys 0.37.0` pertence à ferramenta separada. O CI de `8bb422f` aprovou frontend/Windows, mas detectou SQLite 3.45.1 do sistema no Ubuntu. A [correção de seleção](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#ci-e-correção-de-seleção-sqlite--2026-10-10), em `b9d1464`, passou nos quatro jobs de [nova CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453), incluindo identidade 3.51.3 e suítes nativas debug/release em Windows/Ubuntu. As primeiras 155 verificações locais por perfil e o build Tauri sem instalador conservam seu escopo histórico. A recuperação 8B posterior passou sua CI própria em `d7be11c`. O início 8C abaixo tem controlador, IPC e interface locais; novo pacote instalado e restauração ativa continuam pendentes.
+Após autorização específica, a [integração do build](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) passou a exigir SQLite 3.51.3 estático, com origem, opções, alvo e hashes conferidos. O app conserva SQLx/plugin e seu lock; `libsqlite3-sys 0.37.0` pertence à ferramenta separada. O CI de `8bb422f` aprovou frontend/Windows, mas detectou SQLite 3.45.1 do sistema no Ubuntu. A [correção de seleção](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#ci-e-correção-de-seleção-sqlite--2026-10-10), em `b9d1464`, passou nos quatro jobs de [nova CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453), incluindo identidade 3.51.3 e suítes nativas debug/release em Windows/Ubuntu. As primeiras 155 verificações locais por perfil e o build Tauri sem instalador conservam seu escopo histórico. A recuperação 8B posterior passou sua CI própria em `d7be11c`. O início 8C abaixo acrescenta controlador, IPC e interface publicados na branch; novo pacote instalado e restauração ativa continuam pendentes.
 
 ## Protótipo 8B: recuperação descartável — 2026-10-10
 
@@ -83,7 +83,7 @@ Um mutex somente nos comandos Rust não abrange escritas via plugin SQL/Drizzle 
 
 ## Integração 8C inicial: criação e verificação internas — 2026-10-10
 
-O responsável escolheu este recorte antes da substituição do banco ativo. Base publicada: `d7be11c155927d8c58d488aa04d18626d8b6162e`, com frontend, Rust Windows, Rust Ubuntu e agregador Rust aprovados na [CI 8B](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). As mudanças deste início 8C são locais; ainda não foram publicadas, verificadas em CI ou aceitas em um aplicativo instalado.
+O responsável escolheu este recorte antes da substituição do banco ativo. A implementação 8C partiu de `d7be11c155927d8c58d488aa04d18626d8b6162e`, aprovado na [CI 8B](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746), e foi depois publicada como `5efa88d`. O [registro de publicação e CI](#publicação-e-ci-do-início-8c--2026-10-10) confirma os quatro jobs dessa revisão; o aceite em aplicativo instalado continua pendente.
 
 O [controlador Rust](../../../src-tauri/src/workspace_backup_commands.rs) registra `list_workspace_backups`, `create_workspace_backup` e `verify_internal_workspace_backup` no [handler](../../../src-tauri/src/lib.rs). Obtém identidade e `app_config_dir` do aplicativo nativo e usa o pool já mantido pelo plugin SQL. O destino é `<app_config_dir>/backups/workspace-<uuid>/`; não recebe SQL, URI, identidade ou caminho escolhido pelo frontend. Verificação recebe somente UUID v4 canônico. A enumeração não lê recibos nem anuncia integridade; inclui diretórios de tentativas incompletas e não cria a raiz. Não há exportação, remoção, restauração ou migração nesses comandos.
 
@@ -93,7 +93,7 @@ Esses limites são guardas deste protótipo, não limites de um produto estável
 
 O [painel no Header](../../../components/WorkspaceBackupPanel.tsx) separa backup da exportação de pautas. Informa escopo salvo, namespace, pasta interna, limites e ausência de criptografia/cópia externa/restauração. O [bridge](../../../lib/api/workspaceBackup.ts) só usa desktop IPC e valida recibos/inventário antes de apresentar resultados. Abrir o painel apenas enumera; criar exige ação explícita. Controles impedem duplicação durante a operação, e fechamento/Escape preservam a operação iniciada e retornam foco. Nova abertura pode consultar o resultado. Erros não exibem detalhes privados; uma pasta ou resultado antigo não são anunciados como nova verificação bem-sucedida.
 
-| Validação executada — Windows x64, fonte local 8C sobre d7be11c | Resultado e limite |
+| Validação local — Windows x64, fonte 8C posteriormente publicada em 5efa88d | Resultado e limite |
 | --- | --- |
 | `cargo fmt --check`, `cargo check --locked --offline`, também `--release`; todos em `src-tauri` ou com `--manifest-path src-tauri/Cargo.toml` | Passaram; locks preservados. |
 | `cargo test --manifest-path src-tauri/Cargo.toml --locked --offline`, também `--release` | Em cada perfil: **171 passaram, zero falhas, um piloto real ignorado**. |
@@ -104,7 +104,22 @@ O [painel no Header](../../../components/WorkspaceBackupPanel.tsx) separa backup
 | Header/painel/bridge compilados e CSS do build, Chrome 154.0.8037.99, localhost com IPC sintético | **14 verificações passaram**: startup/navegador, teclado/foco/Escape/modal em primeiro plano, duplicação, fechamento/retomada, conclusão nativa simulada, rejeições/reexecução e ausência de erros de runtime. |
 | Amostra visual automática e inspeção das capturas | Reflow a 320 pixels CSS, fonte raiz a 200%, controles de pelo menos 24 pixels e contraste de texto medido em 15 elementos por tema, mínimo aproximado de **6,83:1**. Não é zoom do WebView nem avaliação com leitor de tela. |
 
-Nenhum processo Tauri ou aplicativo instalado foi aberto nesta validação; nenhum dado editorial real foi lido, copiado ou alterado. A amostra de navegador testa consumo de IPC simulado; testes Rust exercitam controlador/núcleo em diretórios temporários, e a compilação verifica os comandos/registro. **IPC real e operação instalada, NVDA, zoom do WebView, Linux instalado, recursos representativos, falta de espaço/permissão real, interrupção de processo, durabilidade de diretório e corridas de filesystem continuam sem validação.** Não há declaração de conformidade WCAG, prontidão de produção ou fechamento da fase. Commit/push/CI 8C e eventual pacote para aceite exigem seus próprios gates.
+Nenhum processo Tauri ou aplicativo instalado foi aberto nesta validação; nenhum dado editorial real foi lido, copiado ou alterado. A amostra de navegador testa consumo de IPC simulado; testes Rust exercitam controlador/núcleo em diretórios temporários, e a compilação verifica os comandos/registro. **IPC real e operação instalada, NVDA, zoom do WebView, Linux instalado, recursos representativos, falta de espaço/permissão real, interrupção de processo, durabilidade de diretório e corridas de filesystem continuam sem validação.** Não há declaração de conformidade WCAG, prontidão de produção ou fechamento da fase. O registro seguinte separa a CI posteriormente concluída do aceite instalado ainda pendente.
+
+### Publicação e CI do início 8C — 2026-10-10
+
+Após autorização explícita de commit, push e disparo da CI, a implementação deste recorte foi publicada em `codex/phase-6.5-workspace-backup`, no commit [`5efa88d2777fa07a53b9196ee3ea05d50d1300aa`](https://github.com/jornalistainclusivo/retranca-os/commit/5efa88d2777fa07a53b9196ee3ea05d50d1300aa). A [execução 38069861194](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38069861194) concluiu com `success` nesse mesmo SHA. A consulta ao GitHub confirmou os quatro jobs e suas etapas em 2026-10-10:
+
+| Job | Evidência executada | Resultado |
+| --- | --- | --- |
+| [frontend](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38069861194/job/114264898426) | Instalação de dependências; `npm run lint`, `npm test` e `npm run build`. | Aprovado |
+| [rust (windows-latest)](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38069861194/job/114264898610) | Guardas/preparação do SQLite estático, formatação, identidade do motor e checks/testes debug/release com lockfile. | Aprovado |
+| [rust (ubuntu-latest)](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38069861194/job/114264898634) | Dependências nativas e sidecar sintético de build; guardas/preparação do SQLite, formatação, identidade do motor e checks/testes debug/release com lockfile. | Aprovado |
+| [rust — agregador](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38069861194/job/114268466055) | Exige sucesso de ambos os jobs da matriz Rust. | Aprovado |
+
+Essa evidência pertence ao código de `5efa88d`; as contagens e a amostra de navegador da tabela anterior são resultados locais preservados, sem atribuição automática à CI. O workflow não compila nem instala o Pilot, não exercita IPC real do aplicativo instalado e não aceita Linux instalado, restauração ativa ou conformidade WCAG. A atualização deste registro é documental; build, testes e CI não foram repetidos nesta rodada.
+
+O código candidato permanece separado da `main` `96a309384ccb7b337dcce65b39a7519eb1ac02d7` e do PR #14, ainda aberto em Draft sobre `9768a87`. O executável instalado permanece sem atualização deste recorte. Ponto de retomada: preparar e identificar um novo Pilot para validar criação/verificação de backups internos com dados sintéticos e IPC real, incluindo os casos pertinentes de erro, status, teclado, foco e acessibilidade. Operação sobre dados reais, cópia externa, substituição do banco ativo, integração e distribuição conservam seus próprios critérios e autorizações.
 
 ## Dados a preservar
 
@@ -139,7 +154,7 @@ Não copiar apenas o arquivo principal de um banco aberto. Em modo WAL, transaç
 
 Proposta inicial: criar uma pasta privada por operação, com UUID, sob o diretório de configuração da aplicação corrente; nunca dentro do repositório. O nome de arquivo e o destino interno são produzidos pelo nativo, sem aceitar SQL, URI SQLite ou caminho arbitrário enviado pelo frontend.
 
-A estrutura `<app_config_dir>/backups/workspace-<uuid>/` é usada pelo início 8C local acima, ainda sem aceite instalado. A cópia SQLite e seu recibo versionado incluem:
+A estrutura `<app_config_dir>/backups/workspace-<uuid>/` é usada pelo início 8C publicado acima, ainda sem aceite instalado. A cópia SQLite e seu recibo versionado incluem:
 
 - Identificador da aplicação de origem, versão do aplicativo e schema do banco.
 - ID da operação, horário de geração e tamanho/hash SHA-256 da cópia final.
@@ -156,7 +171,7 @@ Uma cópia no mesmo disco protege contra parte dos erros de edição, mas não c
 
 O backup contém material editorial privado e, nesta proposta inicial, não tem criptografia acrescentada pela aplicação. Tornar isso claro antes de copiar/compartilhar. Não enviar arquivo, recibo ou conteúdo para GitHub ou serviço remoto.
 
-O painel 8C local distingue exportação de pautas e criação de backup interno; sua verificação instalada permanece pendente. Para concluir os recortes de interface: Informar qual aplicação originou a cópia, destino e conclusão/erro, com controles nomeados, operação por teclado e anúncio acessível. Bloquear duplicação acidental de uma operação; não anunciar sucesso somente porque o comando foi iniciado. Falhas não devem apagar um formulário aberto ou o texto ainda não salvo.
+O painel 8C da branch distingue exportação de pautas e criação de backup interno; sua verificação instalada permanece pendente. Para concluir os recortes de interface: Informar qual aplicação originou a cópia, destino e conclusão/erro, com controles nomeados, operação por teclado e anúncio acessível. Bloquear duplicação acidental de uma operação; não anunciar sucesso somente porque o comando foi iniciado. Falhas não devem apagar um formulário aberto ou o texto ainda não salvo.
 
 ## Recuperação: desenho a fechar antes de habilitar substituição
 
@@ -181,7 +196,7 @@ Não executar manualmente troca, exclusão de arquivos WAL ou restauração do b
 | 8B | Recuperação em destino descartável e revisão da substituição. | Hash divergente, schema parcial/futuro, origem normal/Pilot/fixtures, restauração exata de IDs/datas/configurações, isolamento do banco de origem, falhas de abertura e recuperação após interrupção. |
 | 8C | Integração de interface e operação instalada, após decisões anteriores. | IPC real, erros/status/foco, teclado/leitor/zoom pertinentes, cópia externa e restauração sintética no aplicativo identificado; Linux instalado continua exigindo evidência própria. |
 
-Os núcleos 8A/8B estão publicados e aprovados na [CI de `d7be11c`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). O início 8C acrescenta criação/verificação interna, IPC e interface locais, com os resultados acima. A substituição ativa, cópia externa, conclusão dos critérios 8C e aceite instalado permanecem pendentes; não há conformidade de acessibilidade demonstrada ou CI própria para o 8C local.
+Os núcleos 8A/8B estão publicados e aprovados na [CI de `d7be11c`](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38065205746). O início 8C acrescenta criação/verificação interna, IPC e interface publicados em `5efa88d`, com resultados locais preservados e [CI própria aprovada](#publicação-e-ci-do-início-8c--2026-10-10). A substituição ativa, cópia externa, conclusão dos critérios 8C e aceite instalado permanecem pendentes; não há conformidade de acessibilidade demonstrada.
 
 ## Decisões pendentes e limite desta preparação
 
@@ -193,4 +208,4 @@ Antes de habilitar a operação para uso:
 - Revisar e validar o protocolo de exclusividade, substituição e recuperação após falha em cada plataforma.
 - Manter separados autorização de implementação, operação sobre dados reais, commit/publicação, integração e distribuição.
 
-A preparação inicial entregou o contrato, o núcleo e seus testes sintéticos. O build e a correção de seleção SQLite foram publicados em `8bb422f`/`b9d1464` após autorização e passaram na nova CI. A continuação 8B foi publicada e aprovada em CI após autorização própria. Este início 8C acrescenta controlador, IPC, painel, guardas e testes sintéticos locais; seu commit, push e CI ainda aguardam autorização específica. Não altera dependências, CI, schema, dados reais ou runtime de IA, não atualiza instalador e não encerra a fase 6.5. O [plano da fase](../../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) conserva as demais pendências.
+A preparação inicial entregou o contrato, o núcleo e seus testes sintéticos. O build e a correção de seleção SQLite foram publicados em `8bb422f`/`b9d1464` após autorização e passaram na nova CI. A continuação 8B foi publicada e aprovada em CI após autorização própria. Este início 8C acrescenta controlador, IPC, painel, guardas e testes sintéticos; após autorização específica, foi publicado em `5efa88d` e aprovado em [CI própria](#publicação-e-ci-do-início-8c--2026-10-10). Não altera dependências, CI, schema, dados reais ou runtime de IA, não atualiza instalador e não encerra a fase 6.5. O [plano da fase](../../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) conserva as demais pendências.
