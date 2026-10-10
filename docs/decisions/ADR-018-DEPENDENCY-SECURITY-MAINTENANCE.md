@@ -91,20 +91,20 @@ Naquele checkpoint, a integração nas dependências de build e no CI aguardava 
 
 ## Integração local do build SQLite — 2026-10-09
 
-**Status: implementação local autorizada, validada em Windows x64 MSVC; commit local autorizado, publicação e CI remoto novo pendentes; sem atualização instalada.** A estratégia e a alteração de CI receberam autorização específica após o experimento. O checkout `codex/phase-6.5-workspace-backup` parte de `9768a87`; esta revisão inclui o protótipo 8A e mudanças ainda não publicadas, separadas do PR #14 e da main.
+**Status: build SQLite publicado em `8bb422f`, corrigido em `b9d1464a341f6606cd04d7dea74a69b66da0a8c4` e aprovado nos quatro jobs do [CI dessa correção](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453). Sem integração à main ou atualização instalada.** O trabalho permanece em `codex/phase-6.5-workspace-backup`, baseado em `9768a87` e separado do PR #14. Os testes locais da implementação inicial abaixo conservam seu escopo; o [recibo de CI e da correção](#ci-e-correção-de-seleção-sqlite--2026-10-10) registra a falha Ubuntu e sua resolução. A continuação 8B é trabalho local posterior, sem CI próprio.
 
 ### Estratégia aplicada
 
 - A [ferramenta de build separada](../../tools/sqlite-runtime/Cargo.toml) fixa `libsqlite3-sys =0.37.0` e tem lock próprio. Compila o SQLite C 3.51.3 e informa versão, source ID, opções e caminhos sem abrir banco. O código-fonte e seu SHA3-256 são confrontados com a [release oficial SQLite 3.51.3](https://sqlite.org/releaselog/3_51_3.html).
 - O [preparador Node](../../scripts/build/prepare-sqlite-runtime.mjs) publica biblioteca estática, header e recibo em `.retranca-local/sqlite-runtime/3.51.3/`, ignorado pelo Git. Confere alvo nativo, opções necessárias, hashes dos artefatos e dos cinco arquivos da receita. Um cache íntegro é reutilizado; um cache incompatível precisa ser preparado novamente.
-- A [configuração Cargo](../../.cargo/config.toml) seleciona essa biblioteca por caminhos relativos ao checkout e força vínculo estático. O [build script do app](../../src-tauri/build.rs) recusa preparação ausente, identidade/alvo/opções incompatíveis ou artefatos/receita alterados. Não há retorno silencioso para SQLite 3.46.0 nem configuração manual de variáveis no IDE.
+- A [configuração Cargo](../../.cargo/config.toml) seleciona essa biblioteca por caminhos relativos ao checkout e força vínculo estático. O [build script do app](../../src-tauri/build.rs) recusa preparação ausente, identidade/alvo/opções incompatíveis ou artefatos/receita alterados. A seleção inicial ainda permitiu SQLite do sistema no Ubuntu, detectado pelo teste de identidade. A correção publicada força `SQLITE3_NO_PKG_CONFIG=1` e exige essa flag no build script, selecionando o diretório estático preparado; não é necessária configuração manual de variáveis no IDE.
 - O app mantém SQLx 0.8.6, plugin SQL 2.4.0 e as bindings `libsqlite3-sys 0.30.1`. O `libsqlite3-sys 0.37.0` pertence apenas à ferramenta independente, não à árvore do app. Os dois locks principais permanecem byte a byte: Cargo `fbcd24edd9c15a5cecad5aac02a9e43142402af8a5d74603342b8677e0f4c81a` e npm `a7d80503398f068dc805f62c2f352d6fbdecbec3a7757bc1b7dbf6ec41656a99`. As dependências de build adicionadas `serde_json` e `sha2` reutilizam versões já presentes no lock Rust.
 - `npm run desktop:dev`, `desktop:build`, `dev:desktop`, `lint:rs` e os dois `test:rs` preparam o motor antes de invocar Tauri/Cargo. O hook Tauri `beforeBuildCommand` também prepara o motor antes do frontend. Cargo direto e `npx --no-install tauri dev` exigem `npm run sqlite:prepare` antes; o [guia local](../development/LOCAL-DEVELOPMENT.md#pinned-native-sqlite-build) mostra a sequência.
-- O [CI candidato](../../.github/workflows/ci.yml) prepara o motor e verifica sua identidade real em Windows e Ubuntu. Preserva eventos, permissões, matriz, nomes de jobs e agregador Rust; adiciona Node 24 somente ao processo nativo. Esta configuração ainda não rodou no GitHub.
+- O [CI do build corrigido](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) prepara o motor e verifica sua identidade real em Windows e Ubuntu. Seus quatro jobs passaram em `b9d1464`. Eventos, permissões, matriz, nomes de jobs e agregador Rust permanecem preservados; Node 24 atende ao processo nativo. Esse run cobre a correção e o núcleo 8A, não as alterações locais 8B posteriores.
 
 ### Verificações desta implementação
 
-Ambiente local: Windows x64 MSVC, Rust/Cargo 1.93.0, Node.js 24.19.0 e npm 10.9.0. Os comandos abaixo foram executados no checkout com estas alterações locais; não são resultados do CI de `9768a87`.
+Checkpoint local da implementação depois publicada em `8bb422f`: Windows x64 MSVC, Rust/Cargo 1.93.0, Node.js 24.19.0 e npm 10.9.0. Estes comandos não são resultados do CI de `9768a87` nem da continuação 8B.
 
 | Verificação executada | Resultado |
 | --- | --- |
@@ -126,9 +126,23 @@ O compilador conserva o aviso herdado `unused_mut` em `src-tauri/src/provisionin
 
 ### Limites e continuação
 
-A preparação admite builds nativos Windows MSVC e Linux GNU; cross-compilation e outras plataformas são recusadas. Windows foi executado localmente. A validação Linux e o CI desta revisão continuam pendentes, assim como um novo instalador identificado e seu aceite instalado. Não foi reproduzida a corrida WAL-reset exata; os testes comprovam o motor corrigido vinculado e os cenários cobertos.
+A preparação admite builds nativos Windows MSVC e Linux GNU; cross-compilation e outras plataformas são recusadas. A correção publicada passou em Windows e Ubuntu na CI vinculada acima, incluindo check e testes debug/release. Um novo instalador identificado e seu aceite instalado permanecem pendentes. Não foi reproduzida a corrida WAL-reset exata; os testes comprovam a identidade do motor e os cenários cobertos em seus próprios ambientes.
 
 O aplicativo instalado normal/Pilot, os bancos editoriais e o checkout original do AntiGravity permanecem preservados. O núcleo 8A não ganhou IPC, interface ou restauração ativa. A mudança de build resolve o pré-requisito local do motor; não aceita automaticamente backup/restauração, elimina todas as vulnerabilidades nem encerra a fase 6.5. Commit/publicação, integração, distribuição e operação sobre dados reais conservam seus gates específicos.
+
+## CI e correção de seleção SQLite — 2026-10-10
+
+O [CI inicial](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38003416891), em `8bb422feb8f74477426fbf63cb8bdfc3244213ce`, aprovou frontend e Rust Windows. O Ubuntu preparou o SQLite 3.51.3 e passou formatação/check debug, mas o teste de identidade encontrou SQLite **3.45.1** do sistema. Dois testes do contrato passaram e o teste de identidade falhou; a suíte completa debug e as verificações release foram omitidas. O agregador Rust falhou corretamente.
+
+O [build script de libsqlite3-sys 0.30.1](https://docs.rs/crate/libsqlite3-sys/0.30.1/source/build.rs), também inspecionado localmente, consulta `pkg-config` mesmo com `SQLITE3_LIB_DIR` definido. Um `sqlite3.pc` do sistema pode fornecer os metadados e impedir a emissão do diretório estático explícito. Preparar e conferir os artefatos não garantiu qual biblioteca o app vinculou.
+
+O commit `b9d1464a341f6606cd04d7dea74a69b66da0a8c4` força `SQLITE3_NO_PKG_CONFIG=1`, mecanismo específico da biblioteca em [pkg-config 0.3.34](https://docs.rs/pkg-config/0.3.34/pkg_config/), e exige a flag no build script do app. `LIBSQLITE3_SYS_USE_PKG_CONFIG=1` permanece: seleciona o ramo de biblioteca externa nas bindings, enquanto a nova flag evita a descoberta de SQLite do sistema nesse ramo. Não se desativa `pkg-config` de GTK/WebKit. Dependências, locks, CI e protótipo foram preservados nessa correção de dois arquivos.
+
+Um experimento privado no Windows reproduziu a escolha de um diretório de sistema simulado nos dois build scripts instalados; com a flag, ambos emitiram o vínculo estático preparado sem chamar o programa de `pkg-config`. Os 12 testes locais de identidade/backup passaram em cada perfil Windows debug/release, assim como três guardas Node e formatação. Esse experimento não executou um runtime GNU.
+
+Após autorização específica de commit/push/disparo, os quatro jobs do [novo CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) passaram no SHA `b9d1464`: frontend, Rust Windows, Rust Ubuntu e agregador Rust. O [log Ubuntu](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453/job/114075479912) reporta **SQLite 3.51.3**, source ID oficial `2026-03-13 10:38:09 737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6d618`; suas suítes debug/release também passaram. Isso supera a pendência de vínculo GNU da revisão anterior. Não aceita Linux instalado, um novo Pilot, restauração ativa ou a fase completa.
+
+O responsável autorizou continuar em 2026-10-10. O [protótipo 8B](../specifications/phase-6.5/PHASE-6.5-INCREMENT-8-WORKSPACE-BACKUP.md#protótipo-8b-recuperação-descartável--2026-10-10) recupera uma cópia em destino descartável. Seus resultados locais são separados do CI aprovado de `b9d1464`; nenhuma interface ou operação sobre dados reais foi habilitada.
 
 ## Contexto
 

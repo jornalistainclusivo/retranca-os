@@ -1,5 +1,8 @@
 use app_lib::article_content::migrate_article_content_pool;
-use app_lib::workspace_backup::{create_workspace_backup_pool, verify_workspace_backup};
+use app_lib::workspace_backup::{
+    create_workspace_backup_pool, recover_workspace_backup_to_disposable,
+    verify_disposable_workspace_recovery, verify_workspace_backup,
+};
 use serde_json::Value;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use sqlx::{Connection, Row, SqliteConnection, SqlitePool};
@@ -463,6 +466,551 @@ fn disabled_synchronization_fails_without_creating_a_complete_or_partial_copy() 
             .await
             .unwrap();
         assert_eq!(count, 2);
+        pool.close().await;
+    });
+}
+
+// Synthetic test budget only; this is not a product default or public file limit.
+const RECOVERY_TEST_BUDGET: u64 = 16 * 1024 * 1024;
+
+#[test]
+fn disposable_recovery_preserves_the_snapshot_and_never_replaces_the_source() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-recovery.db")).await;
+        let backups = temporary.path().join("backups");
+        let recoveries = temporary.path().join("recoveries");
+        std::fs::create_dir(&backups).unwrap();
+        std::fs::create_dir(&recoveries).unwrap();
+        // Preserve an unresolved legacy reference instead of silently normalizing it.
+        let mut source = pool.acquire().await.unwrap();
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&mut *source)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE articles SET category_id = 'synthetic-unresolved-category' WHERE id = 'synthetic-b'")
+            .execute(&mut *source).await.unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *source)
+            .await
+            .unwrap();
+        drop(source);
+        let expected = logical_contents(&mut pool.acquire().await.unwrap()).await;
+        let backup = create_workspace_backup_pool(&pool, &backups, APP)
+            .await
+            .unwrap();
+        let backup_bytes = std::fs::read(backup.directory.join("workspace.sqlite3")).unwrap();
+        let backup_receipt = std::fs::read(backup.directory.join("receipt.json")).unwrap();
+        sqlx::query("UPDATE articles SET analysisContent = 'Latest source — keep this' WHERE id = 'synthetic-a'")
+            .execute(&pool).await.unwrap();
+        let current_source = logical_contents(&mut pool.acquire().await.unwrap()).await;
+        assert_ne!(current_source, expected);
+
+        let recovery = recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &recoveries,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap();
+        assert_eq!(recovery.receipt.source_backup, backup.receipt);
+        assert_ne!(recovery.receipt.operation_id, backup.receipt.operation_id);
+        assert_eq!(
+            std::fs::read(recovery.directory.join("workspace.sqlite3")).unwrap(),
+            backup_bytes
+        );
+        assert_eq!(
+            verify_disposable_workspace_recovery(
+                &recovery.directory,
+                APP,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .unwrap(),
+            recovery.receipt
+        );
+        let mut recovered = SqliteConnection::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(recovery.directory.join("workspace.sqlite3"))
+                .create_if_missing(false),
+        )
+        .await
+        .unwrap();
+        assert_eq!(logical_contents(&mut recovered).await, expected);
+        let schema: Vec<(String, String, String, Option<String>)> = sqlx::query_as(
+            "SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name",
+        )
+        .fetch_all(&mut recovered)
+        .await
+        .unwrap();
+        let reference_schema: Vec<(String, String, String, Option<String>)> = sqlx::query_as(
+            "SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(schema, reference_schema);
+        sqlx::query("UPDATE governance_docs SET content = 'Recovered copy only'")
+            .execute(&mut recovered)
+            .await
+            .unwrap();
+        recovered.close().await.unwrap();
+        assert_eq!(
+            logical_contents(&mut pool.acquire().await.unwrap()).await,
+            current_source
+        );
+        assert_eq!(
+            std::fs::read(backup.directory.join("workspace.sqlite3")).unwrap(),
+            backup_bytes
+        );
+        assert_eq!(
+            std::fs::read(backup.directory.join("receipt.json")).unwrap(),
+            backup_receipt
+        );
+        verify_workspace_backup(&backup.directory, APP)
+            .await
+            .unwrap();
+        assert!(verify_disposable_workspace_recovery(
+            &recovery.directory,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        pool.close().await;
+    });
+}
+
+#[test]
+fn disposable_recovery_keeps_empty_collections_and_existing_configuration() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-empty-recovery.db")).await;
+        sqlx::raw_sql("DELETE FROM checklist_items; DELETE FROM history_entries; DELETE FROM articles;
+            DELETE FROM checklist_templates; DELETE FROM governance_docs; DELETE FROM gamification_badges;")
+            .execute(&pool).await.unwrap();
+        let before = logical_contents(&mut pool.acquire().await.unwrap()).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let backup = create_workspace_backup_pool(&pool, temporary.path(), APP)
+            .await
+            .unwrap();
+        let recovery = recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap();
+        let mut recovered = SqliteConnection::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(recovery.directory.join("workspace.sqlite3"))
+                .read_only(true)
+                .create_if_missing(false),
+        )
+        .await
+        .unwrap();
+        assert_eq!(logical_contents(&mut recovered).await, before);
+        assert_eq!(recovery.receipt.source_backup.table_counts["articles"], 0);
+        assert!(recovery.receipt.source_backup.table_counts["categories"] > 0);
+        recovered.close().await.unwrap();
+        pool.close().await;
+    });
+}
+
+#[test]
+fn disposable_recovery_requires_matching_normal_pilot_or_fixture_origin() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-origin-recovery.db")).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let applications = [
+            "com.jornalistainclusivo.retranca",
+            "com.jornalistainclusivo.retranca.pilot",
+            APP,
+        ];
+        for app in applications {
+            let backup = create_workspace_backup_pool(&pool, temporary.path(), app)
+                .await
+                .unwrap();
+            let before = std::fs::read_dir(&root).unwrap().count();
+            for mismatch in applications
+                .into_iter()
+                .filter(|other| *other != app)
+                .chain(["other.app"])
+            {
+                assert!(recover_workspace_backup_to_disposable(
+                    &backup.directory,
+                    &root,
+                    mismatch,
+                    &pool,
+                    RECOVERY_TEST_BUDGET,
+                )
+                .await
+                .is_err());
+                assert_eq!(std::fs::read_dir(&root).unwrap().count(), before);
+            }
+            let recovery = recover_workspace_backup_to_disposable(
+                &backup.directory,
+                &root,
+                app,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .unwrap();
+            verify_disposable_workspace_recovery(
+                &recovery.directory,
+                app,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .unwrap();
+        }
+        pool.close().await;
+    });
+}
+
+#[test]
+fn recovery_rejects_self_consistent_but_incompatible_columns_indexes_and_triggers() {
+    run_async(async {
+        for statement in [
+            "ALTER TABLE articles DROP COLUMN summary",
+            "ALTER TABLE articles ADD COLUMN unexpected TEXT",
+            "DROP INDEX idx_categories_active_name",
+            "CREATE TRIGGER unexpected AFTER INSERT ON governance_docs BEGIN SELECT 1; END",
+        ] {
+            let temporary = tempfile::tempdir().unwrap();
+            let reference = setup(&temporary.path().join("synthetic-reference.db")).await;
+            let candidate = setup(&temporary.path().join("synthetic-incompatible.db")).await;
+            let retained = logical_contents(&mut reference.acquire().await.unwrap()).await;
+            sqlx::query(statement).execute(&candidate).await.unwrap();
+            let backup = create_workspace_backup_pool(&candidate, temporary.path(), APP)
+                .await
+                .unwrap();
+            // Integrity and its own receipt do not establish app compatibility.
+            verify_workspace_backup(&backup.directory, APP)
+                .await
+                .unwrap();
+            let root = temporary.path().join("recoveries");
+            std::fs::create_dir(&root).unwrap();
+            let error = recover_workspace_backup_to_disposable(
+                &backup.directory,
+                &root,
+                APP,
+                &reference,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.details["stage"], "recovery-schema");
+            assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+            assert_eq!(
+                logical_contents(&mut reference.acquire().await.unwrap()).await,
+                retained
+            );
+            candidate.close().await;
+            reference.close().await;
+        }
+    });
+}
+
+#[test]
+fn recovery_rejects_corrupt_unknown_or_incomplete_backups_before_creating_output() {
+    run_async(async {
+        use sha2::{Digest, Sha256};
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-invalid-backup.db")).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let backup = create_workspace_backup_pool(&pool, temporary.path(), APP)
+            .await
+            .unwrap();
+        let receipt_path = backup.directory.join("receipt.json");
+        let database_path = backup.directory.join("workspace.sqlite3");
+        let original = std::fs::read(&database_path).unwrap();
+        for future_schema in [false, true] {
+            let mut changed = backup.receipt.clone();
+            if future_schema {
+                changed.database_schema_version = 3;
+            } else {
+                changed.format_version = 2;
+            }
+            std::fs::write(&receipt_path, serde_json::to_vec(&changed).unwrap()).unwrap();
+            assert!(recover_workspace_backup_to_disposable(
+                &backup.directory,
+                &root,
+                APP,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .is_err());
+            assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        }
+        std::fs::write(&receipt_path, serde_json::to_vec(&backup.receipt).unwrap()).unwrap();
+        let mut changed_bytes = original.clone();
+        *changed_bytes.last_mut().unwrap() ^= 1;
+        std::fs::write(&database_path, changed_bytes).unwrap();
+        assert!(recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        let corrupt = b"synthetic invalid SQLite header";
+        std::fs::write(&database_path, corrupt).unwrap();
+        let mut changed = backup.receipt.clone();
+        changed.database_size = corrupt.len() as u64;
+        changed.database_sha256 = hex::encode(Sha256::digest(corrupt));
+        std::fs::write(&receipt_path, serde_json::to_vec(&changed).unwrap()).unwrap();
+        assert!(recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        std::fs::write(&database_path, original).unwrap();
+        std::fs::write(&receipt_path, serde_json::to_vec(&backup.receipt).unwrap()).unwrap();
+        std::fs::rename(&receipt_path, backup.directory.join("receipt.pending")).unwrap();
+        assert!(recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        pool.close().await;
+    });
+}
+
+#[test]
+fn recovery_rejects_unsafe_destinations_budgets_and_unreceipted_sidecars() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-recovery-boundaries.db")).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let backup = create_workspace_backup_pool(&pool, temporary.path(), APP)
+            .await
+            .unwrap();
+        let occupied = temporary.path().join("occupied");
+        std::fs::write(&occupied, "existing content").unwrap();
+        for destination in [
+            Path::new("relative"),
+            occupied.as_path(),
+            backup.directory.as_path(),
+        ] {
+            assert!(recover_workspace_backup_to_disposable(
+                &backup.directory,
+                destination,
+                APP,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .is_err());
+        }
+        assert_eq!(std::fs::read(&occupied).unwrap(), b"existing content");
+        for budget in [0, backup.receipt.database_size - 1] {
+            let error = recover_workspace_backup_to_disposable(
+                &backup.directory,
+                &root,
+                APP,
+                &pool,
+                budget,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.details["stage"], "recovery-size");
+        }
+        for suffix in ["-wal", "-shm", "-journal"] {
+            let sidecar = backup.directory.join(format!("workspace.sqlite3{suffix}"));
+            std::fs::write(&sidecar, "synthetic unreceipted sidecar").unwrap();
+            let error = recover_workspace_backup_to_disposable(
+                &backup.directory,
+                &root,
+                APP,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.details["stage"], "recovery-sidecars");
+            std::fs::rename(&sidecar, backup.directory.join(format!("unused{suffix}"))).unwrap();
+        }
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        verify_workspace_backup(&backup.directory, APP)
+            .await
+            .unwrap();
+        pool.close().await;
+    });
+}
+
+#[test]
+fn recovery_retries_create_independent_artifacts_and_preserve_incomplete_output() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-recovery-retry.db")).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let backup = create_workspace_backup_pool(&pool, temporary.path(), APP)
+            .await
+            .unwrap();
+        let bytes = std::fs::read(backup.directory.join("workspace.sqlite3")).unwrap();
+        let interrupted = root.join(format!("recovery-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&interrupted).unwrap();
+        let partial = &bytes[..bytes.len() / 2];
+        std::fs::write(interrupted.join("workspace.sqlite3"), partial).unwrap();
+        std::fs::write(
+            interrupted.join("recovery.pending"),
+            "synthetic interrupted receipt",
+        )
+        .unwrap();
+        assert!(verify_disposable_workspace_recovery(
+            &interrupted,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        let first = recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap();
+        let first_receipt = std::fs::read(first.directory.join("recovery.json")).unwrap();
+        let second = recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap();
+        assert_ne!(first.directory, second.directory);
+        assert_eq!(
+            std::fs::read(first.directory.join("workspace.sqlite3")).unwrap(),
+            bytes
+        );
+        assert_eq!(
+            std::fs::read(second.directory.join("workspace.sqlite3")).unwrap(),
+            bytes
+        );
+        assert_eq!(
+            std::fs::read(first.directory.join("recovery.json")).unwrap(),
+            first_receipt
+        );
+        assert_eq!(
+            std::fs::read(interrupted.join("workspace.sqlite3")).unwrap(),
+            partial
+        );
+        assert!(interrupted.join("recovery.pending").exists());
+        assert!(!interrupted.join("recovery.json").exists());
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 3);
+        pool.close().await;
+    });
+}
+
+#[test]
+fn recovery_verification_rejects_changed_receipts_and_incomplete_or_oversized_markers() {
+    run_async(async {
+        let temporary = tempfile::tempdir().unwrap();
+        let pool = setup(&temporary.path().join("synthetic-recovery-receipt.db")).await;
+        let root = temporary.path().join("recoveries");
+        std::fs::create_dir(&root).unwrap();
+        let backup = create_workspace_backup_pool(&pool, temporary.path(), APP)
+            .await
+            .unwrap();
+        let recovery = recover_workspace_backup_to_disposable(
+            &backup.directory,
+            &root,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap();
+        let path = recovery.directory.join("recovery.json");
+        let original: Value = serde_json::to_value(&recovery.receipt).unwrap();
+        let mut cases = Vec::new();
+        let mut changed = original.clone();
+        changed["format_version"] = 2.into();
+        cases.push(changed);
+        let mut changed = original.clone();
+        changed["operation_id"] = "not-a-uuid".into();
+        cases.push(changed);
+        let mut changed = original.clone();
+        changed["operation_id"] = uuid::Uuid::new_v4().to_string().into();
+        cases.push(changed);
+        let mut changed = original.clone();
+        changed["source_backup"]["source_app_identifier"] =
+            "com.jornalistainclusivo.retranca.pilot".into();
+        cases.push(changed);
+        let mut changed = original.clone();
+        changed["source_backup"]["table_counts"]["articles"] = 500.into();
+        cases.push(changed);
+        let mut changed = original.clone();
+        changed["unexpected"] = true.into();
+        cases.push(changed);
+        for changed in cases {
+            std::fs::write(&path, serde_json::to_vec(&changed).unwrap()).unwrap();
+            assert!(verify_disposable_workspace_recovery(
+                &recovery.directory,
+                APP,
+                &pool,
+                RECOVERY_TEST_BUDGET,
+            )
+            .await
+            .is_err());
+        }
+        std::fs::write(&path, serde_json::to_vec(&original).unwrap()).unwrap();
+        verify_disposable_workspace_recovery(&recovery.directory, APP, &pool, RECOVERY_TEST_BUDGET)
+            .await
+            .unwrap();
+        std::fs::rename(&path, recovery.directory.join("recovery.pending")).unwrap();
+        assert!(verify_disposable_workspace_recovery(
+            &recovery.directory,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .is_err());
+        std::fs::write(&path, vec![b' '; 16 * 1024 + 1]).unwrap();
+        let error = verify_disposable_workspace_recovery(
+            &recovery.directory,
+            APP,
+            &pool,
+            RECOVERY_TEST_BUDGET,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error.details["stage"], "recovery-receipt-limit");
+        assert!(recovery.directory.join("workspace.sqlite3").exists());
         pool.close().await;
     });
 }

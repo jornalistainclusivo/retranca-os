@@ -1,8 +1,8 @@
 # Fase 6.5 — Incremento 8: backup do espaço editorial
 
-Data: 2026-10-09 (America/Sao_Paulo). **Status: proposta de produto para revisão, com protótipo local do núcleo 8A validado. IPC, interface e restauração do banco ativo não implementados; nenhuma decisão de produto é marcada como aceita.**
+Data inicial: 2026-10-09; checkpoint: 2026-10-10 (America/Sao_Paulo). **Status: proposta de produto com núcleo 8A publicado e build SQLite aprovado em CI; protótipo 8B de recuperação descartável implementado e validado localmente. IPC, interface e restauração do banco ativo não implementados; as decisões de produto pendentes continuam sem aceite.**
 
-Base examinada: `9768a87ab3cd2d46f1b5ffa2fbc1886cc7ee33a7`, publicado em `codex/phase-6.5-release-readiness`, com os quatro jobs do [CI de branch](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37988393320) aprovados. O [PR #14](https://github.com/jornalistainclusivo/retranca-os/pull/14) está em Draft; a proposta deste documento é trabalho local separado e não pertence aos dois commits desse PR. A `main` examinada permanece em `96a309384ccb7b337dcce65b39a7519eb1ac02d7`.
+Base da implementação 8B: `b9d1464a341f6606cd04d7dea74a69b66da0a8c4`, publicado em `codex/phase-6.5-workspace-backup`, com os quatro jobs do [CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) aprovados. A preparação inicial partiu de `9768a87`. O [PR #14](https://github.com/jornalistainclusivo/retranca-os/pull/14) continua aberto em Draft com README/manutenção Next; os commits de backup/build permanecem separados dele. A main verificada permanece em `96a309384ccb7b337dcce65b39a7519eb1ac02d7`. As mudanças 8B deste checkpoint ainda são locais e não recebem o resultado do CI da base.
 
 ## Objetivo e alcance
 
@@ -22,7 +22,7 @@ Esta proposta não amplia a importação de pautas nem altera a [ADR-015](../../
 | [Configuração normal](../../../src-tauri/tauri.conf.json), [Pilot](../../../src-tauri/tauri.pilot.conf.json) e [fixtures](../../../src-tauri/tauri.fixture.conf.json) | Os identificadores das aplicações são diferentes. | Identificar a origem de cada backup e impedir troca silenciosa de dados entre aplicações. |
 | [Testes de conteúdo](../../../src-tauri/tests/article_content.rs) e [importação](../../../src-tauri/tests/article_import.rs) | Existem cenários sintéticos em arquivos SQLite temporários, com escopos próprios. | Aproveitar o padrão de isolamento; criar cobertura específica das oito tabelas, sem atribuir estes cenários ao futuro backup. |
 
-As fontes foram inspecionadas. Nenhum banco, backup, exportação ou conteúdo editorial real foi lido ou modificado nesta preparação. Foram executados somente os cenários sintéticos de criação/verificação descritos abaixo; nenhuma restauração ou operação sobre os dados do responsável foi realizada.
+As fontes foram inspecionadas. Nenhum banco, backup, exportação ou conteúdo editorial real foi lido ou modificado nesta preparação. Os cenários 8A/8B executados usam bancos e diretórios descartáveis; nenhuma substituição do banco ativo ou operação sobre os dados do responsável foi realizada.
 
 ## Estado do protótipo 8A e validação local
 
@@ -42,7 +42,7 @@ Os [testes específicos](../../../src-tauri/tests/workspace_backup.rs) extraem a
 | Sincronização | `synchronous=OFF` recusado antes de criar diretório/arquivo de backup. |
 | SQLite efetivamente vinculado ao teste | `sqlite_version()` reportou **3.46.0**; o recibo registra essa versão. |
 
-O compilador emitiu o aviso herdado de `unused_mut` em `src-tauri/src/provisioning/download.rs:93`; esse arquivo permanece preservado. Falta validar interrupção real de processo, falta de espaço, tempo/tamanho em amostras maiores, bloqueios, corridas de filesystem, Windows instalado e Linux. O protótipo rejeita links/reparse points na inspeção de caminho, mas isso não comprova eliminação de corridas entre inspeção e abertura. Não há sincronização comprovada do diretório após publicação do recibo nem protocolo de restauração.
+O compilador emitiu o aviso herdado de `unused_mut` em `src-tauri/src/provisioning/download.rs:93`; esse arquivo permanece preservado. Falta validar interrupção real de processo, falta de espaço, tempo/tamanho em amostras maiores, bloqueios, corridas de filesystem, Windows/Linux instalados; a validação GNU do núcleo 8A foi posteriormente aprovada no CI de `b9d1464`. O protótipo rejeita links/reparse points na inspeção de caminho, mas isso não comprova eliminação de corridas entre inspeção e abertura. Não há sincronização comprovada do diretório após publicação do recibo nem protocolo de restauração do banco ativo.
 
 ### Pendência de SQLite antes da exposição em produção
 
@@ -52,7 +52,34 @@ A [documentação oficial do WAL-reset bug](https://www.sqlite.org/wal.html), co
 
 A [investigação de compatibilidade na ADR-018](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#investigação-de-compatibilidade-sqlite--2026-10-09) encontrou um caminho local: compilar SQLite 3.51.3 separadamente e vinculá-lo estaticamente à cadeia atual. O código C/checksum/source ID foram conferidos contra a release oficial. Mantendo os manifests e locks do app, os nove testes do núcleo 8A e 28 de persistência/conteúdo/importação passaram em Windows x64 debug; o processo reportou SQLite 3.51.3. São 37 resultados adicionais no ambiente experimental, sem reproduzir a corrida exata ou atualizar qualquer aplicativo instalado.
 
-Após autorização específica, a [integração local do build](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) passou a exigir SQLite 3.51.3 estático, com verificação de origem, opções, alvo e hashes. O app conserva a família SQLx/plugin e seu lock; `libsqlite3-sys 0.37.0` fica em uma ferramenta de compilação separada. A suíte nativa completa passou em Windows debug e release, com 155 testes aprovados e um piloto real ignorado em cada perfil; inclui os nove cenários 8A e três testes novos do contrato/identidade SQLite. O build Tauri release sem instalador também passou. As alterações são locais, com commit autorizado e publicação pendente; CI remoto, Linux, novo pacote instalado, recuperação e IPC continuam pendentes. Não há interface de backup.
+Após autorização específica, a [integração do build](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09) passou a exigir SQLite 3.51.3 estático, com origem, opções, alvo e hashes conferidos. O app conserva SQLx/plugin e seu lock; `libsqlite3-sys 0.37.0` pertence à ferramenta separada. O CI de `8bb422f` aprovou frontend/Windows, mas detectou SQLite 3.45.1 do sistema no Ubuntu. A [correção de seleção](../../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#ci-e-correção-de-seleção-sqlite--2026-10-10), em `b9d1464`, passou nos quatro jobs de [nova CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453), incluindo identidade 3.51.3 e suítes nativas debug/release em Windows/Ubuntu. As primeiras 155 verificações locais por perfil e o build Tauri sem instalador conservam seu escopo histórico. A recuperação 8B posterior tem testes locais próprios; novo pacote instalado, IPC, interface e restauração ativa continuam pendentes.
+
+## Protótipo 8B: recuperação descartável — 2026-10-10
+
+O [núcleo Rust](../../../src-tauri/src/workspace_backup.rs) acrescenta `recover_workspace_backup_to_disposable` e `verify_disposable_workspace_recovery`, sem registro em Tauri. O chamador nativo fornece uma raiz existente, a identidade esperada, um pool de referência confiável e um orçamento máximo de bytes. Nos testes, todos são sintéticos e temporários; nenhum diretório da aplicação é resolvido. O orçamento de **16 MiB é somente do teste**, não um limite de produto aprovado.
+
+A operação verifica o backup/recibo 8A, recusa WAL/SHM/journal adjacentes não cobertos pelo recibo e compara o hash de todo o schema com o pool de referência. A comparação inclui colunas, constraints, índices e triggers por meio de `sqlite_schema`; schemas com SQL textual diferente também podem ser recusados, mesmo se logicamente equivalentes. A referência de produção ainda precisa ser vinculada a um controlador confiável, não a uma afirmação do arquivo selecionado.
+
+O núcleo cria `recovery-<uuid>/workspace.sqlite3` sem sobrescrever destinos, copia bytes em blocos com tamanho/hash verificados e sincroniza o arquivo. Reabre a cópia em leitura, com `trusted_schema=OFF` e `query_only=ON`, confere schema/contagens/`quick_check`, fecha e reconfere o hash. As opções estão disponíveis no SQLx 0.8.6 inspecionado; [SQLite recomenda desabilitar confiança implícita no schema](https://www.sqlite.org/pragma.html#pragma_trusted_schema). Não se usa `immutable=1` para dispensar locks ou detecção de mudanças.
+
+Somente após verificar a cópia publica `recovery.json`, inicialmente gravado/sincronizado como `recovery.pending`. O recibo de formato 1 relaciona o UUID/horário da recuperação ao recibo de origem; o verificador exige marcador válido, origem, formato, schema, bytes e metadados. Recibo/hash não são autenticação nem autorização para restaurar. Arquivos parciais ficam preservados; uma nova tentativa usa outro UUID.
+
+| Verificação local — Windows x64 MSVC, Rust/Cargo 1.93.0 | Resultado e alcance |
+| --- | --- |
+| `cargo check --manifest-path src-tauri/Cargo.toml --locked --offline`, também com `--release` | Ambos passaram. |
+| `cargo test --manifest-path src-tauri/Cargo.toml --locked --offline`, também com `--release` | Em cada perfil: 165 passaram, zero falhas e um piloto real ignorado. |
+| [Testes de backup/recuperação](../../../src-tauri/tests/workspace_backup.rs) | 17 passaram por perfil: nove 8A preservados e oito 8B novos. |
+| Falhas de cópia, testes unitários do núcleo | Dois passaram: bytes divergentes/truncados/excedentes e erro simulado de escrita no segundo bloco. |
+| Preservação | Igualdade lógica das oito tabelas, schema, IDs/datas, Unicode/multilinha/nulos, configuração, entidades inativas e referência preexistente não resolvida; cópia editável independente e origem/backup preservados. |
+| Rejeições e reexecução | Coluna ausente/adicional, índice removido, trigger extra, origem normal/Pilot/fixtures incompatível, bytes corrompidos inclusive com hash atualizado, formato/schema futuro, recibos ausentes/alterados/excessivos, destino ocupado/relativo/sobreposto, orçamento insuficiente e sidecars; tentativas independentes preservam uma saída incompleta simulada. |
+
+Os avisos herdados `unused_mut` em `provisioning/download.rs:93` e `unused_variables` para `signing_key` em `provisioning/security.rs:217` permanecem; esses arquivos não foram alterados. A interrupção acima é simulação de falha de escrita/estado incompleto, não encerramento real de processo ou perda de energia. Falta validar falta de espaço/permissão real, bloqueios e corridas de filesystem, durabilidade do diretório após rename, amostras representativas/limites de tempo e aplicativos instalados. A inspeção de caminhos não elimina corridas entre inspeção e abertura. Não há validação de ativação, troca de arquivo/WAL, exclusividade entre processos ou recuperação do banco ativo.
+
+### Revisão da futura substituição
+
+O resultado 8B oferece um arquivo independente para validar a preparação; não autoriza anexá-lo ao pool ativo. A direção proposta para revisão é executar uma futura substituição antes da abertura dos pools, com identidade da aplicação, confirmação vinculada ao backup/destino e retenção verificável do estado anterior. Esse controlador ainda não existe.
+
+Um mutex somente nos comandos Rust não abrange escritas via plugin SQL/Drizzle nem outra instância. Fechar um pool deste processo não comprova que outro processo perdeu acesso; renomear um banco aberto não é um protocolo de restauração, especialmente com WAL. É necessário definir/validar exclusividade entre instâncias, fechamento dos acessos, publicação/rollback e os recibos de cada estado em Windows e Linux antes de implementar a troca. Não se escolhe nova dependência/permissão ou migração para antecipar essa decisão.
 
 ## Dados a preservar
 
@@ -129,7 +156,7 @@ Não executar manualmente troca, exclusão de arquivos WAL ou restauração do b
 | 8B | Recuperação em destino descartável e revisão da substituição. | Hash divergente, schema parcial/futuro, origem normal/Pilot/fixtures, restauração exata de IDs/datas/configurações, isolamento do banco de origem, falhas de abertura e recuperação após interrupção. |
 | 8C | Integração de interface e operação instalada, após decisões anteriores. | IPC real, erros/status/foco, teclado/leitor/zoom pertinentes, cópia externa e restauração sintética no aplicativo identificado; Linux instalado continua exigindo evidência própria. |
 
-As etapas mantêm critérios ainda planejados. Foram executados os nove cenários sintéticos do protótipo e, após a integração de build, a suíte nativa completa em debug/release e o build Tauri com exportação do frontend, conforme o registro vinculado acima. Não há IPC, interface, restauração ativa, aceite instalado ou conformidade de acessibilidade demonstrados. As verificações anteriores de frontend e os CIs citados conservam seus próprios escopos; nenhum CI da nova revisão foi executado.
+O núcleo 8A e seu build corrigido foram publicados e verificados no CI de `b9d1464`; a recuperação descartável 8B tem os resultados locais descritos neste checkpoint. A substituição ativa e o 8C continuam planejados. Não há IPC, interface, aceite instalado ou conformidade de acessibilidade demonstrados. Nenhuma CI foi executada para as alterações 8B locais.
 
 ## Decisões pendentes e limite desta preparação
 
@@ -141,4 +168,4 @@ Antes de habilitar a operação para uso:
 - Revisar e validar o protocolo de exclusividade, substituição e recuperação após falha em cada plataforma.
 - Manter separados autorização de implementação, operação sobre dados reais, commit/publicação, integração e distribuição.
 
-A preparação inicial entregou o contrato, o núcleo e seus testes sintéticos em seis arquivos locais. A rodada autorizada posterior acrescenta a preparação/verificação do SQLite, dependências de build, comandos, documentação e configuração de CI, com commit local autorizado e publicação pendente. Não altera schema, dados reais ou runtime de IA, não atualiza instalador, não disponibiliza backup no aplicativo e não encerra a fase 6.5. O [plano da fase](../../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) conserva as demais pendências de segurança, plataformas, acessibilidade e distribuição.
+A preparação inicial entregou o contrato, o núcleo e seus testes sintéticos. O build e a correção de seleção SQLite foram publicados em `8bb422f`/`b9d1464` após autorização e passaram na nova CI. Esta continuação acrescenta somente o protótipo/testes de recuperação descartável e os checkpoints documentais; commit, push e CI dessa revisão aguardam autorização própria. Não altera dependências, CI, schema, dados reais ou runtime de IA, não atualiza instalador e não encerra a fase 6.5. O [plano da fase](../../architecture/PHASE-6.5-PRODUCTION-EXPERIENCE-PLAN.md) conserva as demais pendências.

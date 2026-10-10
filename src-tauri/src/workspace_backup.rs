@@ -217,7 +217,9 @@ pub async fn create_workspace_backup_pool(
         &SqliteConnectOptions::new()
             .filename(&database)
             .read_only(true)
-            .create_if_missing(false),
+            .create_if_missing(false)
+            .pragma("trusted_schema", "OFF")
+            .pragma("query_only", "ON"),
     )
     .await
     .map_err(|error| database_failure(error, "open-copy"))?;
@@ -308,7 +310,9 @@ pub async fn verify_workspace_backup(
         &SqliteConnectOptions::new()
             .filename(database)
             .read_only(true)
-            .create_if_missing(false),
+            .create_if_missing(false)
+            .pragma("trusted_schema", "OFF")
+            .pragma("query_only", "ON"),
     )
     .await
     .map_err(|error| database_failure(error, "open-copy"))?;
@@ -321,4 +325,340 @@ pub async fn verify_workspace_backup(
         return Err(failure("copy-metadata"));
     }
     Ok(receipt)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkspaceRecoveryReceipt {
+    pub format_version: u32,
+    pub operation_id: String,
+    pub recovered_at_unix_ms: u64,
+    pub source_backup: WorkspaceBackupReceipt,
+}
+
+#[derive(Debug)]
+pub struct WorkspaceRecoveryArtifact {
+    pub directory: PathBuf,
+    pub receipt: WorkspaceRecoveryReceipt,
+}
+
+fn reject_snapshot_sidecars(directory: &Path) -> Result<(), CanonicalError> {
+    for suffix in ["-wal", "-shm", "-journal"] {
+        match fs::symlink_metadata(directory.join(format!("{DATABASE_FILE}{suffix}"))) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            _ => return Err(failure("recovery-sidecars")),
+        }
+    }
+    Ok(())
+}
+
+fn validate_recovery_source(
+    receipt: &WorkspaceBackupReceipt,
+    app_identifier: &str,
+    expected_schema: &str,
+    max_database_bytes: u64,
+) -> Result<(), CanonicalError> {
+    if receipt.format_version != 1
+        || receipt.database_schema_version != 2
+        || !APPLICATION_IDS.contains(&app_identifier)
+        || receipt.source_app_identifier != app_identifier
+        || uuid::Uuid::parse_str(&receipt.operation_id)
+            .map(|id| id.to_string() != receipt.operation_id)
+            .unwrap_or(true)
+    {
+        return Err(failure("recovery-identity"));
+    }
+    if max_database_bytes == 0
+        || receipt.database_size == 0
+        || receipt.database_size > max_database_bytes
+        || receipt.database_size == u64::MAX
+    {
+        return Err(failure("recovery-size"));
+    }
+    if receipt.schema_sha256 != expected_schema {
+        return Err(failure("recovery-schema"));
+    }
+    Ok(())
+}
+
+async fn recovery_reference_schema(pool: &SqlitePool) -> Result<String, CanonicalError> {
+    let mut reference = pool
+        .acquire()
+        .await
+        .map_err(|error| database_failure(error, "recovery-reference"))?;
+    let (schema, _) = inspect_database(&mut reference).await?;
+    Ok(schema)
+}
+
+fn copy_verified_stream(
+    reader: impl Read,
+    writer: &mut impl Write,
+    expected_size: u64,
+    expected_hash: &str,
+) -> Result<(), CanonicalError> {
+    let bound = expected_size
+        .checked_add(1)
+        .ok_or_else(|| failure("recovery-size"))?;
+    let mut reader = reader.take(bound);
+    let mut digest = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    let mut copied = 0_u64;
+    loop {
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|_| failure("recovery-copy"))?;
+        if read == 0 {
+            break;
+        }
+        copied += read as u64;
+        if copied > expected_size {
+            return Err(failure("recovery-copy-identity"));
+        }
+        writer
+            .write_all(&buffer[..read])
+            .map_err(|_| failure("recovery-copy"))?;
+        digest.update(&buffer[..read]);
+    }
+    if copied != expected_size || hex::encode(digest.finalize()) != expected_hash {
+        return Err(failure("recovery-copy-identity"));
+    }
+    Ok(())
+}
+
+async fn copy_recovery_database(
+    source: PathBuf,
+    destination: PathBuf,
+    receipt: WorkspaceBackupReceipt,
+) -> Result<(), CanonicalError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if file_size(&source)? != receipt.database_size {
+            return Err(failure("recovery-copy-identity"));
+        }
+        let input = File::open(source).map_err(|_| failure("recovery-copy"))?;
+        let mut output = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(destination)
+            .map_err(|_| failure("recovery-copy"))?;
+        copy_verified_stream(
+            input,
+            &mut output,
+            receipt.database_size,
+            &receipt.database_sha256,
+        )?;
+        output.sync_all().map_err(|_| failure("recovery-sync"))
+    })
+    .await
+    .map_err(|_| failure("recovery-copy-worker"))?
+}
+
+async fn verify_recovery_database(
+    directory: &Path,
+    receipt: &WorkspaceBackupReceipt,
+) -> Result<(), CanonicalError> {
+    reject_snapshot_sidecars(directory)?;
+    let database = directory.join(DATABASE_FILE);
+    if file_size(&database)? != receipt.database_size
+        || digest_file(database.clone()).await? != receipt.database_sha256
+    {
+        return Err(failure("recovery-copy-identity"));
+    }
+    let mut copy = SqliteConnection::connect_with(
+        &SqliteConnectOptions::new()
+            .filename(&database)
+            .read_only(true)
+            .create_if_missing(false)
+            .pragma("trusted_schema", "OFF")
+            .pragma("query_only", "ON"),
+    )
+    .await
+    .map_err(|error| database_failure(error, "recovery-open"))?;
+    let inspected = inspect_database(&mut copy).await;
+    copy.close()
+        .await
+        .map_err(|error| database_failure(error, "recovery-close"))?;
+    let (schema, counts) = inspected?;
+    if schema != receipt.schema_sha256 || counts != receipt.table_counts {
+        return Err(failure("recovery-metadata"));
+    }
+    reject_snapshot_sidecars(directory)?;
+    if digest_file(database).await? != receipt.database_sha256 {
+        return Err(failure("recovery-copy-identity"));
+    }
+    Ok(())
+}
+
+/// Internal 8B prototype: creates an independent copy in a new UUID directory.
+/// The reference pool and byte budget must be supplied by trusted native code.
+/// This does not replace, migrate, reset or reopen an active application database.
+pub async fn recover_workspace_backup_to_disposable(
+    backup_directory: &Path,
+    recovery_root: &Path,
+    app_identifier: &str,
+    reference_pool: &SqlitePool,
+    max_database_bytes: u64,
+) -> Result<WorkspaceRecoveryArtifact, CanonicalError> {
+    validate_directory(backup_directory)?;
+    validate_directory(recovery_root)?;
+    let source_directory = fs::canonicalize(backup_directory).map_err(|_| failure("directory"))?;
+    let root = fs::canonicalize(recovery_root).map_err(|_| failure("directory"))?;
+    if root.starts_with(&source_directory) {
+        return Err(failure("recovery-directory"));
+    }
+    if max_database_bytes == 0
+        || file_size(&source_directory.join(DATABASE_FILE))? > max_database_bytes
+    {
+        return Err(failure("recovery-size"));
+    }
+    reject_snapshot_sidecars(&source_directory)?;
+    let source_backup = verify_workspace_backup(&source_directory, app_identifier).await?;
+    let reference_schema = recovery_reference_schema(reference_pool).await?;
+    validate_recovery_source(
+        &source_backup,
+        app_identifier,
+        &reference_schema,
+        max_database_bytes,
+    )?;
+
+    let operation_id = uuid::Uuid::new_v4().to_string();
+    let directory = root.join(format!("recovery-{operation_id}"));
+    fs::create_dir(&directory).map_err(|_| failure("recovery-create-directory"))?;
+    copy_recovery_database(
+        source_directory.join(DATABASE_FILE),
+        directory.join(DATABASE_FILE),
+        source_backup.clone(),
+    )
+    .await?;
+    verify_recovery_database(&directory, &source_backup).await?;
+
+    let receipt = WorkspaceRecoveryReceipt {
+        format_version: 1,
+        operation_id,
+        recovered_at_unix_ms: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| failure("clock"))?
+            .as_millis()
+            .try_into()
+            .map_err(|_| failure("clock"))?,
+        source_backup,
+    };
+    let serialized =
+        serde_json::to_vec_pretty(&receipt).map_err(|_| failure("recovery-receipt"))?;
+    if serialized.len() as u64 > MAX_RECEIPT_BYTES {
+        return Err(failure("recovery-receipt-limit"));
+    }
+    let mut pending = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(directory.join("recovery.pending"))
+        .map_err(|_| failure("recovery-receipt"))?;
+    pending
+        .write_all(&serialized)
+        .and_then(|_| pending.sync_all())
+        .map_err(|_| failure("recovery-receipt"))?;
+    drop(pending);
+    fs::rename(
+        directory.join("recovery.pending"),
+        directory.join("recovery.json"),
+    )
+    .map_err(|_| failure("recovery-receipt"))?;
+    Ok(WorkspaceRecoveryArtifact { directory, receipt })
+}
+
+/// Verifies the completed disposable artifact against a trusted native schema.
+/// A receipt is an integrity record, not authentication or authority to restore.
+pub async fn verify_disposable_workspace_recovery(
+    directory: &Path,
+    app_identifier: &str,
+    reference_pool: &SqlitePool,
+    max_database_bytes: u64,
+) -> Result<WorkspaceRecoveryReceipt, CanonicalError> {
+    validate_directory(directory)?;
+    let receipt_path = directory.join("recovery.json");
+    if file_size(&receipt_path)? > MAX_RECEIPT_BYTES {
+        return Err(failure("recovery-receipt-limit"));
+    }
+    let mut bytes = Vec::new();
+    File::open(receipt_path)
+        .map_err(|_| failure("recovery-receipt"))?
+        .take(MAX_RECEIPT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| failure("recovery-receipt"))?;
+    if bytes.len() as u64 > MAX_RECEIPT_BYTES {
+        return Err(failure("recovery-receipt-limit"));
+    }
+    let receipt: WorkspaceRecoveryReceipt =
+        serde_json::from_slice(&bytes).map_err(|_| failure("recovery-receipt"))?;
+    if receipt.format_version != 1
+        || uuid::Uuid::parse_str(&receipt.operation_id)
+            .map(|id| id.to_string() != receipt.operation_id)
+            .unwrap_or(true)
+        || directory.file_name().and_then(|name| name.to_str())
+            != Some(format!("recovery-{}", receipt.operation_id).as_str())
+    {
+        return Err(failure("recovery-identity"));
+    }
+    let reference_schema = recovery_reference_schema(reference_pool).await?;
+    validate_recovery_source(
+        &receipt.source_backup,
+        app_identifier,
+        &reference_schema,
+        max_database_bytes,
+    )?;
+    verify_recovery_database(directory, &receipt.source_backup).await?;
+    Ok(receipt)
+}
+
+#[cfg(test)]
+mod recovery_stream_tests {
+    use super::*;
+
+    #[test]
+    fn recovery_copy_rejects_changed_truncated_or_extra_bytes() {
+        let expected = b"synthetic database bytes";
+        let hash = hex::encode(Sha256::digest(expected));
+        for input in [
+            b"synthetic database byteX".as_slice(),
+            b"synthetic database".as_slice(),
+            b"synthetic database bytes plus trailing bytes".as_slice(),
+        ] {
+            let mut output = Vec::new();
+            let error =
+                copy_verified_stream(input, &mut output, expected.len() as u64, &hash).unwrap_err();
+            assert_eq!(error.details["stage"], "recovery-copy-identity");
+        }
+        let mut output = Vec::new();
+        copy_verified_stream(
+            expected.as_slice(),
+            &mut output,
+            expected.len() as u64,
+            &hash,
+        )
+        .unwrap();
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn recovery_copy_propagates_a_mid_stream_write_failure() {
+        struct InterruptedWriter(Vec<u8>);
+        impl Write for InterruptedWriter {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                if !self.0.is_empty() {
+                    return Err(std::io::Error::other("synthetic write interruption"));
+                }
+                self.0.extend_from_slice(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let input = vec![b'x'; 128 * 1024];
+        let hash = hex::encode(Sha256::digest(&input));
+        let mut writer = InterruptedWriter(Vec::new());
+        let error = copy_verified_stream(input.as_slice(), &mut writer, input.len() as u64, &hash)
+            .unwrap_err();
+        assert_eq!(error.details["stage"], "recovery-copy");
+        assert_eq!(writer.0.len(), 64 * 1024);
+    }
 }

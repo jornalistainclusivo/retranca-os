@@ -28,7 +28,7 @@ Save open edits, close the app and stop the development command with Ctrl+C befo
 
 ## Pinned native SQLite build
 
-These commands describe the current checkout. The SQLite build integration is local work on `codex/phase-6.5-workspace-backup`, based on `9768a87`; local commit has been authorized; integration into main remains pending. A fresh clone of published main does not contain these candidate scripts yet.
+These commands describe `codex/phase-6.5-workspace-backup`. The SQLite build and system-library selection correction are published through `b9d1464`, based on `9768a87`, and validated in branch CI. The subsequent disposable 8B recovery prototype is local, without IPC/UI. Integration into main remains pending; a fresh clone of published main does not contain these candidate scripts.
 
 `npm run desktop:dev` prepares the pinned SQLite engine before starting normal Tauri development. `npm run desktop:build` prepares it before the normal desktop build. The fixture command `npm run dev:desktop` also prepares it but retains synthetic identity/runtime. These commands have different scopes.
 
@@ -41,9 +41,9 @@ npx --no-install tauri dev
 
 The [separate Rust build tool](../../tools/sqlite-runtime/Cargo.toml) and its lock compile SQLite 3.51.3. The [Node preparer](../../scripts/build/prepare-sqlite-runtime.mjs) verifies the official source checksum, actual engine identity/options and native target, then records artifact/recipe hashes. The private cache in `.retranca-local/sqlite-runtime/3.51.3/` contains only build artifacts; it is not the editorial database or a backup.
 
-The [.cargo configuration](../../.cargo/config.toml) supplies the static library paths automatically. The app refuses absent or mismatched preparation instead of linking an old/system engine. If that guard fails, return to this checkout's root and run `npm run sqlite:prepare`; review the reported failure rather than altering application data or bypassing the guard. An uncached helper build requires access to its locked crates and a native C compiler. No separate SQLite DLL installation is required.
+The [.cargo configuration](../../.cargo/config.toml) supplies static library paths and forces `SQLITE3_NO_PKG_CONFIG=1` for SQLite only, preventing system discovery from overriding the prepared directory. The app requires that flag and rejects absent/mismatched artifacts. If preparation fails, return to this checkout's root and run `npm run sqlite:prepare`; review the failure rather than changing application data or bypassing the guard. An uncached helper requires its locked crates and a native C compiler. No separate SQLite DLL installation is required.
 
-The recipe supports native Windows MSVC and Linux GNU; cross-compilation and other platforms are rejected. Local Windows debug/release and a Tauri build without an installer passed; Linux and the candidate CI remain unexecuted. Native CI selects Node 24 for this helper, while frontend CI retains Node 20. See the [implementation evidence and limits](../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#integração-local-do-build-sqlite--2026-10-09).
+The recipe supports native Windows MSVC and Linux GNU; cross-compilation and other platforms are rejected. Frontend, Windows, Ubuntu and the Rust aggregator passed [branch CI](https://github.com/jornalistainclusivo/retranca-os/actions/runs/38006207453) on `b9d1464`, including native identity/debug/release checks. That result does not cover the later local 8B prototype or installed Linux. Native CI selects Node 24 for the helper; frontend CI retains Node 20. See the [SQLite failure/correction receipt](../decisions/ADR-018-DEPENDENCY-SECURITY-MAINTENANCE.md#ci-e-correção-de-seleção-sqlite--2026-10-10) and [disposable-recovery contract](../specifications/phase-6.5/PHASE-6.5-INCREMENT-8-WORKSPACE-BACKUP.md#protótipo-8b-recuperação-descartável--2026-10-10).
 
 ## Preview, desktop and synthetic fixtures
 
