@@ -6,6 +6,38 @@ Manutenção parcial integrada, após autorizações explícitas, pelo [PR #7](h
 
 Checkpoint de revisão: o mesmo revisor independente, antes interrompido pelo limite de uso, concluiu seu ciclo sobre `ad6d84ca22f09553e47b4a9c9d66bbcb1835f444`, sem identificar regressão concreta nos contratos/famílias de plataformas examinados. Todos os quatro jobs dos CIs [#29](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37688342468) e [#30](https://github.com/jornalistainclusivo/retranca-os/actions/runs/37692477632) passaram nessa revisão. O relato local original abaixo é histórico; a interrupção e o CI pendente foram superados por esses recibos, sem repetir a inferência, inspecionar dados editoriais ou ampliar a revisão para uma auditoria de todo o repositório. Build/testes Linux não equivalem a aceite do aplicativo instalado.
 
+## Manutenção local — 2026-10-09
+
+Esta rodada parte da `main` `96a309384ccb7b337dcce65b39a7519eb1ac02d7` e do commit local de README `963bbd456a120a0593e18cec22edcb112b1f6802`, na branch `codex/phase-6.5-release-readiness`. A correção abaixo foi validada localmente; publicação e integração permanecem pendentes e conservam autorizações e evidências próprias. Os resultados históricos das seções seguintes conservam seus próprios commits e escopos.
+
+A API do GitHub confirmou sete alertas abertos na branch padrão: seis de Next.js e um de glib. A [release oficial do Next.js 16.3.8](https://github.com/vercel/next.js/releases/tag/v16.3.8) contém as correções dos seis advisories observados: GHSA-cjq9-62q9-8jv4, GHSA-f87g-xv8r-7p7x, GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p, GHSA-3w37-wq28-93x7 e GHSA-39w2-rjm5-chcv. A API dos alertas informa 16.3.8 como primeira versão corrigida. Isso sustenta a atualização de dependência, sem afirmar que todos os caminhos vulneráveis existem neste aplicativo.
+
+Next.js e `eslint-config-next` ficam fixados exatamente em **16.3.8**, incluindo `@next/env`, o plugin ESLint e as oito variantes opcionais SWC. A restrição exata mantém esta manutenção no patch examinado, em vez de permitir a resolução de uma versão minor posterior. O lock preserva os demais pacotes, todos os overrides e as condições de plataforma. SHA-256 do lock validado: `a7d80503398f068dc805f62c2f352d6fbdecbec3a7757bc1b7dbf6ec41656a99`.
+
+O frontend continua com `output: "export"` e imagens sem otimização. O aplicativo empacotado consome arquivos estáticos; o [alerta do endpoint MCP](https://github.com/vercel/next.js/security/advisories/GHSA-39w2-rjm5-chcv) refere-se ao servidor de desenvolvimento. A distinção não dispensa a correção do ambiente de desenvolvimento/build.
+
+| Verificação desta rodada, Windows x64 | Resultado |
+| --- | --- |
+| Ambiente | Node.js 24.19.0; npm 10.9.0 |
+| `npm ci --no-audit --no-fund` | Passou; 540 pacotes instalados |
+| Engines dos pacotes instalados | Compatíveis com o Node utilizado; variantes opcionais não instaladas foram distinguidas |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | Passou |
+| `npm run lint` | Passou; aviso herdado de `.eslintignore` |
+| `npm test` | 406 testes passaram em 31 arquivos |
+| `npm run build` | Passou; exportação estática com Next.js 16.3.8 |
+| Comparação do lock com HEAD | Somente metadados raiz e 12 pacotes da família Next alterados; oito variantes SWC preservadas |
+| `npm audit --package-lock-only --omit=dev --json` | Saída 0; nenhum advisory reportado nessa consulta |
+| `npm audit --package-lock-only --json` | Saída 1; cinco entradas high da cadeia braces |
+| Árvore Cargo Linux, `--locked --offline --invert glib@0.18.5` | Inspecionada; glib 0.18.5 permanece na cadeia GTK/WebKit/Wry/Tauri |
+| `node scripts/packaging/build-local-pilot.mjs --check` | Configuração válida; CLI 2.11.4; sem build ou execução do instalador |
+| Links, âncoras, escopo e diff | 55 links locais e três âncoras conferidos; cinco arquivos alterados; `git diff --check` passou; ambos os READMEs preservados |
+
+As auditorias acima examinam o lockfile candidato. Não comprovam ausência de vulnerabilidades nem fechamento dos alertas na branch padrão. A consulta npm ainda informa `braces` 3.0.3 como versão publicada mais recente; o [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) permanece pendente. A sugestão de downgrade da configuração Next para 14.2.35 não é adotada.
+
+O [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) continua indicando glib corrigido a partir de 0.20.0. A árvore nativa examinada ainda utiliza 0.18.5. Esta rodada não aplica fork, override ou atualização incompatível das bindings; a pendência Linux permanece aberta.
+
+A instalação também emitiu avisos de depreciação das ferramentas herdadas `@esbuild-kit/esm-loader` e `@esbuild-kit/core-utils`. Vitest avisou sobre o futuro carregamento nativo da configuração Vite em CommonJS. Nenhum aviso foi suprimido nesta rodada. Não houve alteração de Rust/Cargo.lock, schema, migração, permissões, CI, runtime de IA ou dados editoriais. Testes nativos, inferência, aceites instalados e acessibilidade já registrados não foram repetidos; não validam automaticamente este novo frontend. CI da nova revisão, pacote identificado e aceite instalado ainda precisam de evidência própria.
+
 ## Contexto
 
 O GitHub apresentou oito registros Dependabot na branch padrão. Os manifests e locks correspondentes também estavam na revisão `71d25c088887231001329ae3d9fc659dcc6ad5a5` da fase 6.5. A manutenção foi isolada em `codex/security-dependencies`, baseada na `main` `1b7de720ff8f87060cd2f945b8c65ec598679471`, preservando a branch, os dados e o executável piloto do responsável.
